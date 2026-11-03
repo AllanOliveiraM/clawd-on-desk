@@ -70,10 +70,18 @@ describe("companion store", () => {
   });
 
   it("oversized file is quarantined", () => {
-    fs.writeFileSync(file, JSON.stringify({ version: 1, pad: "x".repeat(200) }));
+    // Valid v1 except for its size, so the size check is what triggers quarantine.
+    fs.writeFileSync(file, JSON.stringify({
+      version: 1, mood: { energy: 50, contentment: 50, familiarity: 50 }, pad: "x".repeat(200),
+    }));
+    assert.ok(fs.statSync(file).size > 100);
     const r = make({ maxBytes: 100 }).load();
     assert.deepStrictEqual(r.state, createInitialState());
     assert.strictEqual(corrupts().length, 1);
+    assert.ok(!fs.existsSync(file));
+    // Same payload under the limit loads fine (proves size was the cause).
+    fs.writeFileSync(file, JSON.stringify({ version: 1, mood: { energy: 50, contentment: 50, familiarity: 50 } }));
+    assert.strictEqual(make({ maxBytes: 100 }).load().state.mood.energy, 50);
   });
 
   it("future version is not overwritten", () => {
@@ -87,14 +95,43 @@ describe("companion store", () => {
   });
 
   it("remove clears readOnly after a future version", () => {
-    fs.writeFileSync(file, JSON.stringify({ version: 2 }));
+    // Future version with a shape that is not valid v1: must be neither quarantined nor overwritten.
+    const content = JSON.stringify({ version: 2, shape: "unknown" });
+    fs.writeFileSync(file, content);
     const store = make();
     store.load();
+    assert.strictEqual(corrupts().length, 0);
+    store.schedule({ state: goodState(), restSpot: null });
+    store.flush();
+    assert.strictEqual(fs.readFileSync(file, "utf8"), content);
     store.remove();
     assert.ok(!fs.existsSync(file));
     store.schedule({ state: goodState(), restSpot: null });
     store.flush();
-    assert.ok(fs.existsSync(file));
+    assert.strictEqual(JSON.parse(fs.readFileSync(file, "utf8")).version, 1);
+  });
+
+  it("unref is called when the timer handle supports it", () => {
+    let unrefs = 0;
+    const store = make({
+      setTimeout: (fn, ms) => ({ fn, ms, unref() { unrefs++; } }),
+      clearTimeout() {},
+    });
+    store.schedule({ state: goodState(), restSpot: null });
+    assert.strictEqual(unrefs, 1);
+  });
+
+  it("failing quarantine rename does not throw", () => {
+    fs.writeFileSync(file, "{not json");
+    const badFs = { ...fs, renameSync: () => { throw new Error("nope"); } };
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      let r;
+      assert.doesNotThrow(() => { r = make({ fs: badFs }).load(); });
+      assert.deepStrictEqual(r.state, createInitialState());
+      assert.strictEqual(r.restSpot, null);
+    } finally { console.warn = warn; }
   });
 
   it("out of range values are clamped", () => {

@@ -76,13 +76,17 @@ function createCompanionStore(options = {}) {
     } catch {
       raw = null;
     }
-    if (!isObject(raw) || !Number.isInteger(raw.version) || raw.version < 1 || !isObject(raw.mood)) {
+    if (!isObject(raw) || !Number.isInteger(raw.version) || raw.version < 1) {
       quarantine();
       return initial();
     }
     if (raw.version > FILE_VERSION) {
-      // Written by a newer build: never overwrite it.
+      // Written by a newer build (any shape): never quarantine or overwrite it.
       readOnly = true;
+      return initial();
+    }
+    if (!isObject(raw.mood)) {
+      quarantine();
       return initial();
     }
     const state = sanitizeState({
