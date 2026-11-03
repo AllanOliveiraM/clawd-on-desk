@@ -1,0 +1,214 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 2.6-Second Loop — Stretch after long work: small dip, then a big
+         reach up with arms overhead and "&gt; &lt;" squeezed eyes, arcs to one
+         side with a tiny strain tremble, a one-frame "crack" jolt (eyes pop
+         open), then flops forward with relief and a slow, heavy blink. */
+      .body-anim {
+        transform-origin: 7.5px 13px;
+        animation: sb-body 2.6s infinite ease-in-out;
+      }
+      .legs-anim {
+        transform-origin: 7.5px 15px;
+        animation: sb-legs 2.6s infinite ease-in-out;
+      }
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: sb-shadow 2.6s infinite ease-in-out;
+      }
+      .arm-l {
+        transform-origin: 1px 10px;
+        animation: sb-arm-l 2.6s infinite ease-in-out;
+      }
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: sb-arm-r 2.6s infinite ease-in-out;
+      }
+      .eyes-look {
+        animation: sb-look 2.6s infinite ease-in-out;
+      }
+      .eyes-normal {
+        animation: sb-eyes-normal 2.6s infinite linear;
+      }
+      .eyes-blink {
+        transform-origin: 7.5px 10px;
+        animation: sb-blink 2.6s infinite ease-in-out;
+      }
+      .eyes-squeeze {
+        opacity: 0;
+        animation: sb-eyes-squeeze 2.6s infinite linear;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Dip, reach up tall, arc left with a strain tremble, CRACK (one-frame
+         jolt), flop forward with relief, slowly straighten. */
+      @keyframes sb-body {
+        0%, 5% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        11% { transform: translate(0, 0) rotate(0deg) scale(1.06, 0.93); }
+        19% { transform: translate(0, -0.5px) rotate(0deg) scale(0.9, 1.15); }
+        24% { transform: translate(0, -0.5px) rotate(0deg) scale(0.92, 1.12); }
+        33% { transform: translate(-0.5px, -0.5px) rotate(-7deg) scale(0.92, 1.12); }
+        35% { transform: translate(-0.5px, -0.5px) rotate(-6.4deg) scale(0.92, 1.12); }
+        37% { transform: translate(-0.5px, -0.5px) rotate(-7.3deg) scale(0.92, 1.12); }
+        39% { transform: translate(-0.5px, -0.5px) rotate(-6.6deg) scale(0.92, 1.12); }
+        41% { transform: translate(-0.5px, -0.5px) rotate(-7.4deg) scale(0.92, 1.12); }
+        42.5% { transform: translate(-0.5px, -0.5px) rotate(-7deg) scale(0.92, 1.12); }
+        43% { transform: translate(-0.5px, -0.3px) rotate(-8.5deg) scale(0.89, 1.17); }
+        44.6% { transform: translate(-0.5px, -0.3px) rotate(-8.5deg) scale(0.89, 1.17); }
+        45.2% { transform: translate(-0.5px, -0.5px) rotate(-5deg) scale(0.93, 1.1); }
+        50% { transform: translate(0, -0.5px) rotate(-1deg) scale(0.95, 1.07); }
+        57% { transform: translate(0, 0.5px) rotate(1.5deg) scale(1.08, 0.9); }
+        61% { transform: translate(0, 0) rotate(0.5deg) scale(1.04, 0.95); }
+        66% { transform: translate(0, 0.5px) rotate(1deg) scale(1.07, 0.92); }
+        78% { transform: translate(0, 0.5px) rotate(0.5deg) scale(1.06, 0.93); }
+        88% { transform: translate(0, 0) rotate(0deg) scale(0.99, 1.01); }
+        94%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      /* Legs brace a touch on the stretch and the flop */
+      @keyframes sb-legs {
+        0%, 6% { transform: scale(1, 1); }
+        11% { transform: scale(1.04, 0.94); }
+        19%, 42.5% { transform: scale(0.98, 1); }
+        43%, 44.6% { transform: scale(1.04, 0.96); }
+        50% { transform: scale(1, 1); }
+        57% { transform: scale(1.04, 0.95); }
+        66%, 78% { transform: scale(1.02, 0.97); }
+        90%, 100% { transform: scale(1, 1); }
+      }
+
+      @keyframes sb-shadow {
+        0%, 6% { transform: translate(0, 0) scaleX(1); opacity: 0.5; }
+        11% { transform: translate(0, 0) scaleX(1.06); opacity: 0.55; }
+        19%, 24% { transform: translate(0, 0) scaleX(0.94); opacity: 0.45; }
+        33%, 42.5% { transform: translate(-0.5px, 0) scaleX(0.96); opacity: 0.45; }
+        43%, 44.6% { transform: translate(-1px, 0) scaleX(0.92); opacity: 0.42; }
+        50% { transform: translate(0, 0) scaleX(0.96); opacity: 0.45; }
+        57% { transform: translate(0, 0) scaleX(1.1); opacity: 0.55; }
+        66%, 78% { transform: translate(0, 0) scaleX(1.06); opacity: 0.52; }
+        92%, 100% { transform: translate(0, 0) scaleX(1); opacity: 0.5; }
+      }
+
+      /* Arms: down on the dip, swing up overhead (stretched long), tremble,
+         jolt on the crack, then drop with gravity and dangle */
+      @keyframes sb-arm-l {
+        0%, 5% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        11% { transform: translate(0, 0.5px) rotate(-20deg) scale(1, 1); }
+        16% { transform: translate(0, -4px) rotate(40deg) scale(1, 1.2); }
+        21% { transform: translate(1px, -6px) rotate(0deg) scale(1, 1.8); }
+        25% { transform: translate(1px, -5.5px) rotate(-10deg) scale(1, 1.6); }
+        36% { transform: translate(1.5px, -5.5px) rotate(-12deg) scale(1, 1.6); }
+        42.5% { transform: translate(1.5px, -5.7px) rotate(-12deg) scale(1, 1.7); }
+        43%, 44.6% { transform: translate(1.5px, -5.8px) rotate(-20deg) scale(1, 2); }
+        46% { transform: translate(1.5px, -5.5px) rotate(-8deg) scale(1, 1.5); }
+        49% { transform: translate(1px, -5px) rotate(-5deg) scale(1, 1.3); }
+        54% { transform: translate(0, -2px) rotate(30deg) scale(1, 1.05); animation-timing-function: ease-out; }
+        58% { transform: translate(0, 1px) rotate(-15deg) scale(1, 1); }
+        63% { transform: translate(0, 0.5px) rotate(5deg) scale(1, 1); }
+        68%, 80% { transform: translate(0, 0.5px) rotate(-5deg) scale(1, 1); }
+        90%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      @keyframes sb-arm-r {
+        0%, 6% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        12% { transform: translate(0, 0.5px) rotate(20deg) scale(1, 1); }
+        17% { transform: translate(0, -4px) rotate(-40deg) scale(1, 1.2); }
+        22% { transform: translate(-1px, -6px) rotate(0deg) scale(1, 1.8); }
+        26% { transform: translate(-1px, -5.5px) rotate(10deg) scale(1, 1.6); }
+        36% { transform: translate(-1.5px, -5.5px) rotate(12deg) scale(1, 1.6); }
+        42.5% { transform: translate(-1.5px, -5.7px) rotate(12deg) scale(1, 1.7); }
+        43%, 44.6% { transform: translate(-1.5px, -5.8px) rotate(20deg) scale(1, 2); }
+        46% { transform: translate(-1.5px, -5.5px) rotate(8deg) scale(1, 1.5); }
+        50% { transform: translate(-1px, -5px) rotate(5deg) scale(1, 1.3); }
+        55% { transform: translate(0, -2px) rotate(-30deg) scale(1, 1.05); animation-timing-function: ease-out; }
+        59% { transform: translate(0, 1px) rotate(15deg) scale(1, 1); }
+        64% { transform: translate(0, 0.5px) rotate(-5deg) scale(1, 1); }
+        69%, 80% { transform: translate(0, 0.5px) rotate(5deg) scale(1, 1); }
+        90%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      /* Eyes look up into the stretch, sink a little in the relief */
+      @keyframes sb-look {
+        0%, 8% { transform: translate(0, 0); }
+        19%, 42.5% { transform: translate(0, -0.5px); }
+        43%, 44.6% { transform: translate(-0.5px, -1px); }
+        50% { transform: translate(0, -0.5px); }
+        58%, 82% { transform: translate(0, 0.5px); }
+        92%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Normal eyes off while squeezing; back (wide) exactly on the crack */
+      @keyframes sb-eyes-normal {
+        0%, 14% { opacity: 1; }
+        14.5%, 42.5% { opacity: 0; }
+        43%, 100% { opacity: 1; }
+      }
+      @keyframes sb-eyes-squeeze {
+        0%, 14% { opacity: 0; }
+        14.5%, 42.5% { opacity: 1; }
+        43%, 100% { opacity: 0; }
+      }
+
+      /* Close into the squeeze; pop wide on the crack; relieved half-lids,
+         then a slow heavy blink and open again */
+      @keyframes sb-blink {
+        0%, 9% { transform: scaleY(1); }
+        14% { transform: scaleY(0.15); }
+        42.5% { transform: scaleY(0.15); }
+        43%, 44.6% { transform: scaleY(1.4); }
+        48% { transform: scaleY(1.1); }
+        56%, 62% { transform: scaleY(0.6); }
+        70% { transform: scaleY(0.1); animation-timing-function: linear; }
+        77% { transform: scaleY(0.1); animation-timing-function: ease-out; }
+        84% { transform: scaleY(0.6); }
+        90%, 100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs -->
+  <g class="legs-anim">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+  </g>
+
+  <!-- Upper Body -->
+  <g class="body-anim">
+    <!-- Arms (drawn behind the torso so they read as reaching up behind) -->
+    <g class="arm-l">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <g class="arm-r">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <g class="eyes-look">
+      <!-- Normal eyes -->
+      <g class="eyes-normal">
+        <g class="eyes-blink" fill="#000000">
+          <rect x="4" y="8" width="1" height="2"/>
+          <rect x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+      <!-- Squeezed eyes "> <" -->
+      <g class="eyes-squeeze" fill="#000000">
+        <rect x="3" y="8" width="1" height="1"/>
+        <rect x="4" y="9" width="1" height="1"/>
+        <rect x="3" y="10" width="1" height="1"/>
+        <rect x="11" y="8" width="1" height="1"/>
+        <rect x="10" y="9" width="1" height="1"/>
+        <rect x="11" y="10" width="1" height="1"/>
+      </g>
+    </g>
+  </g>
+</svg>

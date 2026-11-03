@@ -36,7 +36,29 @@
       "clawd-alive-shy.svg",
       "clawd-alive-grumpy.svg",
       "clawd-alive-curious.svg",
-      "clawd-alive-greet.svg"
+      "clawd-alive-greet.svg",
+      "clawd-alive-catch.svg",
+      "clawd-alive-catch-miss.svg",
+      "clawd-alive-pounce-left.svg",
+      "clawd-alive-pounce-right.svg",
+      "clawd-alive-fake-nap.svg",
+      "clawd-alive-boo.svg",
+      "clawd-alive-poke-left.svg",
+      "clawd-alive-poke-right.svg",
+      "clawd-alive-reach-close.svg",
+      "clawd-alive-wall-push-left.svg",
+      "clawd-alive-wall-push-right.svg",
+      "clawd-alive-wall-peek-left.svg",
+      "clawd-alive-wall-peek-right.svg",
+      "clawd-alive-sit-edge.svg",
+      "clawd-alive-morning-stretch.svg",
+      "clawd-alive-coffee.svg",
+      "clawd-alive-night-sleepy.svg",
+      "clawd-alive-welcome.svg",
+      "clawd-alive-stretch-back.svg",
+      "clawd-alive-toy-ball.svg",
+      "clawd-alive-toy-yoyo.svg",
+      "clawd-alive-toy-plane.svg"
     ],
     "discreteSampling": {
       "clawd-working-thinking.svg": 24,
@@ -68,7 +90,29 @@
       "clawd-alive-shy.svg": 24,
       "clawd-alive-grumpy.svg": 24,
       "clawd-alive-curious.svg": 24,
-      "clawd-alive-greet.svg": 24
+      "clawd-alive-greet.svg": 24,
+      "clawd-alive-catch.svg": 24,
+      "clawd-alive-catch-miss.svg": 24,
+      "clawd-alive-pounce-left.svg": 24,
+      "clawd-alive-pounce-right.svg": 24,
+      "clawd-alive-fake-nap.svg": 24,
+      "clawd-alive-boo.svg": 24,
+      "clawd-alive-poke-left.svg": 24,
+      "clawd-alive-poke-right.svg": 24,
+      "clawd-alive-reach-close.svg": 24,
+      "clawd-alive-wall-push-left.svg": 24,
+      "clawd-alive-wall-push-right.svg": 24,
+      "clawd-alive-wall-peek-left.svg": 24,
+      "clawd-alive-wall-peek-right.svg": 24,
+      "clawd-alive-sit-edge.svg": 24,
+      "clawd-alive-morning-stretch.svg": 24,
+      "clawd-alive-coffee.svg": 24,
+      "clawd-alive-night-sleepy.svg": 24,
+      "clawd-alive-welcome.svg": 24,
+      "clawd-alive-stretch-back.svg": 24,
+      "clawd-alive-toy-ball.svg": 24,
+      "clawd-alive-toy-yoyo.svg": 24,
+      "clawd-alive-toy-plane.svg": 24
     }
   },
   "customization": {
@@ -173,6 +217,338 @@
           }
         },
         "clawd-alive-greet.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-catch.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-catch-miss.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-pounce-left.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-pounce-right.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            },
+            "normalizeReflection": "x"
+          }
+        },
+        "clawd-alive-fake-nap.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-boo.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-poke-left.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-poke-right.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            },
+            "normalizeReflection": "x"
+          }
+        },
+        "clawd-alive-reach-close.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-wall-push-left.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-wall-push-right.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-wall-peek-left.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-wall-peek-right.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-sit-edge.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 8.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 8.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-morning-stretch.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-coffee.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-night-sleepy.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-welcome.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-stretch-back.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-toy-ball.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-toy-yoyo.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-toy-plane.svg": {
           "staticFrame": {
             "cx": 7.5,
             "baseY": 6.5,
@@ -918,6 +1294,338 @@
             }
           }
         },
+        "clawd-alive-catch.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-catch-miss.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-pounce-left.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-pounce-right.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 1,
+              "baseY": 13,
+              "width": 5
+            },
+            "normalizeReflection": "x"
+          }
+        },
+        "clawd-alive-fake-nap.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-boo.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-poke-left.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-poke-right.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 1,
+              "baseY": 13,
+              "width": 5
+            },
+            "normalizeReflection": "x"
+          }
+        },
+        "clawd-alive-reach-close.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-wall-push-left.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-wall-push-right.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-wall-peek-left.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-wall-peek-right.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-sit-edge.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 15,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 15,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-morning-stretch.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-coffee.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-night-sleepy.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-welcome.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-stretch-back.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-toy-ball.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-toy-yoyo.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-toy-plane.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
         "clawd-idle-follow.svg": {
           "staticFrame": {
             "cx": 14,
@@ -1610,6 +2318,94 @@
     "greet": {
       "file": "clawd-alive-greet.svg",
       "duration": 2500
+    },
+    "catch": {
+      "file": "clawd-alive-catch.svg",
+      "duration": 1600
+    },
+    "catchMiss": {
+      "file": "clawd-alive-catch-miss.svg",
+      "duration": 2200
+    },
+    "pounceLeft": {
+      "file": "clawd-alive-pounce-left.svg",
+      "duration": 2400
+    },
+    "pounceRight": {
+      "file": "clawd-alive-pounce-right.svg",
+      "duration": 2400
+    },
+    "fakeNap": {
+      "file": "clawd-alive-fake-nap.svg",
+      "duration": 3000
+    },
+    "boo": {
+      "file": "clawd-alive-boo.svg",
+      "duration": 1400
+    },
+    "pokeLeft": {
+      "file": "clawd-alive-poke-left.svg",
+      "duration": 2000
+    },
+    "pokeRight": {
+      "file": "clawd-alive-poke-right.svg",
+      "duration": 2000
+    },
+    "reachClose": {
+      "file": "clawd-alive-reach-close.svg",
+      "duration": 3000
+    },
+    "wallPushLeft": {
+      "file": "clawd-alive-wall-push-left.svg",
+      "duration": 2500
+    },
+    "wallPushRight": {
+      "file": "clawd-alive-wall-push-right.svg",
+      "duration": 2500
+    },
+    "wallPeekLeft": {
+      "file": "clawd-alive-wall-peek-left.svg",
+      "duration": 2500
+    },
+    "wallPeekRight": {
+      "file": "clawd-alive-wall-peek-right.svg",
+      "duration": 2500
+    },
+    "sitEdge": {
+      "file": "clawd-alive-sit-edge.svg",
+      "duration": 2000
+    },
+    "morningStretch": {
+      "file": "clawd-alive-morning-stretch.svg",
+      "duration": 2800
+    },
+    "coffee": {
+      "file": "clawd-alive-coffee.svg",
+      "duration": 3000
+    },
+    "nightSleepy": {
+      "file": "clawd-alive-night-sleepy.svg",
+      "duration": 3000
+    },
+    "welcome": {
+      "file": "clawd-alive-welcome.svg",
+      "duration": 2000
+    },
+    "stretchBack": {
+      "file": "clawd-alive-stretch-back.svg",
+      "duration": 2600
+    },
+    "toyBall": {
+      "file": "clawd-alive-toy-ball.svg",
+      "duration": 3000
+    },
+    "toyYoyo": {
+      "file": "clawd-alive-toy-yoyo.svg",
+      "duration": 3000
+    },
+    "toyPlane": {
+      "file": "clawd-alive-toy-plane.svg",
+      "duration": 3000
     }
   },
   "reactions": {

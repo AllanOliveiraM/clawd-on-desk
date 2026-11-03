@@ -31,6 +31,28 @@ const VISIBLE_MOUTH_FILES = Object.freeze([
   "clawd-alive-grumpy.svg",
   "clawd-alive-curious.svg",
   "clawd-alive-greet.svg",
+  "clawd-alive-catch.svg",
+  "clawd-alive-catch-miss.svg",
+  "clawd-alive-pounce-left.svg",
+  "clawd-alive-pounce-right.svg",
+  "clawd-alive-fake-nap.svg",
+  "clawd-alive-boo.svg",
+  "clawd-alive-poke-left.svg",
+  "clawd-alive-poke-right.svg",
+  "clawd-alive-reach-close.svg",
+  "clawd-alive-wall-push-left.svg",
+  "clawd-alive-wall-push-right.svg",
+  "clawd-alive-wall-peek-left.svg",
+  "clawd-alive-wall-peek-right.svg",
+  "clawd-alive-sit-edge.svg",
+  "clawd-alive-morning-stretch.svg",
+  "clawd-alive-coffee.svg",
+  "clawd-alive-night-sleepy.svg",
+  "clawd-alive-welcome.svg",
+  "clawd-alive-stretch-back.svg",
+  "clawd-alive-toy-ball.svg",
+  "clawd-alive-toy-yoyo.svg",
+  "clawd-alive-toy-plane.svg",
   "clawd-idle-reading.svg",
   "clawd-react-left.svg",
   "clawd-react-right.svg",
@@ -76,7 +98,7 @@ const OPTIONAL_LIBRARY_FILES = Object.freeze([
   "clawd-working-wizard.svg",
 ]);
 
-test("mouth policy covers the approved 45 stock sprites exactly", () => {
+test("mouth policy covers the approved 67 stock sprites exactly", () => {
   const theme = themeLoader.loadTheme("clawd", { strict: true });
   const files = theme.customization.mouthAccessories.files;
   const stockFiles = Object.fromEntries(
@@ -90,7 +112,7 @@ test("mouth policy covers the approved 45 stock sprites exactly", () => {
     new Set(Object.keys(stockFiles)),
     new Set([...VISIBLE_MOUTH_FILES, ...HIDDEN_MOUTH_FILES])
   );
-  assert.strictEqual(Object.keys(stockFiles).length, 45);
+  assert.strictEqual(Object.keys(stockFiles).length, 67);
   assert.deepStrictEqual(files["clawd-outlaw-bender.svg"], { visibility: "hidden" });
   assert.deepStrictEqual(
     files["clawd-working-typing-boss.svg"],
@@ -310,6 +332,28 @@ test("Clawd lists its long-lived animations as object-channel SVGs", () => {
     "clawd-alive-grumpy.svg",
     "clawd-alive-curious.svg",
     "clawd-alive-greet.svg",
+    "clawd-alive-catch.svg",
+    "clawd-alive-catch-miss.svg",
+    "clawd-alive-pounce-left.svg",
+    "clawd-alive-pounce-right.svg",
+    "clawd-alive-fake-nap.svg",
+    "clawd-alive-boo.svg",
+    "clawd-alive-poke-left.svg",
+    "clawd-alive-poke-right.svg",
+    "clawd-alive-reach-close.svg",
+    "clawd-alive-wall-push-left.svg",
+    "clawd-alive-wall-push-right.svg",
+    "clawd-alive-wall-peek-left.svg",
+    "clawd-alive-wall-peek-right.svg",
+    "clawd-alive-sit-edge.svg",
+    "clawd-alive-morning-stretch.svg",
+    "clawd-alive-coffee.svg",
+    "clawd-alive-night-sleepy.svg",
+    "clawd-alive-welcome.svg",
+    "clawd-alive-stretch-back.svg",
+    "clawd-alive-toy-ball.svg",
+    "clawd-alive-toy-yoyo.svg",
+    "clawd-alive-toy-plane.svg",
   ]);
 });
 
@@ -346,6 +390,28 @@ test("Clawd caps its long-lived object-channel animations to 24 discrete steps p
     "clawd-alive-grumpy.svg": 24,
     "clawd-alive-curious.svg": 24,
     "clawd-alive-greet.svg": 24,
+    "clawd-alive-catch.svg": 24,
+    "clawd-alive-catch-miss.svg": 24,
+    "clawd-alive-pounce-left.svg": 24,
+    "clawd-alive-pounce-right.svg": 24,
+    "clawd-alive-fake-nap.svg": 24,
+    "clawd-alive-boo.svg": 24,
+    "clawd-alive-poke-left.svg": 24,
+    "clawd-alive-poke-right.svg": 24,
+    "clawd-alive-reach-close.svg": 24,
+    "clawd-alive-wall-push-left.svg": 24,
+    "clawd-alive-wall-push-right.svg": 24,
+    "clawd-alive-wall-peek-left.svg": 24,
+    "clawd-alive-wall-peek-right.svg": 24,
+    "clawd-alive-sit-edge.svg": 24,
+    "clawd-alive-morning-stretch.svg": 24,
+    "clawd-alive-coffee.svg": 24,
+    "clawd-alive-night-sleepy.svg": 24,
+    "clawd-alive-welcome.svg": 24,
+    "clawd-alive-stretch-back.svg": 24,
+    "clawd-alive-toy-ball.svg": 24,
+    "clawd-alive-toy-yoyo.svg": 24,
+    "clawd-alive-toy-plane.svg": 24,
   });
 });
 

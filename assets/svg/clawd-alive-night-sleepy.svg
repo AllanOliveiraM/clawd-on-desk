@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 3-Second Loop — Night Sleepy: late-night drowsiness while standing.
+         Heavy half-closed eyes; the body slowly nods down (eyes sink, lids
+         close, arms droop, a little drift to the side), then he catches
+         himself with a quick jolt back up (eyes pop wide, arms flick), shakes
+         it off with a double blink, and the lids start getting heavy again.
+         Stays standing, eyes never stay shut, no "z": not the sleep sequence. */
+      .action-body {
+        transform-origin: 7.5px 13px;
+        animation: sleepy-body 3s infinite ease-in-out;
+      }
+
+      .legs-anim {
+        transform-origin: 7.5px 15px;
+        animation: sleepy-legs 3s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: sleepy-shadow 3s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 10px;
+        animation: sleepy-arm-l 3s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: sleepy-arm-r 3s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: sleepy-look 3s infinite ease-in-out;
+      }
+
+      .eyes-lid {
+        transform-origin: 7.5px 10px;
+        animation: sleepy-lid 3s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Slow nod down (sinks, squashes, drifts), quick jolt up (stretch),
+         wobble back, slump again little by little */
+      @keyframes sleepy-body {
+        0%, 4% { transform: translate(0, 0.2px) rotate(0deg) scale(1.02, 0.97); }
+        16% { transform: translate(0, 0.4px) rotate(0.5deg) scale(1.03, 0.95); }
+        30% { transform: translate(0.2px, 0.7px) rotate(1.5deg) scale(1.05, 0.91); }
+        38% { transform: translate(0.3px, 0.9px) rotate(2deg) scale(1.06, 0.89); }
+        40% { transform: translate(0.3px, 0.95px) rotate(2deg) scale(1.06, 0.885); }
+        43% { transform: translate(0, -0.6px) rotate(-0.5deg) scale(0.94, 1.1); }
+        47% { transform: translate(0, 0.2px) rotate(0deg) scale(1.03, 0.97); }
+        51% { transform: translate(0, -0.1px) rotate(0deg) scale(0.99, 1.02); }
+        55% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        70% { transform: translate(0, 0.1px) rotate(0deg) scale(1.01, 0.98); }
+        84% { transform: translate(-0.1px, 0.4px) rotate(-0.8deg) scale(1.03, 0.95); }
+        92% { transform: translate(0, 0.3px) rotate(-0.3deg) scale(1.025, 0.96); }
+        100% { transform: translate(0, 0.2px) rotate(0deg) scale(1.02, 0.97); }
+      }
+
+      @keyframes sleepy-legs {
+        0%, 41%, 47%, 100% { transform: scaleY(1); }
+        43% { transform: scaleY(1.06); }
+      }
+
+      @keyframes sleepy-shadow {
+        0%, 4%, 92%, 100% { transform: scaleX(1.02) translate(0, 0); opacity: 0.5; }
+        38%, 40% { transform: scaleX(1.06) translate(0.3px, 0); opacity: 0.55; }
+        43% { transform: scaleX(0.95) translate(0, 0); opacity: 0.45; }
+        55%, 70% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+        84% { transform: scaleX(1.03) translate(-0.1px, 0); opacity: 0.5; }
+      }
+
+      /* Arms hang heavier as he nods, flick out on the jolt */
+      @keyframes sleepy-arm-l {
+        0%, 4%, 100% { transform: translate(0.2px, 0.5px) rotate(-4deg); }
+        38%, 40% { transform: translate(0.6px, 1.6px) rotate(-12deg); }
+        43% { transform: translate(-0.6px, -1px) rotate(10deg); }
+        48% { transform: translate(0, 0.2px) rotate(-2deg); }
+        55%, 70% { transform: translate(0, 0) rotate(0deg); }
+        84% { transform: translate(0.3px, 0.8px) rotate(-6deg); }
+      }
+
+      @keyframes sleepy-arm-r {
+        0%, 4%, 100% { transform: translate(-0.2px, 0.5px) rotate(4deg); }
+        38%, 40% { transform: translate(-0.6px, 1.6px) rotate(12deg); }
+        43% { transform: translate(0.6px, -1px) rotate(-10deg); }
+        48% { transform: translate(0, 0.2px) rotate(2deg); }
+        55%, 70% { transform: translate(0, 0) rotate(0deg); }
+        84% { transform: translate(-0.3px, 0.8px) rotate(6deg); }
+      }
+
+      /* Gaze sinks with the nod; after the jolt a quick little head shake */
+      @keyframes sleepy-look {
+        0%, 4%, 100% { transform: translate(0, 0.3px); }
+        38%, 40% { transform: translate(0, 1px); }
+        43% { transform: translate(0, -0.3px); }
+        48% { transform: translate(-0.5px, 0); }
+        51% { transform: translate(0.5px, 0); }
+        54% { transform: translate(0, 0); }
+        70% { transform: translate(0, 0.1px); }
+        84% { transform: translate(0, 0.5px); }
+      }
+
+      /* Heavy lids: half-closed, slowly sliding shut during the nod, pop
+         wide on the jolt, double blink, then heavy again */
+      @keyframes sleepy-lid {
+        0%, 4%, 100% { transform: scaleY(0.5); }
+        20% { transform: scaleY(0.4); }
+        32% { transform: scaleY(0.2); }
+        38%, 40.5% { transform: scaleY(0.1); }
+        43%, 46% { transform: scaleY(1.25); }
+        49% { transform: scaleY(1); }
+        51% { transform: scaleY(0.1); }
+        53% { transform: scaleY(1); }
+        55% { transform: scaleY(0.1); }
+        57% { transform: scaleY(1); }
+        66% { transform: scaleY(0.8); }
+        76% { transform: scaleY(0.55); }
+        86% { transform: scaleY(0.3); }
+        93% { transform: scaleY(0.5); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs -->
+  <g class="legs-anim">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="action-body">
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <!-- Left Arm -->
+    <g class="arm-l">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Right Arm -->
+    <g class="arm-r">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Eyes (lids close from the top) -->
+    <g class="eyes-look">
+      <g class="eyes-lid" fill="#000000">
+        <rect x="4" y="8" width="1" height="2"/>
+        <rect x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>

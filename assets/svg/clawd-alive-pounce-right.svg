@@ -1,0 +1,265 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* Exact mirror of the -left file (whole art flipped around x = 7.5).
+         2.4-Second Loop — Pounce (right): eyes lock on something to the right,
+         he lowers himself, wiggles his rear like a cat (back feet kneading,
+         faster and faster), freezes, pulls back a hair, then lunges RIGHT
+         with the front arm reaching out, overshoots, settles, pats the spot,
+         and scuttles sideways back home (crab walk). */
+      .travel {
+        animation: pounce-travel 2.4s infinite ease-in-out;
+      }
+
+      .hop {
+        animation: pounce-hop 2.4s infinite ease-in-out;
+      }
+
+      .body-lean {
+        transform-origin: 7.5px 15px;
+        animation: pounce-lean 2.4s infinite ease-in-out;
+      }
+
+      .body-squash {
+        transform-origin: 7.5px 13px;
+        animation: pounce-squash 2.4s infinite ease-in-out;
+      }
+
+      .legs-squash {
+        transform-origin: 7.5px 15px;
+        animation: pounce-legs 2.4s infinite ease-in-out;
+      }
+
+      .leg-1 { animation: pounce-leg-1 2.4s infinite ease-in-out; }
+      .leg-2 { animation: pounce-leg-2 2.4s infinite ease-in-out; }
+      .leg-3 { animation: pounce-leg-3 2.4s infinite ease-in-out; }
+      .leg-4 { animation: pounce-leg-4 2.4s infinite ease-in-out; }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: pounce-shadow 2.4s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 2px 10px;
+        animation: pounce-arm-l 2.4s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 13px 10px;
+        animation: pounce-arm-r 2.4s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: pounce-look 2.4s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9.5px;
+        animation: pounce-blink 2.4s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Horizontal travel of the whole crab: tiny pull-back, lunge with an
+         overshoot, then a sideways scuttle back to the start */
+      @keyframes pounce-travel {
+        0%, 50% { transform: translate(0, 0); }
+        55% { transform: translate(0.8px, 0); }
+        58% { transform: translate(-3px, 0); }
+        62% { transform: translate(-5.6px, 0); }
+        66% { transform: translate(-4.6px, 0); }
+        70%, 77% { transform: translate(-5px, 0); }
+        81% { transform: translate(-3.8px, 0); }
+        85% { transform: translate(-2.5px, 0); }
+        89% { transform: translate(-1.2px, 0); }
+        93%, 100% { transform: translate(0, 0); }
+      }
+
+      /* The lunge is a low, quick hop; little bobs while scuttling back */
+      @keyframes pounce-hop {
+        0%, 55% { transform: translate(0, 0); }
+        58% { transform: translate(0, -2.2px); }
+        62%, 77% { transform: translate(0, 0); }
+        79% { transform: translate(0, -0.5px); }
+        81% { transform: translate(0, 0); }
+        83% { transform: translate(0, -0.5px); }
+        85% { transform: translate(0, 0); }
+        87% { transform: translate(0, -0.5px); }
+        89% { transform: translate(0, 0); }
+        91% { transform: translate(0, -0.5px); }
+        93%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Lower and lean towards the target; the rear sways side to side,
+         faster each time; freeze; dive forward; recoil; straighten */
+      @keyframes pounce-lean {
+        0%, 4% { transform: translate(0, 0) rotate(0deg); }
+        14% { transform: translate(-0.5px, 1.5px) rotate(-4deg); }
+        18% { transform: translate(-0.2px, 1.5px) rotate(-2deg); }
+        22% { transform: translate(-0.8px, 1.5px) rotate(-7deg); }
+        26% { transform: translate(-0.2px, 1.5px) rotate(-2deg); }
+        30% { transform: translate(-0.8px, 1.5px) rotate(-7deg); }
+        33% { transform: translate(-0.2px, 1.5px) rotate(-2deg); }
+        36% { transform: translate(-0.8px, 1.5px) rotate(-7deg); }
+        39% { transform: translate(-0.2px, 1.5px) rotate(-2deg); }
+        42% { transform: translate(-0.8px, 1.5px) rotate(-7deg); }
+        44.5% { transform: translate(-0.2px, 1.5px) rotate(-2deg); }
+        47% { transform: translate(-0.8px, 1.5px) rotate(-7deg); }
+        50% { transform: translate(-0.5px, 1.7px) rotate(-4deg); }
+        55% { transform: translate(0, 1.9px) rotate(-3deg); }
+        58% { transform: translate(-0.5px, 0) rotate(-9deg); }
+        62% { transform: translate(-0.5px, 0.8px) rotate(-3deg); }
+        66% { transform: translate(0, 0.3px) rotate(2deg); }
+        70% { transform: translate(0, 0.5px) rotate(-1deg); }
+        77% { transform: translate(0, 0) rotate(0deg); }
+        100% { transform: translate(0, 0) rotate(0deg); }
+      }
+
+      @keyframes pounce-squash {
+        0%, 4% { transform: scale(1, 1); }
+        14%, 47% { transform: scale(1.1, 0.86); }
+        50% { transform: scale(1.12, 0.84); }
+        55% { transform: scale(1.15, 0.8); }
+        58% { transform: scale(1.2, 0.9); }
+        62% { transform: scale(1.16, 0.82); }
+        66% { transform: scale(0.95, 1.06); }
+        70% { transform: scale(1.03, 0.97); }
+        77%, 100% { transform: scale(1, 1); }
+      }
+
+      @keyframes pounce-legs {
+        0%, 4% { transform: scale(1, 1); }
+        14%, 55% { transform: scale(1, 0.67); }
+        58% { transform: scale(1, 1.05); }
+        62% { transform: scale(1, 0.75); }
+        66% { transform: scale(1, 1.05); }
+        72%, 100% { transform: scale(1, 1); }
+      }
+
+      /* Back feet knead during the wiggle; legs alternate in the scuttle */
+      @keyframes pounce-leg-1 {
+        0%, 77%, 81%, 85%, 89%, 100% { transform: translate(0, 0); }
+        79%, 87% { transform: translate(0, -1px); }
+      }
+
+      @keyframes pounce-leg-2 {
+        0%, 81%, 85%, 89%, 93%, 100% { transform: translate(0, 0); }
+        83%, 91% { transform: translate(0, -1px); }
+      }
+
+      @keyframes pounce-leg-3 {
+        0%, 18%, 22%, 26%, 30%, 33%, 36%, 39%, 42%, 44.5%, 47%, 77%, 81%, 85%, 89%, 100% { transform: translate(0, 0); }
+        20%, 28%, 34.5%, 40.5%, 45.7%, 79%, 87% { transform: translate(0, -1px); }
+      }
+
+      @keyframes pounce-leg-4 {
+        0%, 20%, 26%, 28%, 33%, 34.5%, 39%, 40.5%, 44.5%, 45.7%, 50%, 81%, 85%, 89%, 93%, 100% { transform: translate(0, 0); }
+        23%, 31.5%, 37.5%, 43%, 48.2%, 83%, 91% { transform: translate(0, -1px); }
+      }
+
+      @keyframes pounce-shadow {
+        0%, 4%, 100% { transform: scaleX(1); opacity: 0.5; }
+        14%, 55% { transform: scaleX(1.12); opacity: 0.55; }
+        58% { transform: scaleX(0.75); opacity: 0.32; }
+        62% { transform: scaleX(1.22); opacity: 0.58; }
+        66% { transform: scaleX(1); opacity: 0.5; }
+      }
+
+      /* Front arm: ready low, swings back on the pull-back, shoots out
+         forward on the lunge, then pins the spot and pats it once */
+      @keyframes pounce-arm-l {
+        0%, 4% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        14%, 50% { transform: translate(0, 0.5px) rotate(-15deg) scale(1.2, 1); }
+        55% { transform: translate(0.5px, 0.5px) rotate(-30deg) scale(1, 1); }
+        58% { transform: translate(0, -0.5px) rotate(14deg) scale(2.3, 1); }
+        62% { transform: translate(0, 0.5px) rotate(-12deg) scale(2, 1); }
+        66% { transform: translate(0, 0.5px) rotate(-20deg) scale(1.6, 1); }
+        69% { transform: translate(0, -0.5px) rotate(10deg) scale(1.6, 1); }
+        72% { transform: translate(0, 0.5px) rotate(-20deg) scale(1.6, 1); }
+        77% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      /* Back arm follows through up and over */
+      @keyframes pounce-arm-r {
+        0%, 4% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        14%, 50% { transform: translate(0, 0.5px) rotate(10deg) scale(1, 1); }
+        55% { transform: translate(0, 0.5px) rotate(20deg) scale(1, 1); }
+        58% { transform: translate(-0.5px, -1px) rotate(-55deg) scale(1.6, 1); }
+        62% { transform: translate(0, -0.5px) rotate(-30deg) scale(1.3, 1); }
+        68% { transform: translate(0, 0) rotate(8deg) scale(1, 1); }
+        77%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      /* Eyes lock on the target and stay locked through the wiggle; look at
+         the pinned spot, then back home */
+      @keyframes pounce-look {
+        0% { transform: translate(0, 0); }
+        5%, 50% { transform: translate(-1.5px, 0.5px); }
+        55% { transform: translate(-1.8px, 0.5px); }
+        58%, 62% { transform: translate(-1.8px, 0); }
+        66%, 76% { transform: translate(-1.5px, 1px); }
+        81%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Focused low lids, narrow at the freeze, wide on the lunge, double
+         blink on the way home */
+      @keyframes pounce-blink {
+        0%, 4% { transform: scaleY(1); }
+        12%, 47% { transform: scaleY(0.7); }
+        52%, 55% { transform: scaleY(0.5); }
+        58%, 62% { transform: scaleY(1.2); }
+        66%, 82% { transform: scaleY(1); }
+        84% { transform: scaleY(0.1); }
+        86% { transform: scaleY(1); }
+        88% { transform: scaleY(0.1); }
+        90%, 100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Mirrored: everything below is the -left art flipped horizontally -->
+  <g transform="translate(15 0) scale(-1 1)">
+
+    <g class="travel">
+      <!-- Ground Shadow -->
+      <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+      <g class="hop">
+        <!-- Legs -->
+        <g class="legs-squash">
+          <g id="legs" fill="#DE886D">
+            <g class="leg-1"><rect x="3" y="12" width="1" height="3"/></g>
+            <g class="leg-2"><rect x="5" y="12" width="1" height="3"/></g>
+            <g class="leg-3"><rect x="9" y="12" width="1" height="3"/></g>
+            <g class="leg-4"><rect x="11" y="12" width="1" height="3"/></g>
+          </g>
+        </g>
+
+        <!-- Animated Upper Body -->
+        <g class="body-lean">
+          <g class="body-squash">
+            <!-- Torso -->
+            <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+            <!-- Left Arm (front, reaches out) -->
+            <g class="arm-l">
+              <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+            </g>
+            <!-- Right Arm -->
+            <g class="arm-r">
+              <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+            </g>
+            <!-- Eyes -->
+            <g class="eyes-look">
+              <g class="eyes-blink" fill="#000000">
+                <rect x="4" y="8" width="1" height="2"/>
+                <rect x="10" y="8" width="1" height="2"/>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

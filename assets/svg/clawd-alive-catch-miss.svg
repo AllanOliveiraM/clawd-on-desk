@@ -1,0 +1,242 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 2.2-Second Loop — Catch (miss): spots something above, crouches,
+         leaps and clasps... nothing (eyes dart after it), flails down, lands
+         sitting with a bounce, shakes his head (eye wobble), then an
+         embarrassed little settle: looks away, double blink, scratches his
+         head and stands back up. */
+      .body-jump {
+        animation: miss-jump 2.2s infinite ease-in-out;
+      }
+
+      .body-tilt {
+        transform-origin: 7.5px 15px;
+        animation: miss-tilt 2.2s infinite ease-in-out;
+      }
+
+      .body-squash {
+        transform-origin: 7.5px 13px;
+        animation: miss-squash 2.2s infinite ease-in-out;
+      }
+
+      .legs-jump {
+        transform-origin: 7.5px 15px;
+        animation: miss-legs 2.2s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: miss-shadow 2.2s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 11px;
+        animation: miss-arm-l 2.2s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 11px;
+        animation: miss-arm-r 2.2s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: miss-look 2.2s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: miss-blink 2.2s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Dip, leap, hang, drop onto his bottom, bounce, sit, stand back up */
+      @keyframes miss-jump {
+        0%, 5% { transform: translate(0, 0); }
+        13%, 17% { transform: translate(0, 1.5px); }
+        23% { transform: translate(0, -3px); }
+        31% { transform: translate(0, -6.4px); }
+        35% { transform: translate(0, -6.8px); }
+        40% { transform: translate(0, -5.6px); }
+        47% { transform: translate(0, 0); }
+        49% { transform: translate(0, 2.4px); }
+        55% { transform: translate(0, -1.2px); }
+        61% { transform: translate(0, 2.2px); }
+        64%, 88% { transform: translate(0, 2px); }
+        94% { transform: translate(0, -0.5px); }
+        100% { transform: translate(0, 0); }
+      }
+
+      /* Head shake after the landing, then lean away (embarrassed) */
+      @keyframes miss-tilt {
+        0%, 62% { transform: rotate(0deg); }
+        64.5% { transform: rotate(4deg); }
+        67.5% { transform: rotate(-4deg); }
+        70.5% { transform: rotate(3.5deg); }
+        73.5% { transform: rotate(-3deg); }
+        76.5% { transform: rotate(1.5deg); }
+        79% { transform: rotate(0deg); }
+        83%, 89% { transform: rotate(-2.5deg); }
+        95%, 100% { transform: rotate(0deg); }
+      }
+
+      @keyframes miss-squash {
+        0%, 5% { transform: scale(1, 1); }
+        13% { transform: scale(1.12, 0.84); }
+        17% { transform: scale(1.14, 0.82); }
+        23% { transform: scale(0.86, 1.18); }
+        31% { transform: scale(0.94, 1.08); }
+        35% { transform: scale(1.03, 0.97); }
+        40% { transform: scale(1, 1); }
+        46% { transform: scale(0.9, 1.12); }
+        49% { transform: scale(1.2, 0.78); }
+        55% { transform: scale(0.95, 1.06); }
+        61% { transform: scale(1.12, 0.85); }
+        65% { transform: scale(1.04, 0.96); }
+        83%, 88% { transform: scale(1.02, 0.95); }
+        94% { transform: scale(0.96, 1.05); }
+        100% { transform: scale(1, 1); }
+      }
+
+      /* Legs fold under him when he sits, dangle during the bounce */
+      @keyframes miss-legs {
+        0%, 5% { transform: translate(0, 0) scale(1, 1); }
+        13%, 17% { transform: translate(0, 0) scale(1, 0.67); }
+        23% { transform: translate(0, -1.8px) scale(1, 1.15); }
+        31% { transform: translate(0, -5.4px) scale(1, 1); }
+        35% { transform: translate(0, -5.8px) scale(1, 1); }
+        40% { transform: translate(0, -4.8px) scale(1, 1); }
+        47% { transform: translate(0, -0.4px) scale(1, 1.05); }
+        49% { transform: translate(0, 0) scale(1, 0.34); }
+        55% { transform: translate(0, -1.2px) scale(1, 0.9); }
+        61%, 88% { transform: translate(0, 0) scale(1, 0.34); }
+        94% { transform: translate(0, 0) scale(1, 1.08); }
+        100% { transform: translate(0, 0) scale(1, 1); }
+      }
+
+      @keyframes miss-shadow {
+        0%, 5%, 100% { transform: scaleX(1); opacity: 0.5; }
+        13%, 17% { transform: scaleX(1.12); opacity: 0.55; }
+        31%, 35% { transform: scaleX(0.58); opacity: 0.22; }
+        40% { transform: scaleX(0.64); opacity: 0.26; }
+        49% { transform: scaleX(1.24); opacity: 0.6; }
+        55% { transform: scaleX(0.9); opacity: 0.45; }
+        61% { transform: scaleX(1.18); opacity: 0.58; }
+        65%, 88% { transform: scaleX(1.1); opacity: 0.55; }
+        94% { transform: scaleX(0.97); opacity: 0.5; }
+      }
+
+      /* Reach up, clasp too late, open empty, flail on the way down, flop */
+      @keyframes miss-arm-l {
+        0%, 5% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        13%, 17% { transform: translate(0, 0.5px) rotate(-30deg) scale(1, 1); }
+        23% { transform: translate(0, -3px) rotate(-12deg) scale(1, 2); }
+        31% { transform: translate(-0.5px, -4.5px) rotate(-18deg) scale(1, 2.3); }
+        34% { transform: translate(0.5px, -4.3px) rotate(16deg) scale(1, 2.2); }
+        38% { transform: translate(-0.5px, -4px) rotate(-24deg) scale(1, 2); }
+        44% { transform: translate(-0.5px, -3.5px) rotate(-34deg) scale(1, 1.8); }
+        49% { transform: translate(-0.5px, 0) rotate(-40deg) scale(1, 1); }
+        55% { transform: translate(0, -1.5px) rotate(-20deg) scale(1, 1.4); }
+        61% { transform: translate(0, 0.5px) rotate(-10deg) scale(1, 1); }
+        65%, 90% { transform: translate(0, 0.5px) rotate(0deg) scale(1, 1); }
+        96%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      /* Same, then goes up to scratch the side of his head */
+      @keyframes miss-arm-r {
+        0%, 5% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        13%, 17% { transform: translate(0, 0.5px) rotate(30deg) scale(1, 1); }
+        23% { transform: translate(0, -3px) rotate(12deg) scale(1, 2); }
+        31% { transform: translate(0.5px, -4.5px) rotate(18deg) scale(1, 2.3); }
+        34% { transform: translate(-0.5px, -4.3px) rotate(-16deg) scale(1, 2.2); }
+        38% { transform: translate(0.5px, -4px) rotate(24deg) scale(1, 2); }
+        44% { transform: translate(0.5px, -3.5px) rotate(34deg) scale(1, 1.8); }
+        49% { transform: translate(0.5px, 0) rotate(40deg) scale(1, 1); }
+        55% { transform: translate(0, -1.5px) rotate(20deg) scale(1, 1.4); }
+        61% { transform: translate(0, 0.5px) rotate(10deg) scale(1, 1); }
+        66%, 78% { transform: translate(0, 0.5px) rotate(0deg) scale(1, 1); }
+        81% { transform: translate(-0.5px, -3px) rotate(-12deg) scale(1, 1.8); }
+        83% { transform: translate(-0.5px, -3.3px) rotate(4deg) scale(1, 1.8); }
+        85% { transform: translate(-0.5px, -3px) rotate(-12deg) scale(1, 1.8); }
+        87% { transform: translate(-0.5px, -3.3px) rotate(4deg) scale(1, 1.8); }
+        89% { transform: translate(-0.5px, -3px) rotate(-8deg) scale(1, 1.8); }
+        94% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      /* Track it up, dart after it as it gets away, wobble, look away */
+      @keyframes miss-look {
+        0% { transform: translate(0, 0); }
+        4%, 17% { transform: translate(0, -1px); }
+        23%, 33% { transform: translate(0, -1.5px); }
+        36% { transform: translate(1.5px, -1.5px); }
+        41% { transform: translate(2px, -1px); }
+        48%, 62% { transform: translate(0, 0); }
+        64.5% { transform: translate(1px, 0); }
+        67.5% { transform: translate(-1px, 0); }
+        70.5% { transform: translate(1px, 0); }
+        73.5% { transform: translate(-1px, 0); }
+        76.5% { transform: translate(0.5px, 0); }
+        79% { transform: translate(0, 0); }
+        82%, 90% { transform: translate(-1.5px, 0.5px); }
+        96%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Wide in the air, squeeze on the bump, double blink when embarrassed */
+      @keyframes miss-blink {
+        0%, 4% { transform: scaleY(1); }
+        13%, 17% { transform: scaleY(0.7); }
+        23%, 34% { transform: scaleY(1.15); }
+        38%, 44% { transform: scaleY(1.25); }
+        48% { transform: scaleY(1); }
+        50% { transform: scaleY(0.1); }
+        55% { transform: scaleY(1); }
+        62%, 78% { transform: scaleY(0.75); }
+        81% { transform: scaleY(1); }
+        84% { transform: scaleY(0.1); }
+        86% { transform: scaleY(1); }
+        88% { transform: scaleY(0.1); }
+        90%, 100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (jump a little less than the body, fold when sitting) -->
+  <g class="legs-jump">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="body-jump">
+    <g class="body-tilt">
+      <g class="body-squash">
+        <!-- Torso -->
+        <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+        <!-- Left Arm -->
+        <g class="arm-l">
+          <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+        </g>
+        <!-- Right Arm -->
+        <g class="arm-r">
+          <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+        </g>
+        <!-- Eyes -->
+        <g class="eyes-look">
+          <g class="eyes-blink" fill="#000000">
+            <rect x="4" y="8" width="1" height="2"/>
+            <rect x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,227 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 1.6-Second Loop — Catch: eyes lock on something above, crouches
+         (anticipation squash), leaps with both little arms stretched up,
+         clasps it at the apex, lands with a squash and a satisfied "^^"
+         squish. Legs lag the body a touch; shadow shrinks with height. */
+      .body-jump {
+        animation: catch-jump 1.6s infinite ease-in-out;
+      }
+
+      .body-squash {
+        transform-origin: 7.5px 13px;
+        animation: catch-squash 1.6s infinite ease-in-out;
+      }
+
+      .legs-jump {
+        transform-origin: 7.5px 15px;
+        animation: catch-legs 1.6s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: catch-shadow 1.6s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 11px;
+        animation: catch-arm-l 1.6s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 11px;
+        animation: catch-arm-r 1.6s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: catch-look 1.6s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: catch-blink 1.6s infinite ease-in-out;
+      }
+
+      .eyes-open {
+        animation: catch-eyes-open 1.6s infinite step-end;
+      }
+
+      .eyes-happy {
+        opacity: 0;
+        animation: catch-eyes-happy 1.6s infinite step-end;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Whole upper body: dip, launch, hang at the apex, drop, tiny rebound */
+      @keyframes catch-jump {
+        0%, 6% { transform: translate(0, 0); }
+        16%, 22% { transform: translate(0, 1.5px); }
+        29% { transform: translate(0, -3px); }
+        38% { transform: translate(0, -6.2px); }
+        46% { transform: translate(0, -6.8px); }
+        52% { transform: translate(0, -6px); }
+        61% { transform: translate(0, 0); }
+        64% { transform: translate(0, 1.3px); }
+        71% { transform: translate(0, -0.8px); }
+        77% { transform: translate(0, 0.3px); }
+        84% { transform: translate(0, 0.5px); }
+        93%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Squash and stretch, origin at the body's base */
+      @keyframes catch-squash {
+        0%, 6% { transform: scale(1, 1); }
+        16% { transform: scale(1.12, 0.84); }
+        22% { transform: scale(1.14, 0.82); }
+        29% { transform: scale(0.86, 1.18); }
+        38% { transform: scale(0.94, 1.08); }
+        46% { transform: scale(1.03, 0.97); }
+        52% { transform: scale(1, 1); }
+        59% { transform: scale(0.9, 1.12); }
+        64% { transform: scale(1.18, 0.8); }
+        71% { transform: scale(0.96, 1.05); }
+        77% { transform: scale(1.04, 0.96); }
+        84% { transform: scale(1.08, 0.91); }
+        93%, 100% { transform: scale(1, 1); }
+      }
+
+      /* Legs fold in the crouch, trail the body on the way up and down */
+      @keyframes catch-legs {
+        0%, 6% { transform: translate(0, 0) scale(1, 1); }
+        16%, 22% { transform: translate(0, 0) scale(1, 0.67); }
+        29% { transform: translate(0, -1.8px) scale(1, 1.15); }
+        38% { transform: translate(0, -5.2px) scale(1, 1); }
+        46% { transform: translate(0, -5.8px) scale(1, 1); }
+        52% { transform: translate(0, -5.4px) scale(1, 1); }
+        61% { transform: translate(0, -0.6px) scale(1, 1.05); }
+        64% { transform: translate(0, 0) scale(1, 0.67); }
+        71% { transform: translate(0, 0) scale(1, 1); }
+        84% { transform: translate(0, 0) scale(1, 0.85); }
+        93%, 100% { transform: translate(0, 0) scale(1, 1); }
+      }
+
+      @keyframes catch-shadow {
+        0%, 6%, 93%, 100% { transform: scaleX(1); opacity: 0.5; }
+        16%, 22% { transform: scaleX(1.12); opacity: 0.55; }
+        38% { transform: scaleX(0.62); opacity: 0.25; }
+        46% { transform: scaleX(0.58); opacity: 0.22; }
+        52% { transform: scaleX(0.62); opacity: 0.25; }
+        64% { transform: scaleX(1.2); opacity: 0.58; }
+        71% { transform: scaleX(0.95); opacity: 0.48; }
+        84% { transform: scaleX(1.08); opacity: 0.53; }
+      }
+
+      /* Arms: swing down in the crouch, shoot up (stretched), flare, clasp
+         inward at the apex, come back down holding the prize */
+      @keyframes catch-arm-l {
+        0%, 6% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        16%, 22% { transform: translate(0, 0.5px) rotate(-30deg) scale(1, 1); }
+        29% { transform: translate(0, -3px) rotate(-12deg) scale(1, 2); }
+        38% { transform: translate(-0.5px, -4.5px) rotate(-18deg) scale(1, 2.3); }
+        44% { transform: translate(0.5px, -4.3px) rotate(14deg) scale(1, 2.2); }
+        52% { transform: translate(0.5px, -4px) rotate(10deg) scale(1, 2); }
+        60% { transform: translate(0.5px, -3px) rotate(6deg) scale(1, 1.8); }
+        68% { transform: translate(0, -0.5px) rotate(0deg) scale(1, 1.1); }
+        76% { transform: translate(0, 0) rotate(-20deg) scale(1, 1); }
+        86% { transform: translate(0, 0.5px) rotate(-10deg) scale(1, 1); }
+        94%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      @keyframes catch-arm-r {
+        0%, 6% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        16%, 22% { transform: translate(0, 0.5px) rotate(30deg) scale(1, 1); }
+        29% { transform: translate(0, -3px) rotate(12deg) scale(1, 2); }
+        38% { transform: translate(0.5px, -4.5px) rotate(18deg) scale(1, 2.3); }
+        44% { transform: translate(-0.5px, -4.3px) rotate(-14deg) scale(1, 2.2); }
+        52% { transform: translate(-0.5px, -4px) rotate(-10deg) scale(1, 2); }
+        60% { transform: translate(-0.5px, -3px) rotate(-6deg) scale(1, 1.8); }
+        68% { transform: translate(0, -0.5px) rotate(0deg) scale(1, 1.1); }
+        76% { transform: translate(0, 0) rotate(20deg) scale(1, 1); }
+        86% { transform: translate(0, 0.5px) rotate(10deg) scale(1, 1); }
+        94%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      /* Eyes spot it first (lead the body), track it up */
+      @keyframes catch-look {
+        0% { transform: translate(0, 0); }
+        5%, 22% { transform: translate(0, -1px); }
+        30%, 54% { transform: translate(0, -1.5px); }
+        62%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Focus squint while aiming, eyes pop wide on the way up */
+      @keyframes catch-blink {
+        0% { transform: scaleY(1); }
+        2% { transform: scaleY(0.1); }
+        5% { transform: scaleY(1); }
+        14%, 22% { transform: scaleY(0.7); }
+        30%, 52% { transform: scaleY(1.15); }
+        60% { transform: scaleY(1); }
+        93% { transform: scaleY(0.1); }
+        97%, 100% { transform: scaleY(1); }
+      }
+
+      /* Normal eyes swap to happy "^^" from the landing until the settle */
+      @keyframes catch-eyes-open {
+        0% { opacity: 1; }
+        64% { opacity: 0; }
+        93% { opacity: 1; }
+      }
+
+      @keyframes catch-eyes-happy {
+        0% { opacity: 0; }
+        64% { opacity: 1; }
+        93% { opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (jump a little less than the body) -->
+  <g class="legs-jump">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="body-jump">
+    <g class="body-squash">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm -->
+      <g class="arm-l">
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Right Arm -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Eyes (look up while aiming and in the air) -->
+      <g class="eyes-open">
+        <g class="eyes-look">
+          <g class="eyes-blink" fill="#000000">
+            <rect x="4" y="8" width="1" height="2"/>
+            <rect x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+      </g>
+      <!-- Satisfied "^^" eyes after the catch -->
+      <g class="eyes-happy" fill="#000000">
+        <rect x="3" y="9" width="1" height="1"/>
+        <rect x="4" y="8" width="1" height="1"/>
+        <rect x="5" y="9" width="1" height="1"/>
+        <rect x="9" y="9" width="1" height="1"/>
+        <rect x="10" y="8" width="1" height="1"/>
+        <rect x="11" y="9" width="1" height="1"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,231 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 2-Second Loop — Welcome back: notices you (eyes pop), crouches,
+         two quick happy hops with arms flung up/out and "^^" eyes, then a
+         little side-to-side wiggle and settles with a blink.
+         Deliberately prop-free: no confetti, stars or sparkles (that is
+         clawd-happy). */
+      .body-air {
+        animation: wb-body-air 2s infinite;
+      }
+      .legs-air {
+        animation: wb-legs-air 2s infinite;
+      }
+      .body-squash {
+        transform-origin: 7.5px 13px;
+        animation: wb-squash 2s infinite ease-in-out;
+      }
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: wb-shadow 2s infinite ease-in-out;
+      }
+      .arm-l {
+        transform-origin: 2px 10px;
+        animation: wb-arm-l 2s infinite ease-in-out;
+      }
+      .arm-r {
+        transform-origin: 13px 10px;
+        animation: wb-arm-r 2s infinite ease-in-out;
+      }
+      .eyes-look {
+        animation: wb-look 2s infinite ease-in-out;
+      }
+      .eyes-normal {
+        animation: wb-eyes-normal 2s infinite linear;
+      }
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: wb-blink 2s infinite ease-in-out;
+      }
+      .eyes-happy {
+        opacity: 0;
+        animation: wb-eyes-happy 2s infinite linear;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Body: hop 1 (high), hop 2 (a bit lower). Rise eases out, fall eases in. */
+      @keyframes wb-body-air {
+        0%, 14% { transform: translateY(0); animation-timing-function: cubic-bezier(0.2, 0.75, 0.4, 1); }
+        22% { transform: translateY(-3.5px); animation-timing-function: cubic-bezier(0.6, 0, 0.85, 0.4); }
+        29% { transform: translateY(0.4px); animation-timing-function: ease-out; }
+        32% { transform: translateY(0); animation-timing-function: ease-in-out; }
+        34% { transform: translateY(0); animation-timing-function: cubic-bezier(0.2, 0.75, 0.4, 1); }
+        41% { transform: translateY(-2.5px); animation-timing-function: cubic-bezier(0.6, 0, 0.85, 0.4); }
+        48% { transform: translateY(0.4px); animation-timing-function: ease-out; }
+        52%, 100% { transform: translateY(0); }
+      }
+
+      /* Legs leave the ground a little later and less high (they dangle) */
+      @keyframes wb-legs-air {
+        0%, 15% { transform: translateY(0); animation-timing-function: cubic-bezier(0.2, 0.75, 0.4, 1); }
+        23% { transform: translateY(-2.5px); animation-timing-function: cubic-bezier(0.6, 0, 0.85, 0.4); }
+        29%, 35% { transform: translateY(0); animation-timing-function: cubic-bezier(0.2, 0.75, 0.4, 1); }
+        42% { transform: translateY(-1.8px); animation-timing-function: cubic-bezier(0.6, 0, 0.85, 0.4); }
+        48%, 100% { transform: translateY(0); }
+      }
+
+      /* Squash and stretch, then the happy wiggle (hips sway, decaying) */
+      @keyframes wb-squash {
+        0%, 4% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        7% { transform: translate(0, 0) rotate(0deg) scale(0.97, 1.04); }
+        14% { transform: translate(0, 0) rotate(0deg) scale(1.1, 0.86); }
+        17% { transform: translate(0, 0) rotate(0deg) scale(0.9, 1.12); }
+        22% { transform: translate(0, 0) rotate(0deg) scale(0.97, 1.04); }
+        29% { transform: translate(0, 0) rotate(0deg) scale(1.14, 0.84); }
+        33% { transform: translate(0, 0) rotate(0deg) scale(1.07, 0.9); }
+        36% { transform: translate(0, 0) rotate(0deg) scale(0.92, 1.1); }
+        41% { transform: translate(0, 0) rotate(0deg) scale(0.98, 1.03); }
+        48% { transform: translate(0, 0) rotate(0deg) scale(1.12, 0.86); }
+        52% { transform: translate(0, 0) rotate(0deg) scale(0.96, 1.05); }
+        56% { transform: translate(0, 0) rotate(0deg) scale(1.02, 0.98); }
+        61% { transform: translate(-0.5px, 0) rotate(-5deg) scale(1, 1); }
+        64% { transform: translate(0, 0) rotate(0deg) scale(1.04, 0.95); }
+        67% { transform: translate(0.5px, 0) rotate(5deg) scale(1, 1); }
+        70% { transform: translate(0, 0) rotate(0deg) scale(1.04, 0.95); }
+        73% { transform: translate(-0.5px, 0) rotate(-3.5deg) scale(1, 1); }
+        76% { transform: translate(0, 0) rotate(0deg) scale(1.03, 0.97); }
+        79% { transform: translate(0.3px, 0) rotate(2deg) scale(1, 1); }
+        85% { transform: translate(0, 0) rotate(-0.5deg) scale(1.02, 0.98); }
+        90%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      @keyframes wb-shadow {
+        0%, 14% { transform: translate(0, 0) scaleX(1); opacity: 0.5; }
+        22% { transform: translate(0, 0) scaleX(0.68); opacity: 0.28; }
+        29% { transform: translate(0, 0) scaleX(1.14); opacity: 0.55; }
+        34% { transform: translate(0, 0) scaleX(1.05); opacity: 0.5; }
+        41% { transform: translate(0, 0) scaleX(0.78); opacity: 0.34; }
+        48% { transform: translate(0, 0) scaleX(1.12); opacity: 0.55; }
+        54% { transform: translate(0, 0) scaleX(1); opacity: 0.5; }
+        61% { transform: translate(-0.5px, 0) scaleX(1); opacity: 0.5; }
+        67% { transform: translate(0.5px, 0) scaleX(1); opacity: 0.5; }
+        73% { transform: translate(-0.4px, 0) scaleX(1); opacity: 0.5; }
+        79%, 100% { transform: translate(0, 0) scaleX(1); opacity: 0.5; }
+      }
+
+      /* Left arm: tuck on the crouch, fling up/out on each hop, waggle */
+      @keyframes wb-arm-l {
+        0%, 6% { transform: translate(0, 0) rotate(0deg); }
+        14% { transform: translate(0, 0.5px) rotate(-25deg); }
+        18% { transform: translate(-1px, -2.5px) rotate(85deg); }
+        23% { transform: translate(-1px, -2px) rotate(75deg); }
+        29% { transform: translate(-0.5px, -0.5px) rotate(30deg); }
+        33% { transform: translate(0, 0.5px) rotate(-15deg); }
+        37% { transform: translate(-1px, -2.5px) rotate(90deg); }
+        42% { transform: translate(-1px, -2px) rotate(75deg); }
+        48% { transform: translate(-0.5px, -0.5px) rotate(30deg); }
+        53% { transform: translate(-1px, -2px) rotate(70deg); }
+        61% { transform: translate(-0.5px, -1px) rotate(45deg); }
+        67% { transform: translate(0, 0) rotate(5deg); }
+        73% { transform: translate(-0.5px, -1px) rotate(40deg); }
+        79% { transform: translate(0, 0) rotate(5deg); }
+        86% { transform: translate(0, -0.5px) rotate(15deg); }
+        92%, 100% { transform: translate(0, 0) rotate(0deg); }
+      }
+
+      @keyframes wb-arm-r {
+        0%, 6% { transform: translate(0, 0) rotate(0deg); }
+        14% { transform: translate(0, 0.5px) rotate(25deg); }
+        18% { transform: translate(1px, -2.5px) rotate(-85deg); }
+        23% { transform: translate(1px, -2px) rotate(-75deg); }
+        29% { transform: translate(0.5px, -0.5px) rotate(-30deg); }
+        33% { transform: translate(0, 0.5px) rotate(15deg); }
+        37% { transform: translate(1px, -2.5px) rotate(-90deg); }
+        42% { transform: translate(1px, -2px) rotate(-75deg); }
+        48% { transform: translate(0.5px, -0.5px) rotate(-30deg); }
+        53% { transform: translate(1px, -2px) rotate(-70deg); }
+        61% { transform: translate(0, 0) rotate(-5deg); }
+        67% { transform: translate(0.5px, -1px) rotate(-45deg); }
+        73% { transform: translate(0, 0) rotate(-5deg); }
+        79% { transform: translate(0.5px, -1px) rotate(-35deg); }
+        86% { transform: translate(0, -0.5px) rotate(-15deg); }
+        92%, 100% { transform: translate(0, 0) rotate(0deg); }
+      }
+
+      /* Eyes: little jump up on noticing you, ride the wiggle */
+      @keyframes wb-look {
+        0%, 3% { transform: translate(0, 0); }
+        7%, 10% { transform: translate(0, -0.5px); }
+        14%, 56% { transform: translate(0, 0); }
+        61% { transform: translate(-0.5px, 0); }
+        67% { transform: translate(0.5px, 0); }
+        73% { transform: translate(-0.5px, 0); }
+        80%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Normal eyes are shown before and after the "^^" stretch */
+      @keyframes wb-eyes-normal {
+        0%, 11% { opacity: 1; }
+        12%, 84% { opacity: 0; }
+        85%, 100% { opacity: 1; }
+      }
+      @keyframes wb-eyes-happy {
+        0%, 11% { opacity: 0; }
+        12%, 84% { opacity: 1; }
+        85%, 100% { opacity: 0; }
+      }
+
+      /* Eyes pop wide when he notices you; squeeze into the "^^";
+         open, then one soft blink while settling */
+      @keyframes wb-blink {
+        0%, 3% { transform: scaleY(1); }
+        6% { transform: scaleY(1.35); }
+        9% { transform: scaleY(1.25); }
+        11.5% { transform: scaleY(0.2); }
+        12%, 84% { transform: scaleY(0.2); }
+        87%, 91% { transform: scaleY(1); }
+        93% { transform: scaleY(0.1); }
+        95.5%, 100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (hop a little later and less high than the body) -->
+  <g class="legs-air">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+  </g>
+
+  <!-- Upper Body -->
+  <g class="body-air">
+    <g class="body-squash">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm -->
+      <g class="arm-l">
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Right Arm -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <g class="eyes-look">
+        <!-- Normal eyes -->
+        <g class="eyes-normal">
+          <g class="eyes-blink" fill="#000000">
+            <rect x="4" y="8" width="1" height="2"/>
+            <rect x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+        <!-- Happy squint "^^" -->
+        <g class="eyes-happy" fill="#000000">
+          <rect x="3" y="9" width="1" height="1"/>
+          <rect x="4" y="8" width="1" height="1"/>
+          <rect x="5" y="9" width="1" height="1"/>
+          <rect x="9" y="9" width="1" height="1"/>
+          <rect x="10" y="8" width="1" height="1"/>
+          <rect x="11" y="9" width="1" height="1"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

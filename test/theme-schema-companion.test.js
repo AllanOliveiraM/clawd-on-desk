@@ -141,7 +141,7 @@ describe("theme companionAnimations block", () => {
     assert.ok(warn.mock.calls.length >= 1);
   });
 
-  it("built-in clawd declares all seven", () => {
+  it("built-in clawd declares all mischief keys", () => {
     const theme = themeLoader.loadTheme("clawd", { strict: true });
     assert.deepStrictEqual(theme.companionAnimations, {
       petting: { files: ["clawd-alive-petting.svg"], duration: null },
@@ -151,13 +151,33 @@ describe("theme companionAnimations block", () => {
       grumpy: { files: ["clawd-alive-grumpy.svg"], duration: 3500 },
       curious: { files: ["clawd-alive-curious.svg"], duration: 4000 },
       greet: { files: ["clawd-alive-greet.svg"], duration: 2500 },
+      catch: { files: ["clawd-alive-catch.svg"], duration: 1600 },
+      catchMiss: { files: ["clawd-alive-catch-miss.svg"], duration: 2200 },
+      pounceLeft: { files: ["clawd-alive-pounce-left.svg"], duration: 2400 },
+      pounceRight: { files: ["clawd-alive-pounce-right.svg"], duration: 2400 },
+      fakeNap: { files: ["clawd-alive-fake-nap.svg"], duration: 3000 },
+      boo: { files: ["clawd-alive-boo.svg"], duration: 1400 },
+      pokeLeft: { files: ["clawd-alive-poke-left.svg"], duration: 2000 },
+      pokeRight: { files: ["clawd-alive-poke-right.svg"], duration: 2000 },
+      reachClose: { files: ["clawd-alive-reach-close.svg"], duration: 3000 },
+      wallPushLeft: { files: ["clawd-alive-wall-push-left.svg"], duration: 2500 },
+      wallPushRight: { files: ["clawd-alive-wall-push-right.svg"], duration: 2500 },
+      wallPeekLeft: { files: ["clawd-alive-wall-peek-left.svg"], duration: 2500 },
+      wallPeekRight: { files: ["clawd-alive-wall-peek-right.svg"], duration: 2500 },
+      sitEdge: { files: ["clawd-alive-sit-edge.svg"], duration: 2000 },
+      morningStretch: { files: ["clawd-alive-morning-stretch.svg"], duration: 2800 },
+      coffee: { files: ["clawd-alive-coffee.svg"], duration: 3000 },
+      nightSleepy: { files: ["clawd-alive-night-sleepy.svg"], duration: 3000 },
+      welcome: { files: ["clawd-alive-welcome.svg"], duration: 2000 },
+      stretchBack: { files: ["clawd-alive-stretch-back.svg"], duration: 2600 },
+      toyBall: { files: ["clawd-alive-toy-ball.svg"], duration: 3000 },
+      toyYoyo: { files: ["clawd-alive-toy-yoyo.svg"], duration: 3000 },
+      toyPlane: { files: ["clawd-alive-toy-plane.svg"], duration: 3000 },
     });
-    // The mischief keys are optional and the built-in theme declares none yet.
-    const ALIVE_KEYS = schema.COMPANION_ANIMATION_KEYS.filter((key) => !schema.MISCHIEF_ANIMATION_KEYS.includes(key));
-    assert.deepStrictEqual(Object.keys(theme.companionAnimations), ALIVE_KEYS);
+    assert.deepStrictEqual(Object.keys(theme.companionAnimations), [...schema.COMPANION_ANIMATION_KEYS]);
     const required = schema.collectRequiredAssetFiles(theme);
-    for (const key of ALIVE_KEYS) {
-      const file = `clawd-alive-${key}.svg`;
+    for (const key of schema.COMPANION_ANIMATION_KEYS) {
+      const [file] = theme.companionAnimations[key].files;
       assert.ok(required.includes(file), `${file} required`);
       assert.ok(theme.rendering.objectChannelFiles.includes(file), `${file} objectChannel`);
       assert.strictEqual(theme.rendering.discreteSampling[file], 24, `${file} discreteSampling`);

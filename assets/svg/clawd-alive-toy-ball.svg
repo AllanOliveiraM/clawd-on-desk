@@ -1,0 +1,333 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 3-Second Loop — Toy ball: balancing a little blue ball on his head,
+         he crouches and tosses it up; it bounces on the floor to his right,
+         he heads it back up (boop!), swats it with his left arm as it comes
+         down on that side, and catches it on his head again with both arms
+         up, proud "^^". Starts and ends holding the ball (seamless loop).
+         Ball: X on a linear group, Y on an eased group (real arcs),
+         squash/stretch on the sprite, shadow on the floor. */
+      .body-air {
+        animation: bl-body-air 3s infinite ease-in-out;
+      }
+      .legs-air {
+        animation: bl-legs-air 3s infinite ease-in-out;
+      }
+      .body-anim {
+        transform-origin: 7.5px 13px;
+        animation: bl-body 3s infinite ease-in-out;
+      }
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: bl-shadow 3s infinite ease-in-out;
+      }
+      .arm-l {
+        transform-origin: 1px 10px;
+        animation: bl-arm-l 3s infinite ease-in-out;
+      }
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: bl-arm-r 3s infinite ease-in-out;
+      }
+      .eyes-look {
+        animation: bl-look 3s infinite ease-in-out;
+      }
+      .eyes-normal {
+        animation: bl-eyes-normal 3s infinite linear;
+      }
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: bl-blink 3s infinite ease-in-out;
+      }
+      .eyes-happy {
+        opacity: 0;
+        animation: bl-eyes-happy 3s infinite linear;
+      }
+      .ball-x {
+        animation: bl-ball-x 3s infinite linear;
+      }
+      .ball-y {
+        animation: bl-ball-y 3s infinite;
+      }
+      .ball-squash {
+        transform-origin: 0px 2.5px;
+        animation: bl-ball-squash 3s infinite ease-in-out;
+      }
+      .ball-shadow {
+        transform-origin: 0px 15.5px;
+        opacity: 0;
+        animation: bl-ball-shadow 3s infinite ease-in-out;
+      }
+
+      /* --- Ball path --- */
+
+      /* Horizontal: constant speed between contacts (head → floor right →
+         head → left arm → head) */
+      @keyframes bl-ball-x {
+        0%, 11% { transform: translateX(7.5px); }
+        32% { transform: translateX(19px); }
+        44% { transform: translateX(8px); }
+        64% { transform: translateX(-2.5px); }
+        87%, 100% { transform: translateX(7.5px); }
+      }
+
+      /* Vertical: rises ease-out, falls ease-in. Centre y 3.5 = resting on head */
+      @keyframes bl-ball-y {
+        0%, 4% { transform: translateY(3.5px); animation-timing-function: ease-in-out; }
+        9% { transform: translateY(4.2px); animation-timing-function: ease-in; }
+        11% { transform: translateY(3.1px); animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1); }
+        22% { transform: translateY(-14px); animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.4); }
+        32% { transform: translateY(12.5px); animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1); }
+        38% { transform: translateY(-1px); animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.4); }
+        44% { transform: translateY(3px); animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1); }
+        54% { transform: translateY(-15px); animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.4); }
+        64% { transform: translateY(8px); animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1); }
+        76% { transform: translateY(-12px); animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.4); }
+        87% { transform: translateY(3.5px); animation-timing-function: ease-out; }
+        90% { transform: translateY(4.3px); animation-timing-function: ease-in-out; }
+        94% { transform: translateY(3.2px); animation-timing-function: ease-in-out; }
+        97%, 100% { transform: translateY(3.5px); }
+      }
+
+      /* Stretch when fast, squash on every contact */
+      @keyframes bl-ball-squash {
+        0%, 9% { transform: scale(1, 1); }
+        13% { transform: scale(0.88, 1.15); }
+        19% { transform: scale(1, 1); }
+        29% { transform: scale(0.88, 1.15); }
+        32% { transform: scale(1.35, 0.65); }
+        34% { transform: scale(0.88, 1.15); }
+        38% { transform: scale(1, 1); }
+        42.5% { transform: scale(0.92, 1.1); }
+        44.5% { transform: scale(1.25, 0.78); }
+        47% { transform: scale(0.88, 1.15); }
+        52% { transform: scale(1, 1); }
+        62% { transform: scale(0.9, 1.12); }
+        64.5% { transform: scale(1.22, 0.8); }
+        67% { transform: scale(0.88, 1.15); }
+        73% { transform: scale(1, 1); }
+        84.5% { transform: scale(0.92, 1.1); }
+        88% { transform: scale(1.18, 0.84); }
+        92% { transform: scale(0.96, 1.04); }
+        96%, 100% { transform: scale(1, 1); }
+      }
+
+      /* Floor shadow: visible away from Clawd, grows as the ball nears the floor */
+      @keyframes bl-ball-shadow {
+        0%, 12% { transform: scaleX(0.3); opacity: 0; }
+        22% { transform: scaleX(0.5); opacity: 0.12; }
+        32% { transform: scaleX(1.2); opacity: 0.4; }
+        38% { transform: scaleX(0.7); opacity: 0.2; }
+        42%, 46% { transform: scaleX(0.5); opacity: 0; }
+        54% { transform: scaleX(0.5); opacity: 0.1; }
+        64% { transform: scaleX(0.9); opacity: 0.3; }
+        76% { transform: scaleX(0.5); opacity: 0.12; }
+        84%, 100% { transform: scaleX(0.3); opacity: 0; }
+      }
+
+      /* --- Clawd --- */
+
+      /* Little hop only for the header */
+      @keyframes bl-body-air {
+        0%, 43% { transform: translateY(0); }
+        46% { transform: translateY(-1.2px); }
+        50% { transform: translateY(0.2px); }
+        53%, 100% { transform: translateY(0); }
+      }
+      @keyframes bl-legs-air {
+        0%, 44% { transform: translateY(0); }
+        47% { transform: translateY(-0.6px); }
+        51%, 100% { transform: translateY(0); }
+      }
+
+      /* Crouch-toss, lean after the ball (right), crouch-header, lean left
+         and twist into the swat, reach up, catch squash, proud settle */
+      @keyframes bl-body {
+        0%, 3% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        9% { transform: translate(0, 0) rotate(0deg) scale(1.08, 0.9); }
+        12% { transform: translate(0, 0) rotate(0deg) scale(0.93, 1.1); }
+        17% { transform: translate(0, 0) rotate(0deg) scale(1.02, 0.98); }
+        24% { transform: translate(0.5px, 0) rotate(2deg) scale(1, 1); }
+        32% { transform: translate(1px, 0) rotate(4deg) scale(1, 1); }
+        37% { transform: translate(0.5px, 0) rotate(1.5deg) scale(1.03, 0.97); }
+        42% { transform: translate(0, 0) rotate(0deg) scale(1.08, 0.9); }
+        44.5% { transform: translate(0, 0) rotate(0deg) scale(0.92, 1.12); }
+        50% { transform: translate(0, 0) rotate(0deg) scale(1.06, 0.93); }
+        54% { transform: translate(0, 0) rotate(0deg) scale(0.99, 1.01); }
+        61% { transform: translate(-0.5px, 0) rotate(-3deg) scale(1.03, 0.97); }
+        64.5% { transform: translate(-0.5px, 0) rotate(-5deg) scale(0.97, 1.04); }
+        69% { transform: translate(0, 0) rotate(1deg) scale(1, 1); }
+        75% { transform: translate(0, 0) rotate(0deg) scale(0.98, 1.02); }
+        84% { transform: translate(0, 0) rotate(0deg) scale(0.97, 1.04); }
+        88% { transform: translate(0, 0) rotate(0deg) scale(1.08, 0.9); }
+        92% { transform: translate(0, 0) rotate(0deg) scale(0.97, 1.04); }
+        96%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      @keyframes bl-shadow {
+        0%, 3% { transform: translate(0, 0) scaleX(1); opacity: 0.5; }
+        9% { transform: translate(0, 0) scaleX(1.06); opacity: 0.55; }
+        32% { transform: translate(0.5px, 0) scaleX(1); opacity: 0.5; }
+        42% { transform: translate(0, 0) scaleX(1.06); opacity: 0.55; }
+        46% { transform: translate(0, 0) scaleX(0.85); opacity: 0.4; }
+        50% { transform: translate(0, 0) scaleX(1.06); opacity: 0.52; }
+        64% { transform: translate(-0.5px, 0) scaleX(1); opacity: 0.5; }
+        88% { transform: translate(0, 0) scaleX(1.06); opacity: 0.55; }
+        96%, 100% { transform: translate(0, 0) scaleX(1); opacity: 0.5; }
+      }
+
+      /* Left arm: holds the ball, pushes it up, drops to the side, cocks and
+         swats, reaches back up for the catch */
+      @keyframes bl-arm-l {
+        0%, 4% { transform: translate(3.5px, -5px) rotate(0deg); }
+        11% { transform: translate(3.5px, -6.5px) rotate(0deg); }
+        14% { transform: translate(2px, -4px) rotate(20deg); }
+        19% { transform: translate(0, 0.5px) rotate(-15deg); }
+        24% { transform: translate(0, 0) rotate(0deg); }
+        42% { transform: translate(0, 0.5px) rotate(-20deg); }
+        45% { transform: translate(-0.5px, -1px) rotate(35deg); }
+        51% { transform: translate(0, 0) rotate(0deg); }
+        58% { transform: translate(0, 0.5px) rotate(-20deg); }
+        62% { transform: translate(0, 1px) rotate(-40deg); }
+        64.5% { transform: translate(-1px, -2.5px) rotate(80deg); }
+        68% { transform: translate(-0.5px, -1px) rotate(40deg); }
+        73% { transform: translate(0, 0) rotate(-5deg); }
+        77% { transform: translate(0, 0) rotate(0deg); }
+        82% { transform: translate(1.5px, -3px) rotate(30deg); }
+        86% { transform: translate(3.5px, -5.5px) rotate(0deg); }
+        88% { transform: translate(3.5px, -5px) rotate(0deg); }
+        92% { transform: translate(3.5px, -5.3px) rotate(0deg); }
+        96%, 100% { transform: translate(3.5px, -5px) rotate(0deg); }
+      }
+
+      @keyframes bl-arm-r {
+        0%, 4% { transform: translate(-3.5px, -5px) rotate(0deg); }
+        11% { transform: translate(-3.5px, -6.5px) rotate(0deg); }
+        14% { transform: translate(-2px, -4px) rotate(-20deg); }
+        19% { transform: translate(0, 0.5px) rotate(15deg); }
+        24% { transform: translate(0, 0) rotate(0deg); }
+        30% { transform: translate(0.5px, -1px) rotate(-30deg); }
+        36% { transform: translate(0, 0) rotate(0deg); }
+        42% { transform: translate(0, 0.5px) rotate(20deg); }
+        45% { transform: translate(0.5px, -1px) rotate(-35deg); }
+        51% { transform: translate(0, 0) rotate(0deg); }
+        64.5% { transform: translate(0, 0.5px) rotate(15deg); }
+        70% { transform: translate(0, 0) rotate(0deg); }
+        78% { transform: translate(0, 0) rotate(0deg); }
+        83% { transform: translate(-1.5px, -3px) rotate(-30deg); }
+        86.5% { transform: translate(-3.5px, -5.5px) rotate(0deg); }
+        88% { transform: translate(-3.5px, -5px) rotate(0deg); }
+        92% { transform: translate(-3.5px, -5.3px) rotate(0deg); }
+        96%, 100% { transform: translate(-3.5px, -5px) rotate(0deg); }
+      }
+
+      /* Eyes track the ball the whole way */
+      @keyframes bl-look {
+        0%, 3% { transform: translate(0, -0.5px); }
+        9% { transform: translate(0, 0); }
+        16% { transform: translate(0.5px, -1px); }
+        22% { transform: translate(1px, -1px); }
+        30% { transform: translate(2px, 0.5px); }
+        33% { transform: translate(2px, 0.5px); }
+        38% { transform: translate(1.5px, -0.5px); }
+        43%, 47% { transform: translate(0, -1px); }
+        54% { transform: translate(-1px, -1px); }
+        62%, 65% { transform: translate(-2px, 0); }
+        76% { transform: translate(-0.5px, -1px); }
+        84% { transform: translate(0, -1px); }
+        90%, 100% { transform: translate(0, -0.5px); }
+      }
+
+      /* Normal eyes, swapped for "^^" after the catch */
+      @keyframes bl-eyes-normal {
+        0%, 89% { opacity: 1; }
+        90%, 97% { opacity: 0; }
+        98%, 100% { opacity: 1; }
+      }
+      @keyframes bl-eyes-happy {
+        0%, 89% { opacity: 0; }
+        90%, 97% { opacity: 1; }
+        98%, 100% { opacity: 0; }
+      }
+
+      /* Squeeze shut on the header, quick blink before the swat */
+      @keyframes bl-blink {
+        0%, 42.5% { transform: scaleY(1); }
+        44% { transform: scaleY(0.1); }
+        47% { transform: scaleY(0.1); }
+        50% { transform: scaleY(1); }
+        57% { transform: scaleY(1); }
+        58.5% { transform: scaleY(0.1); }
+        60%, 88.5% { transform: scaleY(1); }
+        89.8% { transform: scaleY(0.3); }
+        97.5% { transform: scaleY(0.3); }
+        100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Ball shadow on the floor (follows the ball horizontally) -->
+  <g class="ball-x">
+    <rect class="ball-shadow" x="-1.5" y="15" width="3" height="1" fill="#000000"/>
+  </g>
+
+  <!-- Legs -->
+  <g class="legs-air">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+  </g>
+
+  <!-- Upper Body -->
+  <g class="body-air">
+    <g class="body-anim">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm -->
+      <g class="arm-l">
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Right Arm -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <g class="eyes-look">
+        <g class="eyes-normal">
+          <g class="eyes-blink" fill="#000000">
+            <rect x="4" y="8" width="1" height="2"/>
+            <rect x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+        <!-- Proud "^^" -->
+        <g class="eyes-happy" fill="#000000">
+          <rect x="3" y="9" width="1" height="1"/>
+          <rect x="4" y="8" width="1" height="1"/>
+          <rect x="5" y="9" width="1" height="1"/>
+          <rect x="9" y="9" width="1" height="1"/>
+          <rect x="10" y="8" width="1" height="1"/>
+          <rect x="11" y="9" width="1" height="1"/>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- Ball (5x5 rounded, centred on its own origin) -->
+  <g class="ball-x">
+    <g class="ball-y">
+      <g class="ball-squash">
+        <rect x="-1.5" y="-2.5" width="3" height="1" fill="#4FC3F7"/>
+        <rect x="-2.5" y="-1.5" width="5" height="3" fill="#4FC3F7"/>
+        <rect x="-1.5" y="1.5" width="3" height="1" fill="#0288D1"/>
+        <rect x="1.5" y="-0.5" width="1" height="2" fill="#0288D1"/>
+        <rect x="-1.5" y="-1.5" width="1" height="1" fill="#E1F5FE"/>
+      </g>
+    </g>
+  </g>
+</svg>

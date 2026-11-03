@@ -1,0 +1,187 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* Exact mirror of the -left version. 2.5-Second Loop — Wall Peek (right): glances to the right, dips, then
+         leans far out to the right as if peeking past the screen edge (eyes
+         wide, leading arm lifted, back foot lifting for balance).
+         Two curious bobs, a double blink, one more stretch to see further,
+         then springs back with an overshoot and steals one last glance. */
+      .action-body {
+        transform-origin: 7.5px 13px;
+        animation: peek-body 2.5s infinite ease-in-out;
+      }
+
+      .legs-lean {
+        transform-origin: 7.5px 15px;
+        animation: peek-legs 2.5s infinite ease-in-out;
+      }
+
+      .leg-back {
+        animation: peek-leg-back 2.5s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: peek-shadow 2.5s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: peek-arm-r 2.5s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 10px;
+        animation: peek-arm-l 2.5s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: peek-look 2.5s infinite ease-in-out;
+      }
+
+      .eyes-lid {
+        transform-origin: 7.5px 10px;
+        animation: peek-lid 2.5s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Dip and lean back (anticipation), lean far out with an overshoot,
+         two curious bobs, a further stretch, spring back past centre, settle */
+      @keyframes peek-body {
+        0%, 5% { transform: translate(0, 0) skewX(0deg) scale(1, 1); }
+        11% { transform: translate(-0.4px, 0.3px) skewX(3deg) scale(1.04, 0.95); }
+        18% { transform: translate(0.9px, -0.2px) skewX(-16deg) scale(0.95, 1.06); }
+        22% { transform: translate(0.7px, 0) skewX(-14deg) scale(0.99, 1.01); }
+        26% { transform: translate(0.8px, 0) skewX(-14deg) scale(1, 1); }
+        29% { transform: translate(0.8px, -0.6px) skewX(-14deg) scale(0.97, 1.04); }
+        33% { transform: translate(0.7px, 0.2px) skewX(-14deg) scale(1.02, 0.97); }
+        37% { transform: translate(0.8px, -0.4px) skewX(-14deg) scale(0.98, 1.03); }
+        41% { transform: translate(0.7px, 0.1px) skewX(-14deg) scale(1.01, 0.99); }
+        44%, 52% { transform: translate(0.8px, 0) skewX(-14deg) scale(1, 1); }
+        58% { transform: translate(1px, -0.2px) skewX(-16deg) scale(0.97, 1.03); }
+        61% { transform: translate(0.9px, -0.1px) skewX(-16deg) scale(0.98, 1.02); }
+        67% { transform: translate(-0.6px, 0.2px) skewX(4deg) scale(1.05, 0.95); }
+        72% { transform: translate(0.2px, 0) skewX(-1deg) scale(0.98, 1.02); }
+        76%, 100% { transform: translate(0, 0) skewX(0deg) scale(1, 1); }
+      }
+
+      /* Legs brace into the lean, feet stay planted */
+      @keyframes peek-legs {
+        0%, 5%, 76%, 100% { transform: translate(0, 0) skewX(0deg); }
+        11% { transform: translate(-0.1px, 0) skewX(2deg); }
+        18% { transform: translate(0.35px, 0) skewX(-14deg); }
+        22%, 52% { transform: translate(0.3px, 0) skewX(-12deg); }
+        58%, 61% { transform: translate(0.4px, 0) skewX(-14deg); }
+        67% { transform: translate(-0.1px, 0) skewX(3deg); }
+        72% { transform: translate(0, 0) skewX(-1deg); }
+      }
+
+      /* Back foot lifts off the ground for balance, taps with the bobs */
+      @keyframes peek-leg-back {
+        0%, 12%, 66%, 100% { transform: translate(0, 0); }
+        18% { transform: translate(-0.5px, -1.3px); }
+        22%, 26% { transform: translate(-0.4px, -1px); }
+        29% { transform: translate(-0.5px, -1.4px); }
+        33% { transform: translate(-0.4px, -0.8px); }
+        37% { transform: translate(-0.5px, -1.3px); }
+        41%, 52% { transform: translate(-0.4px, -1px); }
+        58%, 61% { transform: translate(-0.6px, -1.5px); }
+      }
+
+      @keyframes peek-shadow {
+        0%, 5%, 76%, 100% { transform: translate(0, 0) scaleX(1); opacity: 0.5; }
+        11% { transform: translate(-0.2px, 0) scaleX(1.04); opacity: 0.5; }
+        18%, 61% { transform: translate(0.7px, 0) scaleX(0.97); opacity: 0.5; }
+        67% { transform: translate(-0.3px, 0) scaleX(1.05); opacity: 0.5; }
+      }
+
+      /* Leading arm lifts a little towards the edge */
+      @keyframes peek-arm-r {
+        0%, 5%, 76%, 100% { transform: translate(0, 0); }
+        11% { transform: translate(-0.3px, 0.4px); }
+        17% { transform: translate(0, -1.3px); }
+        22%, 26% { transform: translate(-0.2px, -1px); }
+        29% { transform: translate(-0.2px, -1.2px); }
+        33% { transform: translate(-0.2px, -0.85px); }
+        37%, 52% { transform: translate(-0.2px, -1px); }
+        58%, 61% { transform: translate(0, -1.2px); }
+        67% { transform: translate(-0.2px, 0.4px); }
+        72% { transform: translate(0, -0.2px); }
+      }
+
+      /* Back arm lifts out behind for balance, flaps a little on the bobs */
+      @keyframes peek-arm-l {
+        0%, 5%, 76%, 100% { transform: translate(0, 0); }
+        11% { transform: translate(0.3px, 0.4px); }
+        18% { transform: translate(0, -1.2px); }
+        22%, 26% { transform: translate(0.2px, -0.9px); }
+        29% { transform: translate(0.1px, -1.25px); }
+        33% { transform: translate(0.2px, -0.65px); }
+        37% { transform: translate(0.1px, -1.1px); }
+        41%, 52% { transform: translate(0.2px, -0.9px); }
+        58%, 61% { transform: translate(0, -1.25px); }
+        67% { transform: translate(0.2px, 0.4px); }
+        72% { transform: translate(0, -0.2px); }
+      }
+
+      /* Eyes lead: glance right first, look far out (a little scan up and
+         down), back to centre, one sneaky glance right again */
+      @keyframes peek-look {
+        0%, 3% { transform: translate(0, 0); }
+        8% { transform: translate(1px, 0); }
+        18%, 26% { transform: translate(1.7px, 0); }
+        31% { transform: translate(1.7px, -0.5px); }
+        39% { transform: translate(1.7px, 0.3px); }
+        44%, 61% { transform: translate(1.7px, 0); }
+        67% { transform: translate(-0.5px, 0); }
+        73%, 81% { transform: translate(0, 0); }
+        85%, 89% { transform: translate(1.2px, 0); }
+        94%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Eyes widen when he sees past the edge; double blink while peeking */
+      @keyframes peek-lid {
+        0%, 14%, 26%, 45%, 47%, 49%, 51%, 96%, 100% { transform: scaleY(1); }
+        19%, 22% { transform: scaleY(1.2); }
+        46% { transform: scaleY(0.1); }
+        50% { transform: scaleY(0.1); }
+        98% { transform: scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (lean with the body; back foot lifts) -->
+  <g class="legs-lean">
+    <g id="legs" fill="#DE886D">
+      <rect x="11" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <g class="leg-back"><rect x="3" y="12" width="1" height="3"/></g>
+    </g>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="action-body">
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <!-- Right Arm (leads) -->
+    <g class="arm-r">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Left Arm (balance) -->
+    <g class="arm-l">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Eyes (lids close from the top) -->
+    <g class="eyes-look">
+      <g class="eyes-lid" fill="#000000">
+        <rect x="10" y="8" width="1" height="2"/>
+        <rect x="4" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>

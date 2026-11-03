@@ -1,0 +1,267 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 2.5-Second Loop — Wall Push (left): an invisible wall on his left.
+         Leans back (wind-up), plants both hands on the wall and pushes:
+         body leans into it, legs braced, squash on each effort beat with a
+         little strain shake and squeezed eyes. Eases off with a sigh and a
+         double blink, winds up again and pushes harder, then lets go with a
+         springy overshoot. Hands stay pinned to the same wall line. */
+      .action-body {
+        transform-origin: 7.5px 13px;
+        animation: push-body 2.5s infinite ease-in-out;
+      }
+
+      .legs-lean {
+        transform-origin: 7.5px 15px;
+        animation: push-legs 2.5s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: push-shadow 2.5s infinite ease-in-out;
+      }
+
+      /* Upper hand: grows from the torso edge to the wall */
+      .arm-l {
+        transform-origin: 2px 10px;
+        animation: push-arm-l 2.5s infinite ease-in-out;
+      }
+
+      /* Far arm: slides behind the torso and comes out as the lower hand */
+      .arm-r {
+        transform-origin: 15px 10px;
+        animation: push-arm-r 2.5s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: push-look 2.5s infinite ease-in-out;
+      }
+
+      .eyes-lid {
+        transform-origin: 7.5px 10px;
+        animation: push-lid 2.5s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      @keyframes push-body {
+        0% { transform: translate(0px, 0px) skewX(0deg) scale(1, 1); }
+        4% { transform: translate(0px, 0px) skewX(0deg) scale(1, 1); }
+        9% { transform: translate(0.5px, 0px) skewX(-2.1deg) scale(0.98, 1.03); }
+        15% { transform: translate(-0.8px, 0px) skewX(7.7deg) scale(1.03, 0.97); }
+        19% { transform: translate(-0.6px, 0px) skewX(6.3deg) scale(1, 1); }
+        22% { transform: translate(-0.6px, 0px) skewX(6.3deg) scale(1.02, 0.98); }
+        24% { transform: translate(-0.85px, 0.2px) skewX(7deg) scale(1.05, 0.94); }
+        26% { transform: translate(-0.45px, 0.2px) skewX(7deg) scale(1.05, 0.94); }
+        28% { transform: translate(-0.85px, 0.2px) skewX(7deg) scale(1.05, 0.94); }
+        30% { transform: translate(-0.45px, 0.1px) skewX(7deg) scale(1.04, 0.95); }
+        32% { transform: translate(-0.8px, 0.1px) skewX(7deg) scale(1.04, 0.95); }
+        35% { transform: translate(-0.6px, 0px) skewX(6.3deg) scale(1, 1); }
+        42% { transform: translate(-0.2px, 0.3px) skewX(2.8deg) scale(1.04, 0.95); }
+        48% { transform: translate(-0.2px, 0.2px) skewX(2.8deg) scale(1.03, 0.96); }
+        53% { transform: translate(0.4px, 0px) skewX(-2.1deg) scale(0.97, 1.04); }
+        58% { transform: translate(-1px, 0px) skewX(9.1deg) scale(1.03, 0.97); }
+        61% { transform: translate(-0.8px, 0px) skewX(7.7deg) scale(1, 1); }
+        64% { transform: translate(-1.05px, 0.2px) skewX(8.4deg) scale(1.06, 0.93); }
+        66% { transform: translate(-0.6px, 0.2px) skewX(8.4deg) scale(1.06, 0.93); }
+        68% { transform: translate(-1.05px, 0.2px) skewX(8.4deg) scale(1.06, 0.93); }
+        70% { transform: translate(-0.6px, 0.2px) skewX(8.4deg) scale(1.06, 0.93); }
+        72% { transform: translate(-1.05px, 0.25px) skewX(8.4deg) scale(1.07, 0.92); }
+        74% { transform: translate(-0.6px, 0.25px) skewX(8.4deg) scale(1.07, 0.92); }
+        76% { transform: translate(-1.05px, 0.25px) skewX(8.4deg) scale(1.07, 0.92); }
+        78% { transform: translate(-0.65px, 0.15px) skewX(8.4deg) scale(1.04, 0.95); }
+        81% { transform: translate(-0.8px, 0px) skewX(7.7deg) scale(1, 1); }
+        87% { transform: translate(0.4px, 0.2px) skewX(-2.1deg) scale(1.04, 0.96); }
+        91% { transform: translate(-0.15px, 0px) skewX(0.7deg) scale(0.99, 1.01); }
+        95% { transform: translate(0px, 0px) skewX(0deg) scale(1, 1); }
+        100% { transform: translate(0px, 0px) skewX(0deg) scale(1, 1); }
+      }
+
+      @keyframes push-legs {
+        0% { transform: skewX(0deg); }
+        4% { transform: skewX(0deg); }
+        9% { transform: skewX(-2deg); }
+        15% { transform: skewX(13deg); }
+        19% { transform: skewX(12deg); }
+        22% { transform: skewX(12deg); }
+        24% { transform: skewX(13deg); }
+        26% { transform: skewX(13deg); }
+        28% { transform: skewX(13deg); }
+        30% { transform: skewX(13deg); }
+        32% { transform: skewX(13deg); }
+        35% { transform: skewX(12deg); }
+        42% { transform: skewX(6deg); }
+        48% { transform: skewX(6deg); }
+        53% { transform: skewX(-2deg); }
+        58% { transform: skewX(15deg); }
+        61% { transform: skewX(14deg); }
+        64% { transform: skewX(15deg); }
+        66% { transform: skewX(15deg); }
+        68% { transform: skewX(15deg); }
+        70% { transform: skewX(15deg); }
+        72% { transform: skewX(15deg); }
+        74% { transform: skewX(15deg); }
+        76% { transform: skewX(15deg); }
+        78% { transform: skewX(15deg); }
+        81% { transform: skewX(14deg); }
+        87% { transform: skewX(-3deg); }
+        91% { transform: skewX(1deg); }
+        95% { transform: skewX(0deg); }
+        100% { transform: skewX(0deg); }
+      }
+
+      @keyframes push-arm-l {
+        0% { transform: translate(0, 0) scale(1, 1); }
+        4% { transform: translate(0, 0) scale(1, 1); }
+        9% { transform: translate(0, -0.8px) scale(1.2, 1); }
+        15% { transform: translate(0, -2px) scale(1.301, 1); }
+        19% { transform: translate(0, -2px) scale(1.574, 1); }
+        22% { transform: translate(0, -2px) scale(1.495, 1); }
+        24% { transform: translate(0, -2px) scale(1.237, 1); }
+        26% { transform: translate(0, -2px) scale(1.428, 1); }
+        28% { transform: translate(0, -2px) scale(1.237, 1); }
+        30% { transform: translate(0, -2px) scale(1.465, 1); }
+        32% { transform: translate(0, -2px) scale(1.297, 1); }
+        35% { transform: translate(0, -2px) scale(1.574, 1); }
+        42% { transform: translate(0, -2px) scale(1.754, 1); }
+        48% { transform: translate(0, -2px) scale(1.796, 1); }
+        53% { transform: translate(0, -2px) scale(2.606, 1); }
+        58% { transform: translate(0, -2px) scale(1.145, 1); }
+        61% { transform: translate(0, -2px) scale(1.412, 1); }
+        64% { transform: translate(0, -2px) scale(1.053, 1); }
+        66% { transform: translate(0, -2px) scale(1.266, 1); }
+        68% { transform: translate(0, -2px) scale(1.053, 1); }
+        70% { transform: translate(0, -2px) scale(1.266, 1); }
+        72% { transform: translate(0, -2px) scale(1.021, 1); }
+        74% { transform: translate(0, -2px) scale(1.232, 1); }
+        76% { transform: translate(0, -2px) scale(1.021, 1); }
+        78% { transform: translate(0, -2px) scale(1.312, 1); }
+        81% { transform: translate(0, -2px) scale(1.412, 1); }
+        87% { transform: translate(0, 0) scale(1, 1); }
+        91% { transform: translate(0, 0) scale(1, 1); }
+        95% { transform: translate(0, 0) scale(1, 1); }
+        100% { transform: translate(0, 0) scale(1, 1); }
+      }
+
+      @keyframes push-arm-r {
+        0% { transform: translate(0, 0) scale(1, 1); }
+        4% { transform: translate(0, 0) scale(1, 1); }
+        9% { transform: translate(-6px, 0.4px) scale(1.3, 1); }
+        15% { transform: translate(-13px, 1px) scale(1.297, 1); }
+        19% { transform: translate(-13px, 1px) scale(1.54, 1); }
+        22% { transform: translate(-13px, 1px) scale(1.458, 1); }
+        24% { transform: translate(-13px, 1px) scale(1.212, 1); }
+        26% { transform: translate(-13px, 1px) scale(1.402, 1); }
+        28% { transform: translate(-13px, 1px) scale(1.212, 1); }
+        30% { transform: translate(-13px, 1px) scale(1.441, 1); }
+        32% { transform: translate(-13px, 1px) scale(1.272, 1); }
+        35% { transform: translate(-13px, 1px) scale(1.54, 1); }
+        42% { transform: translate(-13px, 1px) scale(1.628, 1); }
+        48% { transform: translate(-13px, 1px) scale(1.67, 1); }
+        53% { transform: translate(-13px, 1px) scale(2.341, 1); }
+        58% { transform: translate(-13px, 1px) scale(1.177, 1); }
+        61% { transform: translate(-13px, 1px) scale(1.415, 1); }
+        64% { transform: translate(-13px, 1px) scale(1.059, 1); }
+        66% { transform: translate(-13px, 1px) scale(1.271, 1); }
+        68% { transform: translate(-13px, 1px) scale(1.059, 1); }
+        70% { transform: translate(-13px, 1px) scale(1.271, 1); }
+        72% { transform: translate(-13px, 1px) scale(1.025, 1); }
+        74% { transform: translate(-13px, 1px) scale(1.235, 1); }
+        76% { transform: translate(-13px, 1px) scale(1.025, 1); }
+        78% { transform: translate(-13px, 1px) scale(1.322, 1); }
+        81% { transform: translate(-13px, 1px) scale(1.415, 1); }
+        87% { transform: translate(0, 0) scale(1, 1); }
+        91% { transform: translate(0, 0) scale(1, 1); }
+        95% { transform: translate(0, 0) scale(1, 1); }
+        100% { transform: translate(0, 0) scale(1, 1); }
+      }
+
+      @keyframes push-shadow {
+        0% { transform: translate(0px, 0) scaleX(1); }
+        4% { transform: translate(0px, 0) scaleX(1); }
+        9% { transform: translate(0.405px, 0) scaleX(1.001); }
+        15% { transform: translate(-0.865px, 0) scaleX(1.107); }
+        19% { transform: translate(-0.675px, 0) scaleX(1.063); }
+        22% { transform: translate(-0.675px, 0) scaleX(1.083); }
+        24% { transform: translate(-0.86px, 0) scaleX(1.12); }
+        26% { transform: translate(-0.62px, 0) scaleX(1.12); }
+        28% { transform: translate(-0.86px, 0) scaleX(1.12); }
+        30% { transform: translate(-0.62px, 0) scaleX(1.11); }
+        32% { transform: translate(-0.83px, 0) scaleX(1.11); }
+        35% { transform: translate(-0.675px, 0) scaleX(1.063); }
+        42% { transform: translate(-0.26px, 0) scaleX(1.068); }
+        48% { transform: translate(-0.26px, 0) scaleX(1.058); }
+        53% { transform: translate(0.345px, 0) scaleX(0.991); }
+        58% { transform: translate(-1.055px, 0) scaleX(1.121); }
+        61% { transform: translate(-0.865px, 0) scaleX(1.077); }
+        64% { transform: translate(-1.05px, 0) scaleX(1.144); }
+        66% { transform: translate(-0.78px, 0) scaleX(1.144); }
+        68% { transform: translate(-1.05px, 0) scaleX(1.144); }
+        70% { transform: translate(-0.78px, 0) scaleX(1.144); }
+        72% { transform: translate(-1.05px, 0) scaleX(1.154); }
+        74% { transform: translate(-0.78px, 0) scaleX(1.154); }
+        76% { transform: translate(-1.05px, 0) scaleX(1.154); }
+        78% { transform: translate(-0.81px, 0) scaleX(1.124); }
+        81% { transform: translate(-0.865px, 0) scaleX(1.077); }
+        87% { transform: translate(0.345px, 0) scaleX(1.061); }
+        91% { transform: translate(-0.125px, 0) scaleX(0.997); }
+        95% { transform: translate(0px, 0) scaleX(1); }
+        100% { transform: translate(0px, 0) scaleX(1); }
+      }
+
+      @keyframes push-look {
+        0%, 4% { transform: translate(0, 0); }
+        9% { transform: translate(-0.5px, 0); }
+        15%, 36% { transform: translate(-1px, 0); }
+        42%, 48% { transform: translate(0, 0); }
+        53%, 82% { transform: translate(-1px, 0); }
+        88% { transform: translate(0.3px, 0); }
+        95%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Squeezed eyes on the effort, a double blink while easing off */
+      @keyframes push-lid {
+        0%, 15%, 38%, 43%, 47%, 49%, 53%, 58%, 84%, 100% { transform: scaleY(1); }
+        21%, 33% { transform: scaleY(0.45); }
+        45% { transform: scaleY(0.1); }
+        51% { transform: scaleY(0.1); }
+        63%, 79% { transform: scaleY(0.35); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (braced: lean into the wall, feet planted) -->
+  <g class="legs-lean">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="action-body">
+    <!-- Right Arm (behind the torso, becomes the lower pushing hand) -->
+    <g class="arm-r">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <!-- Left Arm (upper pushing hand) -->
+    <g class="arm-l">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Eyes (lids close from the top) -->
+    <g class="eyes-look">
+      <g class="eyes-lid" fill="#000000">
+        <rect x="4" y="8" width="1" height="2"/>
+        <rect x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>
