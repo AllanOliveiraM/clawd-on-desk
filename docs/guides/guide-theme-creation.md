@@ -445,6 +445,12 @@ Visuals for the opt-in "Clawd Alive" companion (petting, moods). The whole block
 
 - Known keys, and when they play: `petting` (loops while the user strokes the pet; each loop lasts the entry's `duration`, or 2000 ms when none is given, and the petting session ends 3 s after the last stroke), `content` (calm happy moment after petting or on its own), `tired`, `shy`, `grumpy`, `curious` (short mood beats while idle) and `greet` (a light hello to a social personality). The built-in Clawd theme uses 3500 / 4000 / 3000 / 3500 / 4000 / 2500 ms for `content` / `tired` / `shy` / `grumpy` / `curious` / `greet`. Unknown keys and entries without a file are ignored.
 - Each entry takes `file` or `files` (a pool) and an optional `duration` in ms.
+- Mischief keys (also optional, used when the user's `Mischief` switch is on). Durations below are the built-in Clawd theme's, in ms:
+  - Cursor: `catch` 1600 and `catchMiss` 2200 (hover grab, then the miss when the cursor moves); `pounceLeft` / `pounceRight` 2400 (side the cursor lurks on); `fakeNap` 3000 (loops until the user "boos" or a time limit) and `boo` 1400; `pokeLeft` / `pokeRight` 2000
+  - Edges: `reachClose` 3000; `wallPushLeft` / `wallPushRight` 2500; `wallPeekLeft` / `wallPeekRight` 2500; `sitEdge` 2000 (loops)
+  - Day and returns: `morningStretch` 2800, `coffee` 3000, `nightSleepy` 3000, `welcome` 2000, `stretchBack` 2600
+  - Toys: `toyBall`, `toyYoyo`, `toyPlane`, 3000 each
+  - Left/right pairs: `pounce`, `poke`, `wallPush`, `wallPeek`. The side is the direction the pet faces or leans. If only one side exists, that scene is skipped on the other side; `wall` needs at least one `wallPush*` or `wallPeek*` key, `toy` and day rhythm need at least one of their variants. Scenes whose main art is missing are skipped, and missing `boo`/`catchMiss` just ends the scene.
 - Every listed file is a required asset, like reaction files: a misspelled or missing file fails theme validation with a `missing asset` error.
 - A key you leave out has no visual, and the companion simply skips that moment. Themes without the block work unchanged.
 - Variants cannot override this block.

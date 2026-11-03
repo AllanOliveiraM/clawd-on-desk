@@ -334,6 +334,7 @@ Mini 状态映射：
 - 它复用 idle-activity / roam 的同一个 gate，意图集合与 `src/companion-intent.js` 的 `INTENTS` 一致：`observe` / `content` / `tired` / `grumpy` / `curious` / `shy` / `greet` / `themeActivity`（`observe` 只是等待下一拍，`themeActivity` 把选择交还给主题自己的 idle activity）。`explore`（走向访问最少的格子）和 `returnToRest`（精力低时回到拖放留下的休息点，连续三次后让出一次普通行走）不是意图，而是 Free Roam 选择行走目标时的两种方式；逻辑状态始终保持 `idle`，从不调用 `setState` / `applyState` 播放操作类状态，agent 状态、权限、DND、mini、拖拽都优先
 - 主题可选 `companionAnimations` 块（`petting`、`content`、`tired`、`shy`、`grumpy`、`curious`、`greet`）；缺失的键直接跳过，无该块的主题行为不变。`clawd-happy.svg`（attention）永远不会被心情选中
 - 状态存放在 userData 的 `companion-state.json`（tmp + rename 原子写入，30 s debounce，`before-quit` 时 flush）；只保存心情、熟悉度和休息点，不保存鼠标历史、代码、提示词、窗口标题或项目名
+- 淘气（`companionMischief`，默认开，仅在 Clawd Alive 开启时生效）：`src/companion-mischief.js` 是纯函数「大脑」（光标潜伏/停放/boo 检测、冷却、早晚时段、性格权重；时钟/随机数/小时均注入，无 timer），`src/companion-scenes.js` 是多段场景播放器（如 catch→catchMiss、fakeNap 循环→boo），`companion-runtime` 负责接线。11 种行为：catch / pounce / fakeNap(+boo) / poke / reachClose / wall / sitEdge / dayRhythm / welcome / stretchBack / toy。`companionAnimations` 新增 22 个可选键（pounce、poke、wallPush、wallPeek 各有 Left/Right），缺键则该场景直接跳过。走路型（poke / reachClose / wall / sitEdge）仅在 roam 模式下搭乘下一次 roam，`Stay put` 下不会走动；activities 模式只选单段变体（dayRhythm / toy）。边缘目标（reachClose / wall / sitEdge）是 roam 15% 边距带的例外：可到达屏幕边缘，但仍遵守 Roam Fence 与整窗落在工作区内；普通行走不变。光标样本由现有 tick 提供，原生 Wayland 无全局光标，故光标类淘气不触发
 
 ### Click Reactions
 

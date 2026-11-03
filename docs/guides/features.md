@@ -22,6 +22,24 @@
 - **Local and private** — only mood, familiarity, and the resting spot are saved, in `companion-state.json` under the app's data folder (never mouse history, code, prompts, or window titles). Agent work always takes priority over these moments
 - **Theme art** — themes add visuals through an optional [`companionAnimations`](guide-theme-creation.md#companion-animations-optional) block; themes without it work unchanged
 
+### Mischief
+
+Part of Clawd Alive, with its own switch: `Settings…` → `Pet` → `Personality & behavior` → `Mischief` (on by default once Clawd Alive is on). Off, none of the moments below happen. Each one needs matching theme art and has its own cooldown; personality weights how often each shows up, and a low-energy Clawd skips the jumpy and walking ones.
+
+- **Catch** — hover over Clawd and it grabs for the cursor; move the cursor and it misses (not for very shy pets)
+- **Pounce** — lurk near Clawd (40–220 px away) for a couple of seconds and it pounces toward you
+- **Fake nap** — pretends to doze; sneak the cursor close and it jumps up with a "boo"
+- **Poke** — park the cursor far away for 20 s and Clawd walks over to poke it
+- **Reach close** — walks to the top corner where the window close button lives (top right, top left on macOS) and reaches for it
+- **Wall** — walks to the nearest side edge and pushes on it or peeks over it
+- **Sit on the edge** — walks to the bottom edge and sits on it for a while
+- **Day rhythm** — a morning stretch or coffee (06:00–10:00) and a sleepy yawn at night (23:00–03:00), once per window
+- **Toy** — plays with a ball, yo-yo, or paper plane
+- **Welcome back** — celebrates when you return after a sleep of 10 minutes or more
+- **Stretch back** — stretches after a long work stretch of 10 minutes or more ends
+
+How `When idle` decides where: with `Stay put`, Clawd never walks, so only the in-place moments happen (catch, pounce, fake nap, day rhythm, toy, welcome, stretch). With `Free Roam`, the walking ones (poke, reach close, wall, sit on the edge) ride Free Roam's normal walks, and the corner/edge ones may go all the way to the screen edge, past the usual margin. They still respect the Roam Fence and keep the pet fully on screen. With `Activities`, only single-visual moments (day rhythm and toy) are picked. Agent work, DND, mini mode, and dragging always win.
+
 ## Permission Bubble
 
 - **In-app permission review** — when a permission-capable integration sends a supported request, Clawd can pop a floating bubble card instead of waiting in the terminal; state-only agents keep their native permission flow
