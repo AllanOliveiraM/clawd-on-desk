@@ -10,6 +10,11 @@
 // No polling: mood advances lazily on events/decisions, beats are driven by the
 // existing tick, and the only timers are the per-playback duration timer and
 // the petting inactivity timer.
+//
+// Mischief (opt-in, `mischief`): multi-part scenes played through the same
+// playback protocol (src/companion-scenes.js), triggered by cursor samples the
+// tick already reads, hover gestures, idle entries and roam arrivals. With
+// mischief off every path below behaves exactly like plain Clawd Alive.
 
 const {
   getTraits,
@@ -26,6 +31,14 @@ const {
   beatDelayMs,
   roamDelayMs,
 } = require("./companion-intent");
+const { createMischiefBrain, reactWeight } = require("./companion-mischief");
+const {
+  buildScene,
+  createScenePlayer,
+  partDurationMs,
+  mischiefAvailable,
+  walkTarget,
+} = require("./companion-scenes");
 
 const BEAT_DEFAULT_DURATION_MS = 3500;
 const BEAT_MIN_DURATION_MS = 2000;
@@ -41,7 +54,13 @@ const EXPLORE_CHANCE_PER_CURIOSITY = 0.6;
 const MAX_CONSECUTIVE_REST_HOLDS = 3;
 const GRID_SIZE = 3;
 const GRID_DECAY = 0.9;
-const GESTURES = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell"]);
+const GESTURES = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell", "hover-move"]);
+// Mischief tuning.
+const MISCHIEF_LOW_ENERGY = 25; // jumpy/walking reactions stay off below this
+const WALKING_MISCHIEF = new Set(["poke", "reachClose", "wall", "sitEdge"]);
+const IDLE_QUEUE_MAX_WAIT_MS = 60000; // welcome / stretch wait this long for the gate
+const PENDING_WALK_MAX_MS = 120000; // a walk the roam never asked for (or cut) is dropped
+const LONG_WORK_MS = 600000;
 
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -66,6 +85,9 @@ function createCompanionRuntime(options = {}) {
     // greets wait for it, petting may still take over.
     isOtherIdleVisualPlaying = () => false,
     getDisplayWorkArea = null,
+    // Mischief: platform for the "close button" corner, local hour for tests.
+    getPlatform = () => process.platform,
+    getHour = undefined,
     store = null,
     random = Math.random,
     now = Date.now,
@@ -73,7 +95,9 @@ function createCompanionRuntime(options = {}) {
     clearTimeout: clearTimer = clearTimeout,
   } = options;
 
-  const config = { enabled: false, personality: "balanced", autonomy: true, interactions: true, memory: true };
+  const config = {
+    enabled: false, personality: "balanced", autonomy: true, interactions: true, memory: true, mischief: false,
+  };
   let traits = getTraits(config.personality);
   let state = createInitialState();
   let restSpot = null;
@@ -89,9 +113,16 @@ function createCompanionRuntime(options = {}) {
   let pendingWalkCell = null;
   let restHolds = 0; // consecutive rest-spot answers; the pet never parks forever
   let disposed = false;
+  // Mischief bookkeeping (memory only).
+  const brain = createMischiefBrain({ now, random, getHour });
+  let napping = false; // last value given to brain.setNapping
+  let pendingWalk = null; // { id, at, target? } chosen, waiting for the roam to ask
+  let walkingMischief = null; // { id, at, side, petWidth } proposed to the roam, waiting for arrival
+  let idleQueue = null; // { id, at } welcome / stretchBack waiting for the gate
 
   const memoryOn = () => config.enabled && config.memory;
   const autonomous = () => config.enabled && config.autonomy;
+  const mischiefOn = () => config.enabled && config.mischief;
 
   function persist() {
     if (memoryOn() && store) store.schedule({ state, restSpot });
@@ -149,7 +180,7 @@ function createCompanionRuntime(options = {}) {
   // one on screen and the logical state is idle.
   function stopPlayback(restore) {
     const shouldRestore = restore && isAnimating() && getCurrentState() === "idle";
-    const wasBeat = playing && playing.kind === "beat";
+    const wasBeat = playing && (playing.kind === "beat" || playing.kind === "scene");
     clearPlayTimer();
     playing = null;
     if (shouldRestore) restoreIdleVisual();
@@ -164,6 +195,11 @@ function createCompanionRuntime(options = {}) {
     clearPlayTimer();
     if (playing !== attempt) return;
     const stillOurs = getCurrentState() === "idle" && isVisualGenerationCurrent(attempt.visualGeneration);
+    if (attempt.kind === "scene") {
+      playing = null;
+      scenes.partFinished(attempt.scene, stillOurs);
+      return;
+    }
     if (attempt.kind === "petting" && petSession) {
       // Loop the same file while the session lasts; a newer visual ends the
       // loop, and so does a closed gate (the session itself stays for mood).
@@ -178,8 +214,8 @@ function createCompanionRuntime(options = {}) {
     if (attempt.kind === "beat" && autonomous()) scheduleBeat();
   }
 
-  function play(kind, file, duration) {
-    const attempt = { kind, file, duration, visualGeneration: null, committed: false };
+  function play(kind, file, duration, scene = null) {
+    const attempt = { kind, file, duration, visualGeneration: null, committed: false, scene };
     playing = attempt;
     const onLogicalSettlement = (settlement) => {
       if (playing !== attempt) return;
@@ -213,6 +249,132 @@ function createCompanionRuntime(options = {}) {
     return !playing && getCurrentState() === "idle" && canPlay();
   }
 
+  // ---- mischief scenes ----
+
+  const scenes = createScenePlayer({
+    play,
+    getPlaying: () => playing,
+    isOwned: () => isAnimating(),
+    canContinue: () => canPlay() && getCurrentState() === "idle",
+    stopPlayback,
+    clearPlayback: () => {
+      clearPlayTimer();
+      playing = null;
+    },
+    restoreIdleVisual: () => restoreIdleVisual(),
+    now,
+    onEnd: () => {
+      if (autonomous()) scheduleBeat();
+    },
+  });
+
+  // A scene never starts over another idle visual, a walk or a closed gate.
+  function sceneGateOpen() {
+    return visualGateOpen() && !isOtherIdleVisualPlaying() && !isRoamAnimating();
+  }
+
+  function startScene(id, opts) {
+    if (!sceneGateOpen()) return false;
+    const theme = getTheme();
+    const scene = buildScene(id, opts, (key) => animationFor(key, theme), random);
+    if (!scene) return false;
+    const t = now();
+    brain.markPlayed(id, t, traits);
+    if (scene.requires === "autonomy") setMood(applyEvent(state, { kind: "beat" }, traits, t));
+    scenes.start(scene);
+    return true;
+  }
+
+  function sceneAllowed(scene) {
+    if (!mischiefOn()) return false;
+    return scene.requires === "interactions" ? config.interactions : config.autonomy;
+  }
+
+  // Personality chance, individual cooldown and energy for a cursor reaction.
+  function acceptReaction(id, t) {
+    if (!brain.canReact(id, t)) return false;
+    advanceMood();
+    if (state.mood.energy < MISCHIEF_LOW_ENERGY) return false;
+    return random() < clamp(reactWeight(id, config.personality), 0, 1);
+  }
+
+  function clearMischiefWork() {
+    pendingWalk = null;
+    walkingMischief = null;
+    idleQueue = null;
+  }
+
+  function syncNap() {
+    const scene = scenes.current();
+    const napNow = !!(scene && scene.id === "fakeNap" && !scene.switched && isAnimating());
+    if (napNow !== napping) {
+      napping = napNow;
+      brain.setNapping(napNow);
+    }
+  }
+
+  function tryBoo() {
+    const scene = scenes.current();
+    if (!scene || scene.id !== "fakeNap" || scene.switched) return;
+    if (!(random() < clamp(reactWeight("boo", config.personality), 0, 1))) return;
+    scenes.event("boo");
+  }
+
+  // Cursor reactions, the idle-entry queue and stale bookkeeping. Returns true
+  // when this tick is spoken for (the beat path then waits).
+  function mischiefTick(cursor) {
+    const t = now();
+    const scene = scenes.current();
+    // A replaced visual or a non-idle state ends the scene right away.
+    if (scene && (!isAnimating() || getCurrentState() !== "idle")) stopPlayback(true);
+    if (!autonomous() || getIdleMode() !== "roam") {
+      pendingWalk = null;
+      walkingMischief = null;
+    }
+    if (pendingWalk && t - pendingWalk.at > PENDING_WALK_MAX_MS) pendingWalk = null;
+    if (walkingMischief && t - walkingMischief.at > PENDING_WALK_MAX_MS) walkingMischief = null;
+    if (idleQueue && t - idleQueue.at > IDLE_QUEUE_MAX_WAIT_MS) idleQueue = null;
+    syncNap();
+    const hit = brain.observeCursor(cursor);
+    if (playing || petSession) {
+      if (hit && hit.id === "boo") tryBoo();
+      return true;
+    }
+    if (getCurrentState() !== "idle") return true;
+    if (idleQueue && autonomous() && getIdleMode() !== "none" && startScene(idleQueue.id)) {
+      idleQueue = null;
+      return true;
+    }
+    if (!hit) return false;
+    if (hit.id === "pounce" && config.interactions && !isRoamAnimating()
+      && acceptReaction("pounce", t) && startScene("pounce", { side: hit.side })) {
+      return true;
+    }
+    if (hit.id === "poke" && autonomous() && getIdleMode() === "roam" && !pendingWalk && !walkingMischief
+      && brain.isGlobalReady(t) && acceptReaction("poke", t)) {
+      const keys = availableKeys(getTheme());
+      if (keys.has("pokeLeft") || keys.has("pokeRight")) pendingWalk = { id: "poke", at: t, target: hit.target };
+    }
+    return false;
+  }
+
+  // Autonomous mischief on a due beat. A walking one becomes a pending walk
+  // that rides the next roam; the rest play right away as a scene.
+  function tryAutonomousMischief(keys) {
+    if (pendingWalk || walkingMischief) return false;
+    const t = now();
+    const pick = brain.pickAutonomous({
+      traits, personality: config.personality, state, mode: "roam", available: mischiefAvailable(keys, false), now: t,
+    });
+    if (!pick) return false;
+    if (WALKING_MISCHIEF.has(pick.id)) {
+      pendingWalk = { id: pick.id, at: t };
+      scheduleBeat();
+      return true;
+    }
+    return startScene(pick.id, { variant: pick.variant });
+  }
+
   // ---- beats and choosers ----
 
   function markIntentPlayed(intent) {
@@ -220,8 +382,10 @@ function createCompanionRuntime(options = {}) {
     setMood(applyEvent(state, { kind: "beat" }, traits, now()));
   }
 
-  function tick() {
-    if (disposed || !autonomous() || getIdleMode() !== "roam") return;
+  function tick(cursor) {
+    if (disposed) return;
+    if (mischiefOn() && mischiefTick(cursor)) return;
+    if (!autonomous() || getIdleMode() !== "roam") return;
     if (playing || petSession || getCurrentState() !== "idle") return;
     // Arm the clock even while a gate is closed so the beat is ready when it opens.
     if (nextBeatAt == null) {
@@ -232,6 +396,7 @@ function createCompanionRuntime(options = {}) {
     advanceMood();
     const theme = getTheme();
     const available = availableKeys(theme);
+    if (!forcedIntent && mischiefOn() && tryAutonomousMischief(available)) return;
     const intent = forcedIntent
       || chooseIntent({ traits, state, mode: "roam", available, cooldownUntil, now: now(), random });
     forcedIntent = null;
@@ -254,6 +419,19 @@ function createCompanionRuntime(options = {}) {
     const theme = (args && args.theme) || getTheme();
     advanceMood();
     const available = availableKeys(theme);
+    if (mischiefOn()) {
+      // Single-part mischief only: idle-activity plays one file, no scenes.
+      const t = now();
+      const pick = brain.pickAutonomous({
+        traits, personality: config.personality, state, mode: "activities", available: mischiefAvailable(available, true), now: t,
+      });
+      const anim = pick && pick.variant ? animationFor(pick.variant, theme) : null;
+      if (anim) {
+        brain.markPlayed(pick.id, t, traits);
+        setMood(applyEvent(state, { kind: "beat" }, traits, t));
+        return { file: anim.file, durationMs: partDurationMs(anim) };
+      }
+    }
     const intent = chooseIntent({ traits, state, mode: "activities", available, cooldownUntil, now: now(), random });
     if (intent === "themeActivity") return null;
     const key = ANIMATION_KEY_BY_INTENT[intent];
@@ -265,6 +443,8 @@ function createCompanionRuntime(options = {}) {
 
   function getRoamDelayMs(isFirst, baseMs) {
     if (disposed || !autonomous()) return baseMs;
+    // A pending mischief walk asks for the shortest pause roam allows.
+    if (mischiefOn() && pendingWalk) return 0.5 * baseMs;
     advanceMood();
     return roamDelayMs(isFirst, baseMs, traits, state.mood);
   }
@@ -309,6 +489,17 @@ function createCompanionRuntime(options = {}) {
       grid[cellOf(area, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)] += 1;
     }
     pendingWalkCell = null;
+    walkingMischief = null; // a new walk supersedes an older, never-finished one
+
+    if (mischiefOn() && pendingWalk) {
+      const walk = pendingWalk;
+      pendingWalk = null;
+      const spot = walkTarget(walk, { area, bounds, size, platform: getPlatform() });
+      if (spot) {
+        walkingMischief = { id: walk.id, at: now(), side: spot.side, petWidth: spot.petWidth };
+        return { ...toTarget(spot.cx, spot.cy, true), mischief: walk.id };
+      }
+    }
 
     advanceMood();
     if (state.mood.energy < REST_ENERGY_THRESHOLD && restSpot) {
@@ -341,16 +532,25 @@ function createCompanionRuntime(options = {}) {
   }
 
   // Roam did not use the proposed target (too close, or holding): the explore
-  // cell must not be credited on the next arrival.
+  // cell must not be credited on the next arrival, and a mischief walk is off.
   function onPreferredTargetDiscarded() {
     if (disposed) return;
     pendingWalkCell = null;
+    pendingWalk = null;
+    walkingMischief = null;
   }
 
-  // A real (non-walk) idle entry: the next beat waits a fresh delay.
-  function noteIdleEntered() {
+  // A real (non-walk) idle entry: the next beat waits a fresh delay. With
+  // mischief, a return from sleep or from a long work stretch queues a short
+  // welcome / stretch that waits (on tick) for the gate to open.
+  function noteIdleEntered(info) {
     if (disposed || !autonomous()) return;
     scheduleBeat();
+    if (!mischiefOn() || !info) return;
+    if (info.from === "sleep") idleQueue = { id: "welcome", at: now() };
+    else if (info.from === "work" && isNum(info.awayMs) && info.awayMs >= LONG_WORK_MS) {
+      idleQueue = { id: "stretchBack", at: now() };
+    }
   }
 
   function noteWalkFinished(info) {
@@ -360,7 +560,18 @@ function createCompanionRuntime(options = {}) {
       pendingWalkCell = null;
     }
     setMood(applyEvent(state, { kind: "walk" }, traits, now()));
-    if (info && info.preferred && autonomous() && state.mood.energy < FORCED_TIRED_ENERGY_THRESHOLD) {
+    let played = false;
+    if (mischiefOn() && walkingMischief && info && info.mischief === walkingMischief.id) {
+      const walk = walkingMischief;
+      walkingMischief = null;
+      // Fence or clamp may stop the pet short of the edge: then skip the scene.
+      const reached = info.reachedEdgeDistancePx;
+      const close = walk.id === "poke" || (isNum(reached) && reached <= walk.petWidth);
+      if (close && autonomous() && getIdleMode() === "roam") played = startScene(walk.id, { side: walk.side });
+      // Spend the cooldown anyway so a fenced pet does not keep walking there.
+      if (!played) brain.markPlayed(walk.id, now(), traits);
+    }
+    if (!played && info && info.preferred && autonomous() && state.mood.energy < FORCED_TIRED_ENERGY_THRESHOLD) {
       nextBeatAt = now() + FORCED_BEAT_DELAY_MS;
       forcedIntent = "tired";
     }
@@ -428,10 +639,25 @@ function createCompanionRuntime(options = {}) {
     play("hover", anim.file, beatDuration(anim));
   }
 
+  // Mischief answer to a hover dwell; shy pets keep today's shy answer.
+  function tryCatch() {
+    if (traits.sociability < 0.3) return false;
+    const t = now();
+    if (!brain.canReact("catch", t) || !startScene("catch")) return false;
+    hoverReadyAt = t + HOVER_COOLDOWN_MS; // no greet right after a catch
+    setMood(applyEvent(state, { kind: "hoverGreet" }, traits, t));
+    return true;
+  }
+
   function handleGesture(kind) {
     if (disposed || !config.enabled || !config.interactions || !GESTURES.has(kind)) return;
+    if (kind === "hover-move") {
+      // Cursor moved or left during a catch: it turns into the miss.
+      if (mischiefOn()) scenes.event("hover-move");
+      return;
+    }
     if (kind === "hover-dwell") {
-      handleHover();
+      if (!(mischiefOn() && tryCatch())) handleHover();
       return;
     }
     if (kind === "pet-end") {
@@ -456,6 +682,7 @@ function createCompanionRuntime(options = {}) {
     playing = null;
     nextBeatAt = null;
     forcedIntent = null;
+    clearMischiefWork();
   }
 
   function stopEverything() {
@@ -464,6 +691,7 @@ function createCompanionRuntime(options = {}) {
     stopPlayback(true);
     nextBeatAt = null;
     forcedIntent = null;
+    clearMischiefWork();
   }
 
   function configure(next = {}) {
@@ -471,7 +699,7 @@ function createCompanionRuntime(options = {}) {
     const prev = { ...config };
     if (typeof next.enabled === "boolean") config.enabled = next.enabled;
     if (next.personality !== undefined) config.personality = normalizePersonality(next.personality);
-    for (const key of ["autonomy", "interactions", "memory"]) {
+    for (const key of ["autonomy", "interactions", "memory", "mischief"]) {
       if (typeof next[key] === "boolean") config[key] = next[key];
     }
     traits = getTraits(config.personality);
@@ -500,6 +728,9 @@ function createCompanionRuntime(options = {}) {
       forcedIntent = null;
     }
     if (!config.interactions) endPetSession();
+    const scene = scenes.current();
+    if (scene && !sceneAllowed(scene)) stopPlayback(true);
+    if (!config.mischief || !config.autonomy) clearMischiefWork();
   }
 
   function reset() {
@@ -512,6 +743,8 @@ function createCompanionRuntime(options = {}) {
     grids = new Map();
     pendingWalkCell = null;
     restHolds = 0;
+    brain.reset();
+    napping = false;
     if (store) store.remove();
   }
 
@@ -521,6 +754,7 @@ function createCompanionRuntime(options = {}) {
     clearPlayTimer();
     petSession = false;
     playing = null;
+    clearMischiefWork();
     disposed = true;
     if (memoryOn() && store) store.flush();
   }

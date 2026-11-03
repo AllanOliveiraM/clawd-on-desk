@@ -721,3 +721,462 @@ test("noteIdleEntered restarts the beat delay", () => {
   off.runtime.noteIdleEntered();
   assert.equal(off.clock.pendingTimers, 0);
 });
+
+// ---- mischief (scenes) ----
+
+const MISCHIEF_KEYS = [
+  "catch", "catchMiss", "pounceLeft", "pounceRight", "fakeNap", "boo",
+  "pokeLeft", "pokeRight", "reachClose", "wallPushLeft", "wallPushRight",
+  "wallPeekLeft", "wallPeekRight", "sitEdge", "morningStretch", "coffee",
+  "nightSleepy", "welcome", "stretchBack", "toyBall", "toyYoyo", "toyPlane",
+];
+const MON = { ...ON, mischief: true };
+const PET_RECT = { x: 500, y: 500, width: 100, height: 100 };
+const ROAM_ARGS = {
+  xMin: 0, xMax: 1900, yMin: 0, yMax: 900,
+  bounds: { x: 950, y: 450, width: 100, height: 100 },
+  size: { width: 100, height: 100 },
+  displayId: null,
+  workArea: { x: 0, y: 0, width: 2000, height: 1000 },
+};
+
+function sample(x, y, overPet = false) {
+  return { x, y, petRect: { ...PET_RECT }, overPet };
+}
+
+// Ticks with the same cursor sample every 250 ms for `ms`.
+function tickWithCursor(env, cursor, ms) {
+  for (let t = 0; t < ms; t += 250) {
+    env.clock.advance(250);
+    env.runtime.tick(cursor);
+  }
+}
+
+// Advances time in small steps, committing every new (uncommitted) send right away.
+function runCommitting(env, ms, step = 250) {
+  const commitPending = () => {
+    const last = env.sends[env.sends.length - 1];
+    if (last && !last.committedByHelper) {
+      last.committedByHelper = true;
+      env.commitLast();
+    }
+  };
+  for (let t = 0; t < ms; t += step) {
+    commitPending();
+    env.clock.advance(step);
+  }
+  commitPending();
+}
+
+function lcg(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+test("mischief off is identical to Clawd Alive", () => {
+  // Same script and theme (with mischief art) twice: once with mischief:false
+  // and every new input; once the way Clawd Alive was driven. Sends, restores
+  // and answers match.
+  function run(withExtras) {
+    const env = setup({ options: { random: lcg(7) } });
+    env.theme = themeWith([...ALL_KEYS, ...MISCHIEF_KEYS]);
+    const log = [];
+    const cfg = withExtras ? { ...ON, personality: "playful", mischief: false } : { ...ON, personality: "playful" };
+    env.runtime.configure(cfg);
+    env.runtime.handleGesture("hover-dwell");
+    if (withExtras) env.runtime.handleGesture("hover-move");
+    env.commitLast();
+    for (let i = 0; i < 1200; i += 1) {
+      env.clock.advance(500);
+      if (env.sends.length && !env.sends[env.sends.length - 1].committedSeen) {
+        env.sends[env.sends.length - 1].committedSeen = true;
+        env.commitLast();
+      }
+      const cursor = i < 600 ? sample(700, 550) : sample(1500, 1200);
+      env.runtime.tick(withExtras ? cursor : undefined);
+    }
+    env.runtime.noteIdleEntered(withExtras ? { from: "sleep", awayMs: 9e6 } : undefined);
+    for (let i = 0; i < 100; i += 1) {
+      env.clock.advance(1000);
+      env.runtime.tick(withExtras ? sample(700, 550) : undefined);
+    }
+    log.push(env.runtime.getRoamDelayMs(false, 8000));
+    log.push(env.runtime.pickRoamTarget(ROAM_ARGS));
+    env.runtime.noteWalkFinished(withExtras
+      ? { preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 0 }
+      : { preferred: true });
+    env.runtime.handleGesture("hover-dwell");
+    env.mode = "activities";
+    for (let i = 0; i < 20; i += 1) log.push(env.runtime.chooseIdleActivity({ theme: env.theme }));
+    log.push(env.runtime.getMood());
+    return { sends: env.sends.map((s) => s.file), restores: env.restores, log, timers: env.clock.pendingTimers };
+  }
+  const off = run(true);
+  const alive = run(false);
+  assert.ok(alive.sends.length > 1, "the script exercises real playback");
+  assert.deepEqual(off, alive);
+});
+
+test("hover dwell plays catch and a move turns it into catchMiss", () => {
+  const env = setup();
+  env.mode = "none";
+  env.theme = themeWith([...ALL_KEYS, ...MISCHIEF_KEYS]);
+  env.runtime.configure(MON); // balanced: no greet today, catch with mischief
+  env.runtime.handleGesture("hover-dwell");
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.sends[0].file, "catch.svg");
+  env.commitLast();
+  env.clock.advance(500);
+  env.runtime.handleGesture("hover-move");
+  assert.equal(env.sends.length, 2);
+  assert.equal(env.sends[1].file, "catchMiss.svg");
+  assert.equal(env.restores, 0, "the miss takes the visual over directly");
+  env.runtime.handleGesture("hover-move"); // at most one switch per scene
+  assert.equal(env.sends.length, 2);
+  env.commitLast();
+  env.clock.advance(3500);
+  assert.equal(env.restores, 1);
+  assert.equal(env.runtime.isAnimating(), false);
+  assert.equal(env.clock.pendingTimers, 0);
+  // catch is on its 90 s cooldown: a balanced pet falls back to today's hover (nothing).
+  env.runtime.handleGesture("hover-dwell");
+  assert.equal(env.sends.length, 2);
+  // A move outside a catch scene does nothing.
+  env.runtime.handleGesture("hover-move");
+  assert.equal(env.sends.length, 2);
+  env.clock.advance(90000);
+  env.runtime.handleGesture("hover-dwell");
+  assert.equal(env.sends[2].file, "catch.svg");
+});
+
+test("shy hover still plays shy", () => {
+  const env = setup();
+  env.mode = "none";
+  env.theme = themeWith([...ALL_KEYS, ...MISCHIEF_KEYS]);
+  env.runtime.configure({ ...MON, personality: "shy" });
+  env.runtime.handleGesture("hover-dwell");
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.sends[0].file, "shy.svg");
+  env.runtime.handleGesture("hover-move");
+  assert.equal(env.sends.length, 1);
+});
+
+test("pounce plays the side-correct file", () => {
+  for (const [x, file] of [[700, "pounceRight.svg"], [400, "pounceLeft.svg"]]) {
+    const env = setup();
+    env.mode = "none";
+    env.theme = themeWith(MISCHIEF_KEYS);
+    env.runtime.configure({ ...MON, personality: "playful" });
+    tickWithCursor(env, sample(x, 550), 2000);
+    assert.equal(env.sends.length, 0, "not before 2.5 s in the band");
+    tickWithCursor(env, sample(x, 550), 1000);
+    assert.equal(env.sends.length, 1);
+    assert.equal(env.sends[0].file, file);
+  }
+  // Shy never pounces; interactions off never pounces.
+  for (const cfg of [{ ...MON, personality: "shy" }, { ...MON, personality: "playful", interactions: false }]) {
+    const env = setup();
+    env.mode = "none";
+    env.theme = themeWith(MISCHIEF_KEYS);
+    env.runtime.configure(cfg);
+    tickWithCursor(env, sample(700, 550), 5000);
+    assert.equal(env.sends.length, 0);
+  }
+});
+
+test("fake nap loops until cursor approach then boo", () => {
+  const env = setup();
+  env.theme = themeWith(["fakeNap", "boo"]);
+  env.runtime.configure({ ...MON, personality: "playful" });
+  tickUntilBeat(env);
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.sends[0].file, "fakeNap.svg");
+  env.commitLast();
+  env.clock.advance(3500);
+  assert.equal(env.sends.length, 2, "the loop re-sends the nap");
+  assert.equal(env.sends[1].file, "fakeNap.svg");
+  assert.equal(env.restores, 0);
+  env.commitLast();
+  env.runtime.tick(sample(1200, 550)); // far away: keeps napping
+  assert.equal(env.sends.length, 2);
+  env.clock.advance(250);
+  env.runtime.tick(sample(650, 550)); // sneaks up
+  assert.equal(env.sends.length, 3);
+  assert.equal(env.sends[2].file, "boo.svg");
+  env.commitLast();
+  env.clock.advance(3500);
+  assert.equal(env.restores, 1);
+  assert.equal(env.clock.pendingTimers, 0);
+
+  // Without an approach the nap ends at 20 s.
+  const nap = setup();
+  nap.theme = themeWith(["fakeNap"]);
+  nap.runtime.configure({ ...MON, personality: "playful" });
+  tickUntilBeat(nap);
+  const startedAt = nap.clock.now();
+  runCommitting(nap, 25000);
+  assert.ok(nap.sends.every((s) => s.file === "fakeNap.svg"));
+  assert.equal(nap.sends.length, 6);
+  assert.equal(nap.restores, 1);
+  assert.ok(nap.clock.now() - startedAt >= 20000);
+  assert.equal(nap.runtime.isAnimating(), false);
+});
+
+test("real state change mid-scene kills every part", () => {
+  const env = setup();
+  env.theme = themeWith(["fakeNap", "boo"]);
+  env.runtime.configure({ ...MON, personality: "playful" });
+  tickUntilBeat(env);
+  env.commitLast();
+  env.generation += 1; // a real event painted something newer
+  env.runtime.tick(sample(650, 550)); // even a boo trigger cannot revive the scene
+  env.clock.advance(30000);
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.restores, 0);
+  assert.equal(env.clock.pendingTimers, 0);
+  assert.equal(env.runtime.isAnimating(), false);
+
+  // Catch: a move after a newer generation never sends the miss nor restores.
+  const hover = setup();
+  hover.mode = "none";
+  hover.theme = themeWith(MISCHIEF_KEYS);
+  hover.runtime.configure(MON);
+  hover.runtime.handleGesture("hover-dwell");
+  hover.commitLast();
+  hover.generation += 1;
+  hover.runtime.handleGesture("hover-move");
+  hover.clock.advance(10000);
+  assert.equal(hover.sends.length, 1);
+  assert.equal(hover.restores, 0);
+  assert.equal(hover.clock.pendingTimers, 0);
+
+  // Logical state left idle between loop iterations: no re-send, no restore.
+  const work = setup();
+  work.theme = themeWith(["sitEdge"]);
+  work.runtime.configure(MON);
+  tickUntilBeat(work, 200000);
+  work.runtime.pickRoamTarget(ROAM_ARGS);
+  work.runtime.noteWalkFinished({ preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 0 });
+  assert.equal(work.sends.length, 1);
+  work.commitLast();
+  work.state = "working";
+  work.clock.advance(30000);
+  assert.equal(work.sends.length, 1);
+  assert.equal(work.restores, 0);
+  assert.equal(work.clock.pendingTimers, 0);
+});
+
+test("welcome waits for the gate up to 60 s then drops", () => {
+  const env = setup();
+  env.theme = themeWith(["welcome"]);
+  env.runtime.configure(MON);
+  env.gate = false;
+  env.runtime.noteIdleEntered({ from: "sleep", awayMs: 3600000 });
+  for (let i = 0; i < 59; i += 1) {
+    env.clock.advance(1000);
+    env.runtime.tick();
+  }
+  assert.equal(env.sends.length, 0);
+  env.gate = true;
+  env.runtime.tick();
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.sends[0].file, "welcome.svg");
+
+  const late = setup();
+  late.theme = themeWith(["welcome"]);
+  late.runtime.configure(MON);
+  late.gate = false;
+  late.runtime.noteIdleEntered({ from: "sleep", awayMs: 3600000 });
+  for (let i = 0; i < 61; i += 1) {
+    late.clock.advance(1000);
+    late.runtime.tick();
+  }
+  late.gate = true;
+  late.runtime.tick();
+  late.clock.advance(1000);
+  late.runtime.tick();
+  assert.equal(late.sends.length, 0);
+});
+
+test("stretch only after long work", () => {
+  const cases = [
+    [{ from: "work", awayMs: 599999 }, 0],
+    [{ from: "other", awayMs: 9e6 }, 0],
+    [{ from: "work", awayMs: 600000 }, 1],
+  ];
+  for (const [info, expected] of cases) {
+    const env = setup();
+    env.theme = themeWith(["stretchBack", "welcome"]);
+    env.runtime.configure(MON);
+    env.runtime.noteIdleEntered(info);
+    env.clock.advance(1000);
+    env.runtime.tick();
+    assert.equal(env.sends.length, expected, JSON.stringify(info));
+    if (expected) assert.equal(env.sends[0].file, "stretchBack.svg");
+  }
+});
+
+test("walking mischief shortens the roam delay and targets the right corner per platform", () => {
+  for (const [platform, x] of [["linux", 1900], ["win32", 1900], ["darwin", 0]]) {
+    const env = setup({ options: { getPlatform: () => platform } });
+    env.theme = themeWith(["reachClose"]);
+    env.runtime.configure(MON); // balanced: 8000 * 1.1
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800);
+    tickUntilBeat(env, 200000);
+    assert.equal(env.sends.length, 0, "a walking mischief waits for the roam");
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000);
+    const target = env.runtime.pickRoamTarget(ROAM_ARGS);
+    assert.deepEqual(target, { x, y: 0, preferred: true, mischief: "reachClose" });
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800);
+    env.runtime.noteWalkFinished({ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 0 });
+    assert.equal(env.sends.length, 1);
+    assert.equal(env.sends[0].file, "reachClose.svg");
+  }
+});
+
+test("walking mischief targets the nearest wall, the bottom edge and the cursor", () => {
+  const wall = setup();
+  wall.theme = themeWith(["wallPushLeft", "wallPushRight"]);
+  wall.runtime.configure(MON);
+  tickUntilBeat(wall, 200000);
+  const nearLeft = { ...ROAM_ARGS, bounds: { x: 300, y: 600, width: 100, height: 100 } };
+  assert.deepEqual(wall.runtime.pickRoamTarget(nearLeft), { x: 0, y: 600, preferred: true, mischief: "wall" });
+  wall.runtime.noteWalkFinished({ preferred: true, mischief: "wall", reachedEdgeDistancePx: 0 });
+  assert.equal(wall.sends[0].file, "wallPushLeft.svg");
+
+  const edge = setup();
+  edge.theme = themeWith(["sitEdge"]);
+  edge.runtime.configure(MON);
+  tickUntilBeat(edge, 200000);
+  assert.deepEqual(edge.runtime.pickRoamTarget(nearLeft), { x: 300, y: 900, preferred: true, mischief: "sitEdge" });
+  edge.runtime.noteWalkFinished({ preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 40 });
+  assert.equal(edge.sends[0].file, "sitEdge.svg");
+  runCommitting(edge, 20000);
+  assert.ok(edge.sends.length > 1 && edge.sends.every((s) => s.file === "sitEdge.svg"));
+  assert.equal(edge.restores, 1, "the sit loop ends at 15 s");
+
+  const poke = setup();
+  poke.theme = themeWith(["pokeLeft", "pokeRight"]);
+  poke.runtime.configure(MON);
+  const parked = { x: 1500, y: 300, petRect: { x: 950, y: 450, width: 100, height: 100 }, overPet: false };
+  for (let t = 0; t < 21000; t += 250) {
+    poke.clock.advance(250);
+    poke.runtime.tick(parked);
+  }
+  assert.equal(poke.runtime.getRoamDelayMs(false, 8000), 4000);
+  // Pet sits left of the cursor: stop half a pet before it, cursor on the right.
+  assert.deepEqual(poke.runtime.pickRoamTarget(ROAM_ARGS), { x: 1350, y: 250, preferred: true, mischief: "poke" });
+  poke.runtime.noteWalkFinished({ preferred: true, mischief: "poke", reachedEdgeDistancePx: 700 });
+  assert.equal(poke.sends.length, 1);
+  assert.equal(poke.sends[0].file, "pokeRight.svg");
+});
+
+test("corner target clamped by fence skips the scene", () => {
+  const env = setup();
+  env.theme = themeWith(["reachClose"]);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  assert.equal(env.runtime.pickRoamTarget(ROAM_ARGS).mischief, "reachClose");
+  env.runtime.noteWalkFinished({ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 500 });
+  assert.equal(env.sends.length, 0);
+  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "nothing pending afterwards");
+});
+
+test("discarded preferred target clears the pending walk", () => {
+  const env = setup();
+  env.theme = themeWith(["reachClose"]);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000);
+  env.runtime.onPreferredTargetDiscarded();
+  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800);
+
+  const walked = setup();
+  walked.theme = themeWith(["reachClose"]);
+  walked.runtime.configure(MON);
+  tickUntilBeat(walked, 200000);
+  assert.equal(walked.runtime.pickRoamTarget(ROAM_ARGS).mischief, "reachClose");
+  walked.runtime.onPreferredTargetDiscarded();
+  walked.runtime.noteWalkFinished({ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 0 });
+  assert.equal(walked.sends.length, 0);
+});
+
+test("stay-put mode only allows reactive mischief", () => {
+  const env = setup();
+  env.mode = "none";
+  env.theme = themeWith(MISCHIEF_KEYS);
+  env.runtime.configure({ ...MON, personality: "playful" });
+  env.runtime.noteIdleEntered({ from: "sleep", awayMs: 9e6 });
+  for (let i = 0; i < 3600; i += 1) {
+    env.clock.advance(1000);
+    env.runtime.tick();
+  }
+  // Parked far cursor: no poke walk in stay-put.
+  tickWithCursor(env, sample(1500, 1200), 30000);
+  assert.equal(env.sends.length, 0);
+  assert.equal(env.runtime.chooseIdleActivity({ theme: env.theme }), null);
+  // Reactive: lurking cursor pounces.
+  tickWithCursor(env, sample(700, 550), 3000);
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.sends[0].file, "pounceRight.svg");
+  env.mode = "roam";
+  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 6400, "no poke walk was queued");
+});
+
+test("activities mode only picks single-part mischief", () => {
+  const env = setup({ options: { getHour: () => 7 } });
+  env.mode = "activities";
+  env.theme = themeWith(["fakeNap", "boo", "sitEdge", "reachClose", "wallPushLeft", "coffee"]);
+  env.runtime.configure({ ...MON, personality: "playful" });
+  assert.deepEqual(env.runtime.chooseIdleActivity({ theme: env.theme }), { file: "coffee.svg", durationMs: 3500 });
+  for (let i = 0; i < 50; i += 1) {
+    env.clock.advance(60000);
+    const choice = env.runtime.chooseIdleActivity({ theme: env.theme });
+    assert.ok(!choice || !choice.file || choice.file === "coffee.svg", JSON.stringify(choice));
+  }
+  assert.equal(env.sends.length, 0, "the chooser never plays by itself");
+
+  const toy = setup();
+  toy.mode = "activities";
+  toy.theme = themeWith(["fakeNap", "toyYoyo"]);
+  toy.runtime.configure({ ...MON, personality: "playful" });
+  assert.deepEqual(toy.runtime.chooseIdleActivity({ theme: toy.theme }), { file: "toyYoyo.svg", durationMs: 3500 });
+});
+
+test("dispose mid-scene clears all timers", () => {
+  const env = setup();
+  env.mode = "none";
+  env.theme = themeWith(MISCHIEF_KEYS);
+  env.runtime.configure(MON);
+  env.runtime.handleGesture("hover-dwell");
+  env.commitLast();
+  assert.equal(env.clock.pendingTimers, 1);
+  env.runtime.dispose();
+  assert.equal(env.clock.pendingTimers, 0);
+  env.clock.advance(20000);
+  env.runtime.tick(sample(700, 550));
+  env.runtime.handleGesture("hover-move");
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.restores, 0);
+  assert.equal(env.runtime.isAnimating(), false);
+});
+
+test("turning mischief off mid-scene restores idle and drops pending work", () => {
+  const env = setup();
+  env.theme = themeWith(["sitEdge", "welcome"]);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  env.runtime.pickRoamTarget(ROAM_ARGS);
+  env.runtime.noteWalkFinished({ preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 0 });
+  env.commitLast();
+  env.runtime.noteIdleEntered({ from: "sleep", awayMs: 9e6 });
+  env.runtime.configure({ ...MON, mischief: false });
+  assert.equal(env.restores, 1);
+  assert.equal(env.clock.pendingTimers, 0);
+  env.clock.advance(1000);
+  env.runtime.tick();
+  assert.equal(env.sends.length, 1, "queued welcome was dropped");
+});
