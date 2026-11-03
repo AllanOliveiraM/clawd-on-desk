@@ -434,11 +434,16 @@ Visuals for the opt-in "Clawd Alive" companion (petting, moods). The whole block
 ```json
 "companionAnimations": {
   "petting": { "file": "alive-petting.svg" },
-  "content": { "files": ["alive-content.svg"], "duration": 3500 }
+  "content": { "files": ["alive-content.svg"], "duration": 3500 },
+  "tired":   { "file": "alive-tired.svg",   "duration": 4000 },
+  "shy":     { "file": "alive-shy.svg",     "duration": 3000 },
+  "grumpy":  { "file": "alive-grumpy.svg",  "duration": 3500 },
+  "curious": { "file": "alive-curious.svg", "duration": 4000 },
+  "greet":   { "file": "alive-greet.svg",   "duration": 2500 }
 }
 ```
 
-- Known keys: `petting`, `content`, `tired`, `shy`, `grumpy`, `curious`, `greet`. Unknown keys and entries without a file are ignored.
+- Known keys, and when they play: `petting` (loops while the user strokes the pet, no duration), `content` (calm happy moment after petting or on its own), `tired`, `shy`, `grumpy`, `curious` (short mood beats while idle) and `greet` (a light hello to a social personality). The built-in Clawd theme uses 3500 / 4000 / 3000 / 3500 / 4000 / 2500 ms for `content` / `tired` / `shy` / `grumpy` / `curious` / `greet`. Unknown keys and entries without a file are ignored.
 - Each entry takes `file` or `files` (a pool) and an optional `duration` in ms.
 - Every listed file is a required asset, like reaction files.
 - A key you leave out has no visual, and the companion simply skips that moment. Themes without the block work unchanged.

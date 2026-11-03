@@ -328,6 +328,13 @@ Mini 状态映射：
 - 原因不是 HTTP 缓存，而是 Chromium 会复用同 URL SVG 的文档与 CSS 动画时间线；`forwards` 的一次性动画第二次加载时会直接停在末帧
 - 相关 dedup 逻辑必须比较规范化后的文件名，而不是带 query 的最终 URL
 
+### Clawd Alive（陪伴系统，默认关闭）
+
+- 主进程里的 `companion-runtime`（arbiter）是唯一决定「陪伴意图」的地方：由现有 tick 在 idle 块里调用，没有新的 timer / 轮询；`companionEnabled=false` 时所有钩子直接回到原路径，不计算、不读写文件
+- 它复用 idle-activity / roam 的同一个 gate，只选择 `observe` / `rest` / `content` / `curious` / `shy` / `grumpy` / `greet` / `explore` / `returnToRest` 等意图；逻辑状态始终保持 `idle`，从不调用 `setState` / `applyState` 播放操作类状态，agent 状态、权限、DND、mini、拖拽都优先
+- 主题可选 `companionAnimations` 块（`petting`、`content`、`tired`、`shy`、`grumpy`、`curious`、`greet`）；缺失的键直接跳过，无该块的主题行为不变。`clawd-happy.svg`（attention）永远不会被心情选中
+- 状态存放在 userData 的 `companion-state.json`（tmp + rename 原子写入，30 s debounce，`before-quit` 时 flush）；只保存心情、熟悉度和休息点，不保存鼠标历史、代码、提示词、窗口标题或项目名
+
 ### Click Reactions
 
 - 双击 → 左/右戳反应

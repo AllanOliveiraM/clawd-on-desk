@@ -13,6 +13,15 @@
 - **Drag from any state** — grab Clawd anytime (Pointer Capture prevents fast-flick drops), release to resume
 - **Mini mode** — drag to right edge or right-click "Mini Mode"; Clawd hides at screen edge with peek-on-hover, mini alerts/celebrations, and parabolic jump transitions
 
+## Clawd Alive (opt-in)
+
+- **Off by default** — turn it on in `Settings…` → `Pet` → `Personality & behavior`. With it off, nothing is computed, read, or written
+- **Mood and familiarity** — Clawd keeps a small mood and a slowly growing familiarity with you, shaped by a personality (Balanced, Playful, Curious, Calm, Shy). Familiarity never fades from absence; only **Reset** clears it
+- **Petting and hover** — stroke Clawd with a back-and-forth cursor motion to pet it; clicks, double clicks, drags, and hovering feed the mood too (native Wayland has no hover/drag, so petting is unavailable there)
+- **Autonomy** — mood shapes which idle activities and Free Roam walks happen (the existing `When idle` mode still decides: `Stay put` keeps Clawd in place); Clawd learns a favorite resting spot from where you drop it after a drag
+- **Local and private** — only mood, familiarity, and the resting spot are saved, in `companion-state.json` under the app's data folder (never mouse history, code, prompts, or window titles). Agent work always takes priority over these moments
+- **Theme art** — themes add visuals through an optional [`companionAnimations`](guide-theme-creation.md#companion-animations-optional) block; themes without it work unchanged
+
 ## Permission Bubble
 
 - **In-app permission review** — when a permission-capable integration sends a supported request, Clawd can pop a floating bubble card instead of waiting in the terminal; state-only agents keep their native permission flow
