@@ -38,6 +38,7 @@ const REST_ENERGY_THRESHOLD = 35;
 const FORCED_TIRED_ENERGY_THRESHOLD = 50;
 const SHY_FAMILIARITY_THRESHOLD = 20;
 const EXPLORE_CHANCE_PER_CURIOSITY = 0.6;
+const MAX_CONSECUTIVE_REST_HOLDS = 3;
 const GRID_SIZE = 3;
 const GRID_DECAY = 0.9;
 const GESTURES = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell"]);
@@ -83,6 +84,7 @@ function createCompanionRuntime(options = {}) {
   let petTimer = null;
   let grids = new Map(); // displayId -> number[9] visit counts (memory only)
   let pendingWalkCell = null;
+  let restHolds = 0; // consecutive rest-spot answers; the pet never parks forever
   let disposed = false;
 
   const memoryOn = () => config.enabled && config.memory;
@@ -301,10 +303,17 @@ function createCompanionRuntime(options = {}) {
 
     advanceMood();
     if (state.mood.energy < REST_ENERGY_THRESHOLD && restSpot) {
+      if (restHolds >= MAX_CONSECUTIVE_REST_HOLDS) {
+        // Stretch the legs: one normal walk, then the rest spot may win again.
+        restHolds = 0;
+        return null;
+      }
+      restHolds += 1;
       const restArea = (typeof getDisplayWorkArea === "function" && validArea(getDisplayWorkArea(restSpot.displayId)))
         || area;
       return toTarget(restArea.x + restSpot.x * restArea.width, restArea.y + restSpot.y * restArea.height, true);
     }
+    restHolds = 0;
     if (random() < traits.curiosity * EXPLORE_CHANCE_PER_CURIOSITY) {
       const min = Math.min(...grid);
       const candidates = [];
@@ -480,6 +489,7 @@ function createCompanionRuntime(options = {}) {
     hoverReadyAt = 0;
     grids = new Map();
     pendingWalkCell = null;
+    restHolds = 0;
     if (store) store.remove();
   }
 

@@ -23,6 +23,9 @@ const MAX_ELAPSED_MS = 7 * 24 * HOUR_MS;
 const REST_MIN_GAP_MS = 10 * MINUTE_MS;
 const STREAK_WINDOW_MS = 30 * 1000;
 const MIN_STREAK_FACTOR = 0.15;
+// Awake recovery toward the 70 baseline. advance() runs every few seconds while
+// the pet roams, so this (not the >=10 min rest branch) is what offsets walking.
+const AWAKE_ENERGY_RECOVERY_PER_HOUR = 40;
 const INTERACTION_KINDS = new Set(["pet", "click", "hoverGreet"]);
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -108,7 +111,7 @@ function advance(state, now, traits) {
   const mood = {
     energy: isRest
       ? approach(state.mood.energy, 100, 30 * hours)
-      : approach(state.mood.energy, 70, 10 * hours),
+      : approach(state.mood.energy, 70, AWAKE_ENERGY_RECOVERY_PER_HOUR * hours),
     contentment: approach(state.mood.contentment, 55, (8 + 12 * calm) * hours),
     familiarity: state.mood.familiarity,
   };
@@ -142,7 +145,7 @@ function applyEvent(state, event, traits, now) {
     case "clickBurst": dC = -6 * s; break;
     case "drag": dC = -0.5 * s; break;
     case "dragLong": dE = -3; dC = -2 * s; break;
-    case "walk": dE = -2; break;
+    case "walk": dE = -0.5 * r; break;
     case "beat": dE = -0.5; break;
     case "hoverGreet": dC = 0.5; dF = 0.2 * r; break;
     default: break;

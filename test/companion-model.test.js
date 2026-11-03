@@ -106,7 +106,7 @@ test("long unattended gap counts as rest", () => {
   const traits = getTraits("balanced");
   const rest = advance(stateWith({ energy: 20 }, { lastAdvanceAt: T0 }), T0 + 2 * HOUR, traits);
   assert.equal(rest.mood.energy, 80);
-  const busy = advance(stateWith({ energy: 20 }, { lastAdvanceAt: T0, lastInteractionAt: T0 + HOUR }), T0 + 2 * HOUR, traits);
+  const busy = advance(stateWith({ energy: 20 }, { lastAdvanceAt: T0, lastInteractionAt: T0 + HOUR / 4 }), T0 + HOUR / 2, traits);
   assert.equal(busy.mood.energy, 40);
 });
 
@@ -132,4 +132,29 @@ test("applyEvent is pure and updates interaction time", () => {
   assert.equal(out.lastInteractionAt, T0 + 1000);
   assert.equal(out.streak.count, 1);
   assert.equal(applyEvent(frozen, { kind: "walk" }, getTraits("balanced"), T0 + 1000).lastInteractionAt, null);
+});
+
+test("awake recovery moves energy toward 70 at 40 per hour", () => {
+  const traits = getTraits("balanced");
+  // Short gaps never count as rest, so recovery accumulates at the awake rate.
+  let s = stateWith({ energy: 20 }, { lastAdvanceAt: T0 });
+  for (let i = 1; i <= 90; i++) s = advance(s, T0 + i * 10 * 1000, traits); // 15 minutes
+  assert.ok(Math.abs(s.mood.energy - 30) < 1e-9, `energy ${s.mood.energy}`);
+  const high = advance(stateWith({ energy: 90 }, { lastAdvanceAt: T0, lastInteractionAt: T0 + 1 }), T0 + HOUR / 4, traits);
+  assert.equal(high.mood.energy, 80);
+});
+
+test("walk costs 0.5 energy with diminishing returns inside the streak window", () => {
+  const traits = getTraits("balanced");
+  let s = stateWith({ energy: 50 }, { lastAdvanceAt: T0 });
+  s = applyEvent(s, { kind: "walk" }, traits, T0);
+  assert.equal(s.mood.energy, 49.5);
+  // Second walk 0 ms later in the streak: r = 1/2.
+  s = applyEvent(s, { kind: "walk" }, traits, T0);
+  assert.equal(s.mood.energy, 49.25);
+  for (let i = 0; i < 20; i++) s = applyEvent(s, { kind: "walk" }, traits, T0);
+  // Floor of the streak factor: 0.5 * 0.15.
+  const before = s.mood.energy;
+  s = applyEvent(s, { kind: "walk" }, traits, T0);
+  assert.ok(Math.abs(before - s.mood.energy - 0.075) < 1e-9);
 });

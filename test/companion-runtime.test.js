@@ -520,3 +520,54 @@ test("dispose cancels timers, flushes and turns every method into a no-op", () =
   assert.equal(env.runtime.chooseIdleActivity({}), null);
   assert.equal(env.runtime.getRoamDelayMs(true, 8000), 8000);
 });
+
+test("one hour of roaming keeps energy healthy", () => {
+  const loaded = { state: null, restSpot: { displayId: null, x: 0.5, y: 0.5 } };
+  const env = setup({ loaded });
+  env.runtime.configure(ON); // balanced
+  const workArea = { x: 0, y: 0, width: 2000, height: 1000 };
+  const size = { width: 100, height: 100 };
+  const restTarget = { x: 950, y: 450 };
+  let pos = { x: 100, y: 100 };
+  let calls = 0;
+  let holds = 0;
+  let isFirst = true;
+  for (let t = 0; t < 3600 * 1000; t += 10000) {
+    env.runtime.getRoamDelayMs(isFirst, 4000);
+    isFirst = false;
+    env.clock.advance(10000);
+    calls += 1;
+    const target = env.runtime.pickRoamTarget({
+      xMin: 0, xMax: 1900, yMin: 0, yMax: 900,
+      bounds: { ...pos, ...size }, size, displayId: null, workArea,
+    });
+    if (target && target.preferred && Math.hypot(target.x - pos.x, target.y - pos.y) < 100) {
+      holds += 1; // roam holds: already at the rest spot
+      continue;
+    }
+    pos = target ? { x: target.x, y: target.y } : (pos.x === restTarget.x ? { x: 100, y: 100 } : { x: 1500, y: 700 });
+    env.runtime.noteWalkFinished({ preferred: !!(target && target.preferred) });
+  }
+  const energy = env.runtime.getMood().energy;
+  assert.ok(energy >= 40, `energy ${energy}`);
+  assert.ok(holds <= calls * 0.1, `holds ${holds} of ${calls}`);
+});
+
+test("rest-spot hold yields to a normal walk after three consecutive holds", () => {
+  const loaded = {
+    state: { mood: { energy: 10, contentment: 55, familiarity: 0 }, label: "tired", streak: null, lastAdvanceAt: null, lastInteractionAt: null },
+    restSpot: { displayId: null, x: 0.5, y: 0.5 },
+  };
+  const env = setup({ loaded });
+  env.runtime.configure(ON);
+  const args = {
+    xMin: 0, xMax: 1900, yMin: 0, yMax: 900,
+    bounds: { x: 950, y: 450, width: 100, height: 100 },
+    size: { width: 100, height: 100 },
+    displayId: null,
+    workArea: { x: 0, y: 0, width: 2000, height: 1000 },
+  };
+  const results = [];
+  for (let i = 0; i < 8; i++) results.push(env.runtime.pickRoamTarget(args));
+  assert.deepEqual(results.map((r) => (r ? "rest" : "walk")), ["rest", "rest", "rest", "walk", "rest", "rest", "rest", "walk"]);
+});
