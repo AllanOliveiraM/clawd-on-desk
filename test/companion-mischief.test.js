@@ -89,18 +89,27 @@ test("cursor over the pet never pounces", () => {
   assert.equal(brain.observeCursor(sample(1050, 550, { overPet: true })), null);
 });
 
+// Feed the same sample once per second for `ms`, returning the last result.
+function hold(brain, clock, x, y, ms) {
+  let r = null;
+  for (let e = 0; e < ms; e += 1000) {
+    clock.t += 1000;
+    r = brain.observeCursor(sample(x, y));
+    if (r) return r;
+  }
+  return r;
+}
+
 test("parked far cursor triggers poke after 20 s", () => {
   const a = make();
   a.brain.observeCursor(sample(1600, 550));
-  a.clock.t += 19000;
-  assert.equal(a.brain.observeCursor(sample(1600, 550)), null);
+  assert.equal(hold(a.brain, a.clock, 1600, 550, 19000), null);
   a.clock.t += 1000;
   assert.deepEqual(a.brain.observeCursor(sample(1600, 550)), { id: "poke", target: { x: 1600, y: 550 } });
 
   const near = make(); // center is (1050, 550); 250 px away is too close
   near.brain.observeCursor(sample(1300, 550));
-  near.clock.t += 21000;
-  const r = near.brain.observeCursor(sample(1300, 550));
+  const r = hold(near.brain, near.clock, 1300, 550, 21000);
   assert.ok(!r || r.id !== "poke");
 });
 
@@ -122,13 +131,71 @@ test("null cursor samples are ignored", () => {
   brain.observeCursor(sample(1200, 550));
   clock.t += 1500;
   assert.equal(brain.observeCursor(null), null);
-  clock.t += 1500; // 3 s since the band started, but only 1.5 s of valid samples after
+  clock.t += 500; // 2 s into the lurk: not yet
+  assert.equal(brain.observeCursor(sample(1200, 550)), null);
+  clock.t += 600; // 2.6 s: the null sample did not reset the clock
   assert.deepEqual(brain.observeCursor(sample(1200, 550)), { id: "pounce", side: "right" });
+});
 
-  const parked = make();
-  parked.brain.observeCursor(sample(1600, 550));
-  parked.clock.t += 25000;
-  assert.equal(parked.brain.observeCursor(null), null);
+test("a long gap in samples never fires on the first sample after it", () => {
+  const p = make();
+  p.brain.observeCursor(sample(1200, 550));
+  p.clock.t += 60000;
+  assert.equal(p.brain.observeCursor(sample(1200, 550)), null);
+  p.clock.t += 2600;
+  assert.deepEqual(p.brain.observeCursor(sample(1200, 550)), { id: "pounce", side: "right" });
+
+  const k = make();
+  k.brain.observeCursor(sample(1600, 550));
+  k.clock.t += 60000;
+  assert.equal(k.brain.observeCursor(sample(1600, 550)), null);
+  assert.equal(hold(k.brain, k.clock, 1600, 550, 19000), null);
+  assert.equal(hold(k.brain, k.clock, 1600, 550, 2000).id, "poke");
+});
+
+test("a backwards clock re-bases cursor clocks", () => {
+  const { brain, clock } = make();
+  brain.observeCursor(sample(1200, 550));
+  clock.t += 2000;
+  brain.observeCursor(sample(1200, 550));
+  clock.t -= 10000;
+  assert.equal(brain.observeCursor(sample(1200, 550)), null);
+  clock.t += 2000;
+  assert.equal(brain.observeCursor(sample(1200, 550)), null);
+  clock.t += 600;
+  assert.deepEqual(brain.observeCursor(sample(1200, 550)), { id: "pounce", side: "right" });
+});
+
+test("napping while the cursor is already close does not boo instantly", () => {
+  const { brain, clock } = make();
+  brain.observeCursor(sample(1150, 550));
+  brain.setNapping(true);
+  clock.t += 100;
+  assert.equal(brain.observeCursor(sample(1150, 550)), null);
+  clock.t += 100;
+  brain.observeCursor(sample(1500, 550)); // leaves
+  clock.t += 100;
+  assert.deepEqual(brain.observeCursor(sample(1150, 550)), { id: "boo" });
+});
+
+test("a backwards clock cannot stretch cooldowns past their nominal length", () => {
+  const { brain, clock } = make({ rand: 0.6 });
+  brain.markPlayed("fakeNap", clock.t, getTraits("balanced"));
+  const back = clock.t - 100000000;
+  assert.equal(brain.canReact("fakeNap", back), false);
+  assert.equal(brain.canReact("fakeNap", back + 10800000), true);
+  assert.equal(brain.isGlobalReady(back + m.globalCooldownMs(getTraits("balanced"))), true);
+});
+
+test("isGlobalReady reflects the global cooldown", () => {
+  const { brain, clock } = make();
+  const traits = getTraits("balanced");
+  assert.equal(brain.isGlobalReady(clock.t), true);
+  brain.markPlayed("poke", clock.t, traits);
+  assert.equal(brain.isGlobalReady(clock.t + m.globalCooldownMs(traits) - 1), false);
+  assert.equal(brain.isGlobalReady(clock.t + m.globalCooldownMs(traits)), true);
+  brain.markPlayed("pounce", clock.t + 5);
+  assert.equal(brain.isGlobalReady(clock.t + m.globalCooldownMs(traits)), true);
 });
 
 test("shy never pounces, boos or fake naps; calm never fake naps", () => {

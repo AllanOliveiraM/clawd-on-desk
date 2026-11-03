@@ -38,12 +38,17 @@ const OBSERVE_CHANCE = 0.5;
 const GLOBAL_COOLDOWN_CALM_MS = 900000; // activity 0
 const GLOBAL_COOLDOWN_ACTIVE_MS = 480000; // activity 1
 
-// Reactive triggers never consume (nor are blocked by) the global cooldown.
-const REACTIVE_IDS = new Set(["catch", "pounce", "boo", "welcome", "stretchBack"]);
+// Reactive triggers (catch, pounce, boo, welcome, stretchBack) never consume
+// the global cooldown: see GLOBAL_COOLDOWN_IDS.
 // Autonomous ids that walk across the screen: roam mode only.
 const WALKING_IDS = new Set(["poke", "reachClose", "wall", "sitEdge"]);
 // Zeroed when the pet is too tired to be jumpy.
 const LOW_ENERGY_BLOCKED = new Set(["pounce", "poke", "reachClose", "wall"]);
+
+// Ids that start the global cooldown when played (autonomous ones plus poke).
+const GLOBAL_COOLDOWN_IDS = new Set(["fakeNap", "reachClose", "wall", "sitEdge", "dayRhythm", "toy", "poke"]);
+// Gap between cursor samples after which running clocks are considered stale.
+const SAMPLE_GAP_MS = 5000;
 
 const AUTONOMOUS_IDS = ["fakeNap", "reachClose", "wall", "sitEdge", "dayRhythm", "toy"];
 
@@ -120,12 +125,17 @@ function createMischiefBrain(options) {
   const opts = options || {};
   const now = typeof opts.now === "function" ? opts.now : Date.now;
   const random = typeof opts.random === "function" ? opts.random : Math.random;
-  const getHour = typeof opts.getHour === "function" ? opts.getHour : () => new Date(now()).getHours();
+  const customHour = typeof opts.getHour === "function" ? opts.getHour : null;
+  // Same hour/date source for picking and for recording a played window.
+  const hourAt = (t) => (customHour ? customHour() : new Date(t).getHours());
 
   let cooldownUntil = {};
   let globalUntil = 0;
-  let usedWindows = new Set();
+  let usedWindows = {}; // window type -> key of the latest used window
   let lastTraits = null;
+  let lastSeen = null; // latest time the brain has seen, to detect a backwards clock
+  let lastSampleAt = null;
+  let lastEdge = null;
   let napping = false;
 
   // Cursor tracking state.
@@ -136,7 +146,20 @@ function createMischiefBrain(options) {
   let pounceFired = false;
   let booFired = false;
 
+  // If the clock went backwards, a step back must not extend cooldowns beyond their nominal length.
+  function syncClock(t) {
+    if (lastSeen !== null && t < lastSeen) {
+      for (const id of Object.keys(cooldownUntil)) {
+        cooldownUntil[id] = Math.min(cooldownUntil[id], t + (MISCHIEF_COOLDOWN_MS[id] || 0));
+      }
+      globalUntil = Math.min(globalUntil, t + globalCooldownMs(lastTraits));
+    }
+    if (lastSeen === null || t > lastSeen) lastSeen = t;
+  }
+
   function resetCursorState() {
+    lastSampleAt = null;
+    lastEdge = null;
     prev = null;
     stillSince = 0;
     pokeFired = false;
@@ -148,7 +171,18 @@ function createMischiefBrain(options) {
   function observeCursor(sample) {
     if (!sample || !sample.petRect || !Number.isFinite(sample.x) || !Number.isFinite(sample.y)) return null;
     const t = now();
+    syncClock(t);
     const { x, y, petRect } = sample;
+
+    // Stale or backwards samples: re-base running clocks so a gap cannot fire instantly.
+    if (lastSampleAt !== null && (t - lastSampleAt > SAMPLE_GAP_MS || t < lastSampleAt)) {
+      prev = null;
+      stillSince = t;
+      bandSince = null;
+      pokeFired = false;
+      pounceFired = false;
+    }
+    lastSampleAt = t;
 
     // Stillness is measured against the previous sample.
     const moved = prev ? Math.hypot(x - prev.x, y - prev.y) : Infinity;
@@ -159,6 +193,7 @@ function createMischiefBrain(options) {
     prev = { x, y };
 
     const edge = sample.overPet ? 0 : distanceToRect(x, y, petRect);
+    lastEdge = edge;
 
     if (napping) {
       // A napping pet only reacts to the cursor sneaking up (boo); no pounce.
@@ -199,27 +234,37 @@ function createMischiefBrain(options) {
 
   function setNapping(value) {
     napping = !!value;
-    booFired = false;
+    // A cursor already close when the nap starts must leave and re-enter to boo.
+    booFired = napping && lastEdge !== null && lastEdge < BOO_RANGE_PX;
     bandSince = null;
     pounceFired = false;
   }
 
   function canReact(id, at) {
+    const t = Number.isFinite(at) ? at : now();
+    syncClock(t);
     const until = cooldownUntil[id];
-    return !(until > (Number.isFinite(at) ? at : now()));
+    return !(until > t);
+  }
+
+  function isGlobalReady(at) {
+    const t = Number.isFinite(at) ? at : now();
+    syncClock(t);
+    return !(t < globalUntil);
   }
 
   function markPlayed(id, at, traits) {
     const t = Number.isFinite(at) ? at : now();
+    syncClock(t);
     cooldownUntil[id] = t + (MISCHIEF_COOLDOWN_MS[id] || 0);
     if (traits) lastTraits = traits;
-    if (!REACTIVE_IDS.has(id) && AUTONOMOUS_IDS.concat("poke").includes(id)) {
+    if (GLOBAL_COOLDOWN_IDS.has(id)) {
       globalUntil = t + globalCooldownMs(lastTraits);
     }
     if (id === "dayRhythm") {
-      const hour = getHour();
+      const hour = hourAt(t);
       const win = dayWindow(hour);
-      if (win) usedWindows.add(windowKey(win, hour, t));
+      if (win) usedWindows[win] = windowKey(win, hour, t);
     }
   }
 
@@ -234,12 +279,13 @@ function createMischiefBrain(options) {
     const t = Number.isFinite(args && args.now) ? args.now : now();
     const avail = available || new Set();
     if (traits) lastTraits = traits;
+    syncClock(t);
     if (t < globalUntil) return null;
 
     const mood = (state && state.mood) || {};
     const energy = Number.isFinite(mood.energy) ? mood.energy : 50;
 
-    const hour = getHour();
+    const hour = hourAt(t);
     const win = dayWindow(hour);
     const winKey = win ? windowKey(win, hour, t) : null;
 
@@ -250,7 +296,7 @@ function createMischiefBrain(options) {
       if (WALKING_IDS.has(id) && mode !== "roam") w = 0;
       if (energy < LOW_ENERGY && LOW_ENERGY_BLOCKED.has(id)) w = 0;
       if (id === "dayRhythm") {
-        if (!win || usedWindows.has(winKey)) w = 0;
+        if (!win || usedWindows[win] === winKey) w = 0;
         else if (!DAY_VARIANTS[win].some((v) => avail.has(v))) w = 0;
       } else if (id === "toy") {
         if (!TOY_VARIANTS.some((v) => avail.has(v))) w = 0;
@@ -286,13 +332,14 @@ function createMischiefBrain(options) {
   function reset() {
     cooldownUntil = {};
     globalUntil = 0;
-    usedWindows = new Set();
+    usedWindows = {};
     lastTraits = null;
+    lastSeen = null;
     napping = false;
     resetCursorState();
   }
 
-  return { observeCursor, setNapping, pickAutonomous, canReact, markPlayed, reset };
+  return { observeCursor, setNapping, pickAutonomous, canReact, isGlobalReady, markPlayed, reset };
 }
 
 module.exports = {
