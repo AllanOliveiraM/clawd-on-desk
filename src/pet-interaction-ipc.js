@@ -110,6 +110,8 @@ function registerPetInteractionIpc(options = {}) {
   //   without changing what the existing handlers do.
   // noteCompanionDragEnd({displayId, x, y}): the pet's final center as a
   //   fraction of its display's work area, needs getDisplayNearestPoint.
+  // isCompanionEnabled(): when supplied and not true, the click / drag
+  //   observers skip all work (no theme lookup, no display query).
   const handlePetGesture = typeof options.handlePetGesture === "function" ? options.handlePetGesture : null;
   const noteCompanionEvent = typeof options.noteCompanionEvent === "function" ? options.noteCompanionEvent : null;
   const noteCompanionDragEnd = typeof options.noteCompanionDragEnd === "function"
@@ -123,6 +125,9 @@ function registerPetInteractionIpc(options = {}) {
     : null;
   const now = typeof options.now === "function" ? options.now : Date.now;
   const companionLog = options.companionLog || (() => {});
+  const isCompanionEnabledOption = typeof options.isCompanionEnabled === "function"
+    ? options.isCompanionEnabled
+    : null;
   const disposers = [];
   // Local view of the drag lock this module handles; only used for the
   // duration measurement and as the gesture gate when main gives no getter.
@@ -157,6 +162,15 @@ function registerPetInteractionIpc(options = {}) {
   on("accessory-mirror", (_event, mirrored) => {
     setAccessoryMirror(!!mirrored);
   });
+
+  function companionObserving() {
+    if (!isCompanionEnabledOption) return true;
+    try {
+      return isCompanionEnabledOption() === true;
+    } catch {
+      return false;
+    }
+  }
 
   function observeCompanion(fn) {
     try {
@@ -229,7 +243,7 @@ function registerPetInteractionIpc(options = {}) {
   on("play-click-reaction", (_event, svg, duration) => {
     if (requestClickReaction) requestClickReaction(svg, duration);
     else sendToRenderer("play-click-reaction", svg, duration);
-    if (noteCompanionEvent && typeof svg === "string" && svg) {
+    if (noteCompanionEvent && typeof svg === "string" && svg && companionObserving()) {
       observeCompanion(() => noteCompanionEvent(isClickBurstFile(svg) ? "clickBurst" : "click"));
     }
   });
@@ -252,7 +266,8 @@ function registerPetInteractionIpc(options = {}) {
     // per completed drag, measured from the drag lock.
     const dragMs = takeDragDurationMs();
     localDragLocked = false;
-    if (noteCompanionEvent) {
+    const observing = companionObserving();
+    if (noteCompanionEvent && observing) {
       observeCompanion(() => noteCompanionEvent(dragMs != null && dragMs > DRAG_LONG_MS ? "dragLong" : "drag"));
     }
     try {
@@ -273,7 +288,7 @@ function registerPetInteractionIpc(options = {}) {
           syncDisplayedVisualGeometry();
           repositionFloatingBubbles();
           refreshIdleVisualAfterDrag();
-          observeCompanion(() => noteDragRestSpot(clamped));
+          if (observing) observeCompanion(() => noteDragRestSpot(clamped));
         }
       }
     } finally {

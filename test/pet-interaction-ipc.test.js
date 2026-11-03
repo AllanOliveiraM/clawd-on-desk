@@ -779,3 +779,29 @@ test("missing companion options keep existing behavior", () => {
   withCompanion.runtime.dispose();
   assert.strictEqual(withCompanion.ipcMain.listeners.size, 0);
 });
+
+test("companion click/drag observers do no work while the feature is off", () => {
+  let enabled = false;
+  let themeLookups = 0;
+  const h = companionHarness({
+    state: { clampedBounds: { x: 200, y: 100, width: 100, height: 100 } },
+    extra: {
+      isCompanionEnabled: () => enabled,
+      getThemeReactions: () => { themeLookups += 1; return { annoyed: { file: "annoyed.svg" } }; },
+    },
+  });
+  h.ipcMain.send("play-click-reaction", "annoyed.svg", 3500);
+  h.ipcMain.send("drag-lock", true);
+  h.ipcMain.send("drag-lock", false);
+  h.ipcMain.send("drag-end");
+  assert.deepStrictEqual(h.companion, [], "no event, no display lookup, no rest spot");
+  assert.equal(themeLookups, 0);
+  // The reaction and the drag-end clamp still happen as before.
+  assert.equal(h.calls.filter((c) => c[0] === "sendToRenderer" && c[1] === "play-click-reaction").length, 1);
+
+  enabled = true;
+  h.ipcMain.send("play-click-reaction", "annoyed.svg", 3500);
+  h.ipcMain.send("drag-end");
+  assert.deepStrictEqual(h.companion.map((c) => c[0]), ["event", "event", "displayFor", "dragEnd"]);
+  assert.equal(themeLookups, 1);
+});

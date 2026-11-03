@@ -5561,6 +5561,7 @@ function createWindow() {
     handlePetGesture: (kind) => _companion.handleGesture(kind),
     noteCompanionEvent: (kind) => _companion.noteEvent(kind),
     noteCompanionDragEnd: (spot) => _companion.noteDragEnd(spot),
+    isCompanionEnabled: () => _settingsController.get("companionEnabled") === true,
     hitWebContents: () => (hitWin && !hitWin.isDestroyed() ? hitWin.webContents : null),
     isDragLocked: () => petWindowRuntime.isDragLocked(),
     getThemeReactions: () => {
