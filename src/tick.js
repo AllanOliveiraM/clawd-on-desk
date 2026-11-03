@@ -328,6 +328,7 @@ function runMainTickOnce() {
         lastCursorY = null;
         mouseStillSince = Date.now();
         if (ctx.idleActivity) ctx.idleActivity.noteIdleEntered();
+        if (ctx.companion && typeof ctx.companion.noteIdleEntered === "function") ctx.companion.noteIdleEntered();
       }
     }
 

@@ -2011,6 +2011,28 @@ describe("tick companion coordination", () => {
     assert.deepStrictEqual(idleFiles(), ["clawd-idle-look.svg"]);
   });
 
+  it("notifies the companion of each real idle entry but not after a walk", () => {
+    let entries = 0;
+    ctx.companion.noteIdleEntered = () => { entries++; };
+    ctx.currentState = "working";
+    start();
+    function sample(state) {
+      ctx.currentState = state;
+      tickApi.scheduleSoon(0);
+      mock.timers.tick(1);
+    }
+    sample("idle");
+    assert.equal(entries, 1);
+    sample("idle");
+    assert.equal(entries, 1);
+    sample("roam");
+    sample("idle");
+    assert.equal(entries, 1, "automatic walks are part of the same idle period");
+    sample("sleeping");
+    sample("idle");
+    assert.equal(entries, 2);
+  });
+
   it("without a companion the idle-look and eyes behave as today", () => {
     delete ctx.companion;
     ctx.forceEyeResend = true;

@@ -27,7 +27,8 @@
 //     ctx.getRoamDelayMs(isFirst, baseMs) modulates the pause (clamped to
 //     [0.5×, 3×] base), ctx.pickPreferredTarget(args) proposes a target for
 //     unconstrained walks (clamped into the same band/fence; null → random),
-//     ctx.onWalkFinished({preferred}) reports each natural arrival, and
+//     ctx.onWalkFinished({preferred}) reports each natural arrival,
+//     ctx.onPreferredTargetDiscarded() reports a proposal roam did not walk, and
 //     ctx.isCompanionPlaying() holds walks while a companion beat owns the
 //     visual. Hook failures never break the scheduling chain.
 
@@ -191,6 +192,14 @@ module.exports = function initRoam(ctx) {
     if (Math.sqrt(dx * dx + dy * dy) < minDist) {
       // Already at the favorite spot: stay put this round instead of
       // wandering off. An explore target that close is just not worth it.
+      // Either way the proposal is not walked, so tell the hook owner.
+      if (typeof ctx.onPreferredTargetDiscarded === "function") {
+        try {
+          ctx.onPreferredTargetDiscarded();
+        } catch {
+          // Hook failures never break the scheduling chain.
+        }
+      }
       return preferred ? null : undefined;
     }
     return { x, y, size, fence: fenceRect, preferred };

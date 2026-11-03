@@ -5861,6 +5861,7 @@ const _roamCtx = {
   getRoamDelayMs: (isFirst, baseMs) => _companion.getRoamDelayMs(isFirst, baseMs),
   pickPreferredTarget: (args) => _companion.pickRoamTarget(args),
   onWalkFinished: (info) => _companion.noteWalkFinished(info),
+  onPreferredTargetDiscarded: () => _companion.onPreferredTargetDiscarded(),
   get miniTransitioning() { return _mini.getMiniTransitioning(); },
   applyState: (state, svgOverride, opts) => _state.applyState(state, svgOverride, opts),
   setState: (state, svgOverride, opts) => _state.setState(state, svgOverride, opts),
@@ -6014,6 +6015,7 @@ const _companion = require("./companion-runtime").createCompanionRuntime({
     ? "roam"
     : _settingsController.get("idleActivities") === true ? "activities" : "none"),
   isRoamAnimating: () => _roam.isRoamAnimating(),
+  isOtherIdleVisualPlaying: () => _idleActivity.isAnimating(),
   getDisplayWorkArea: (displayId) => {
     try {
       const display = screen.getAllDisplays().find((d) => d.id === displayId);

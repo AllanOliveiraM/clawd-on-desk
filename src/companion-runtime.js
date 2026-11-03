@@ -62,6 +62,9 @@ function createCompanionRuntime(options = {}) {
     sendToRenderer = () => null,
     getIdleMode = () => "none",
     isRoamAnimating = () => false,
+    // True while another idle visual (idle-activity.js) is on screen; hover
+    // greets wait for it, petting may still take over.
+    isOtherIdleVisualPlaying = () => false,
     getDisplayWorkArea = null,
     store = null,
     random = Math.random,
@@ -162,9 +165,12 @@ function createCompanionRuntime(options = {}) {
     if (playing !== attempt) return;
     const stillOurs = getCurrentState() === "idle" && isVisualGenerationCurrent(attempt.visualGeneration);
     if (attempt.kind === "petting" && petSession) {
-      // Loop the same file while the session lasts; a newer visual ends the loop.
+      // Loop the same file while the session lasts; a newer visual ends the
+      // loop, and so does a closed gate (the session itself stays for mood).
       playing = null;
-      if (stillOurs) play("petting", attempt.file, attempt.duration);
+      if (!stillOurs) return;
+      if (canPlay()) play("petting", attempt.file, attempt.duration);
+      else restoreIdleVisual();
       return;
     }
     playing = null;
@@ -216,13 +222,13 @@ function createCompanionRuntime(options = {}) {
 
   function tick() {
     if (disposed || !autonomous() || getIdleMode() !== "roam") return;
-    if (playing || getCurrentState() !== "idle") return;
+    if (playing || petSession || getCurrentState() !== "idle") return;
     // Arm the clock even while a gate is closed so the beat is ready when it opens.
     if (nextBeatAt == null) {
       scheduleBeat();
       return;
     }
-    if (isRoamAnimating() || !canPlay() || now() < nextBeatAt) return;
+    if (now() < nextBeatAt || isRoamAnimating() || !canPlay()) return;
     advanceMood();
     const theme = getTheme();
     const available = availableKeys(theme);
@@ -240,8 +246,11 @@ function createCompanionRuntime(options = {}) {
   }
 
   function chooseIdleActivity(args) {
-    if (disposed || !autonomous() || getIdleMode() !== "activities") return null;
-    if (playing) return { skip: true }; // never fight our own petting/hover visual
+    if (disposed) return null;
+    // Never fight our own petting/hover visual or an ongoing petting session,
+    // whatever the autonomy setting (disabled: nothing can be playing).
+    if (playing || petSession) return { skip: true };
+    if (!autonomous() || getIdleMode() !== "activities") return null;
     const theme = (args && args.theme) || getTheme();
     advanceMood();
     const available = availableKeys(theme);
@@ -331,6 +340,19 @@ function createCompanionRuntime(options = {}) {
     return null;
   }
 
+  // Roam did not use the proposed target (too close, or holding): the explore
+  // cell must not be credited on the next arrival.
+  function onPreferredTargetDiscarded() {
+    if (disposed) return;
+    pendingWalkCell = null;
+  }
+
+  // A real (non-walk) idle entry: the next beat waits a fresh delay.
+  function noteIdleEntered() {
+    if (disposed || !autonomous()) return;
+    scheduleBeat();
+  }
+
   function noteWalkFinished(info) {
     if (disposed || !config.enabled) return;
     if (pendingWalkCell) {
@@ -396,7 +418,7 @@ function createCompanionRuntime(options = {}) {
   }
 
   function handleHover() {
-    if (now() < hoverReadyAt || !visualGateOpen()) return;
+    if (now() < hoverReadyAt || !visualGateOpen() || isOtherIdleVisualPlaying()) return;
     const key = traits.sociability >= 0.6 ? "greet" : (traits.sociability < 0.3 ? "shy" : null);
     const anim = key && animationFor(key, getTheme());
     if (!anim) return;
@@ -513,6 +535,8 @@ function createCompanionRuntime(options = {}) {
     handleGesture,
     noteDragEnd,
     noteWalkFinished,
+    onPreferredTargetDiscarded,
+    noteIdleEntered,
     isAnimating: () => !disposed && isAnimating(),
     cancel,
     reset,

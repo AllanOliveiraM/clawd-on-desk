@@ -3271,6 +3271,44 @@ describe("roam companion hooks", () => {
     assert.deepStrictEqual(run.firstEnd, { x: 1389, y: 734 });
   });
 
+  it("reports a discarded preferred target so it is not credited", () => {
+    let discarded = 0;
+    const hold = makeCtx({
+      pickPreferredTarget: () => ({ x: 410, y: 310, preferred: true }),
+      onPreferredTargetDiscarded: () => { discarded += 1; },
+    });
+    const holdRoam = roamModule(hold);
+    holdRoam.setEnabled(true);
+    holdRoam.tick();
+    mock.timers.tick(8000);
+    assert.equal(discarded, 1, "hold discards the rest-spot target");
+    holdRoam.setEnabled(false);
+
+    discarded = 0;
+    const run = scriptedRun({
+      pickPreferredTarget: () => ({ x: 410, y: 310, preferred: false }),
+      onPreferredTargetDiscarded: () => { discarded += 1; },
+    });
+    assert.ok(discarded >= 1, "explore fallback discards the target");
+    assert.deepStrictEqual(run.firstEnd, { x: 1389, y: 734 });
+
+    discarded = 0;
+    const far = [{ x: 1500, y: 700, preferred: false }, { x: 400, y: 300, preferred: false }];
+    scriptedRun({
+      pickPreferredTarget: () => far.shift(),
+      onPreferredTargetDiscarded: () => { discarded += 1; },
+    });
+    assert.equal(discarded, 0, "a used target is not reported");
+  });
+
+  it("a throwing discard hook keeps the original fallback", () => {
+    const run = scriptedRun({
+      pickPreferredTarget: () => ({ x: 410, y: 310, preferred: false }),
+      onPreferredTargetDiscarded: () => { throw new Error("boom"); },
+    });
+    assert.deepStrictEqual(run.firstEnd, { x: 1389, y: 734 });
+  });
+
   it("axis-constrained walks ignore preferred target", () => {
     let calls = 0;
     const ctx = makeCtx({

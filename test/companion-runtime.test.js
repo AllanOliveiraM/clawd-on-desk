@@ -571,3 +571,153 @@ test("rest-spot hold yields to a normal walk after three consecutive holds", () 
   for (let i = 0; i < 8; i++) results.push(env.runtime.pickRoamTarget(args));
   assert.deepEqual(results.map((r) => (r ? "rest" : "walk")), ["rest", "rest", "rest", "walk", "rest", "rest", "rest", "walk"]);
 });
+
+test("petting loop stops re-sending when the gate closes but keeps the session for mood", () => {
+  const env = setup();
+  env.mode = "none";
+  env.runtime.configure(ON);
+  env.runtime.handleGesture("pet-start");
+  env.commitLast();
+  assert.equal(env.sends.length, 1);
+  env.gate = false;
+  env.clock.advance(1000);
+  env.runtime.handleGesture("pet-continue");
+  env.clock.advance(1000); // petting duration ends while the gate is closed
+  assert.equal(env.sends.length, 1, "no re-send through a closed gate");
+  assert.equal(env.restores, 1, "our petting visual is replaced by idle");
+  assert.equal(env.runtime.isAnimating(), false);
+  // Session still alive: strokes keep raising contentment and keep the timer.
+  const c0 = env.runtime.getMood().contentment;
+  env.runtime.handleGesture("pet-continue");
+  assert.ok(env.runtime.getMood().contentment > c0);
+  assert.equal(env.clock.pendingTimers, 1, "inactivity timer only");
+});
+
+test("petting loop does not restore idle when a newer visual owns the screen", () => {
+  const env = setup();
+  env.mode = "none";
+  env.runtime.configure(ON);
+  env.runtime.handleGesture("pet-start");
+  env.commitLast();
+  env.gate = false;
+  env.generation += 1; // someone else painted
+  env.clock.advance(2000);
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.restores, 0);
+});
+
+test("an active petting session blocks beats and idle activities even without a visual", () => {
+  const env = setup();
+  env.runtime.configure(ON);
+  env.gate = false;
+  env.runtime.handleGesture("pet-start"); // session, no visual (gate closed)
+  env.gate = true;
+  for (let i = 0; i < 2; i += 1) {
+    env.runtime.handleGesture("pet-continue");
+    env.runtime.tick();
+    env.clock.advance(1000);
+  }
+  // Keep stroking for a long time: no beat may start mid-session.
+  for (let i = 0; i < 400; i += 1) {
+    env.runtime.handleGesture("pet-continue");
+    env.clock.advance(1000);
+    env.runtime.tick();
+  }
+  assert.equal(env.sends.filter((s) => s.file !== "petting.svg").length, 0);
+  env.mode = "activities";
+  assert.deepEqual(env.runtime.chooseIdleActivity({ theme: env.theme }), { skip: true });
+});
+
+test("idle activities skip while a petting visual plays even without autonomy", () => {
+  const env = setup();
+  env.mode = "activities";
+  env.runtime.configure({ ...ON, autonomy: false });
+  env.runtime.handleGesture("pet-start");
+  env.commitLast();
+  assert.deepEqual(env.runtime.chooseIdleActivity({ theme: env.theme }), { skip: true });
+  env.runtime.handleGesture("pet-end");
+  assert.equal(env.runtime.chooseIdleActivity({ theme: env.theme }), null);
+  // Disabled: nothing can be playing, chooser keeps the original path.
+  env.runtime.configure({ ...ON, enabled: false });
+  assert.equal(env.runtime.chooseIdleActivity({ theme: env.theme }), null);
+});
+
+test("hover greet never interrupts another idle visual", () => {
+  let other = true;
+  const env = setup({ options: { isOtherIdleVisualPlaying: () => other } });
+  env.mode = "none";
+  env.runtime.configure({ ...ON, personality: "playful" });
+  env.runtime.handleGesture("hover-dwell");
+  assert.equal(env.sends.length, 0);
+  other = false;
+  env.runtime.handleGesture("hover-dwell");
+  assert.equal(env.sends.length, 1, "no cooldown was spent while blocked");
+  // Petting may still take over by design.
+  const pet = setup({ options: { isOtherIdleVisualPlaying: () => true } });
+  pet.mode = "none";
+  pet.runtime.configure(ON);
+  pet.runtime.handleGesture("pet-start");
+  assert.equal(pet.sends.length, 1);
+});
+
+test("a discarded explore target is not credited to the visit grid", () => {
+  const env = setup();
+  env.runtime.configure({ ...ON, personality: "curious" });
+  env.randomValue = 0.1; // explore
+  const args = {
+    xMin: 0, xMax: 1900, yMin: 0, yMax: 700,
+    bounds: { x: 0, y: 0, width: 100, height: 100 },
+    size: { width: 100, height: 100 },
+    displayId: 1,
+    workArea: { x: 0, y: 0, width: 2000, height: 800 },
+  };
+  const first = env.runtime.pickRoamTarget(args);
+  assert.equal(first.preferred, false);
+  env.runtime.onPreferredTargetDiscarded();
+  env.runtime.noteWalkFinished({ preferred: false });
+  // Not credited: the same least-visited cell is still the explore answer.
+  const second = env.runtime.pickRoamTarget(args);
+  assert.deepEqual(second, first);
+
+  // Credited (control): after a real arrival the next explore picks another cell.
+  const ctl = setup();
+  ctl.runtime.configure({ ...ON, personality: "curious" });
+  ctl.randomValue = 0.1;
+  const a = ctl.runtime.pickRoamTarget(args);
+  ctl.runtime.noteWalkFinished({ preferred: false });
+  assert.notDeepEqual(ctl.runtime.pickRoamTarget(args), a);
+});
+
+test("tick checks the beat clock before asking canPlay", () => {
+  let gateCalls = 0;
+  const env = setup({ options: { canPlay: () => { gateCalls += 1; return true; } } });
+  env.runtime.configure(ON);
+  env.runtime.tick(); // arms the clock
+  env.clock.advance(1000);
+  env.runtime.tick();
+  assert.equal(gateCalls, 0);
+});
+
+test("noteIdleEntered restarts the beat delay", () => {
+  const env = setup();
+  env.runtime.configure(ON);
+  env.runtime.tick(); // arms the clock at t=0
+  // Find when the beat would have fired, then re-enter idle just before it.
+  const probe = setup();
+  probe.runtime.configure(ON);
+  tickUntilBeat(probe);
+  const firesAt = probe.clock.now();
+  env.clock.advance(firesAt - 1000);
+  env.runtime.noteIdleEntered();
+  env.clock.advance(1000);
+  env.runtime.tick();
+  assert.equal(env.sends.length, 0, "fresh delay after a new idle entry");
+  env.clock.advance(firesAt);
+  env.runtime.tick();
+  assert.equal(env.sends.length, 1);
+  // Disabled: a no-op without computation.
+  const off = setup();
+  off.runtime.configure({ ...ON, enabled: false });
+  off.runtime.noteIdleEntered();
+  assert.equal(off.clock.pendingTimers, 0);
+});
