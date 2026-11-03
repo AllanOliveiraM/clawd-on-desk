@@ -162,6 +162,50 @@ describe("i18n locales", () => {
       ["When idle", "Stay put", "Free roam", "Idle activities"]);
   });
 
+  it("companion strings are non-empty in every locale", () => {
+    const strings = loadSettingsI18nStrings();
+    const keys = [
+      "sectionPetCompanion",
+      "rowCompanionEnabled", "rowCompanionEnabledDesc",
+      "rowCompanionPersonality", "rowCompanionPersonalityDesc",
+      "companionPersonalityBalanced", "companionPersonalityBalancedDesc",
+      "companionPersonalityPlayful", "companionPersonalityPlayfulDesc",
+      "companionPersonalityCurious", "companionPersonalityCuriousDesc",
+      "companionPersonalityCalm", "companionPersonalityCalmDesc",
+      "companionPersonalityShy", "companionPersonalityShyDesc",
+      "rowCompanionAutonomy", "rowCompanionAutonomyDesc", "rowCompanionAutonomyDescStayPut",
+      "rowCompanionInteractions", "rowCompanionInteractionsDesc",
+      "rowCompanionMemory", "rowCompanionMemoryDesc",
+      "rowCompanionReset", "rowCompanionResetDesc",
+      "companionResetConfirmTitle", "companionResetConfirmDetail",
+      "companionResetConfirmAction", "companionResetConfirmCancel",
+      "toastCompanionResetDone", "toastCompanionResetFailed",
+    ];
+    const { PERSONALITY_IDS } = require("../src/companion-model");
+    for (const id of PERSONALITY_IDS) {
+      const labelKey = `companionPersonality${id[0].toUpperCase()}${id.slice(1)}`;
+      assert.ok(keys.includes(labelKey), labelKey);
+      assert.ok(keys.includes(`${labelKey}Desc`), `${labelKey}Desc`);
+    }
+    for (const lang of SUPPORTED_LANGS) {
+      const ordered = Object.keys(strings[lang]).filter((key) => keys.includes(key));
+      assert.deepStrictEqual(ordered, keys, `${lang} companion key order`);
+      for (const key of keys) {
+        assert.strictEqual(typeof strings[lang][key], "string", `${lang}.${key}`);
+        assert.ok(strings[lang][key].trim(), `${lang}.${key}`);
+        assert.notStrictEqual(strings[lang][key], key, `${lang}.${key} must not render as its key`);
+      }
+      if (lang !== "en") {
+        assert.notStrictEqual(strings[lang].rowCompanionEnabledDesc, strings.en.rowCompanionEnabledDesc,
+          `${lang}.rowCompanionEnabledDesc should be translated`);
+      }
+      // The stay-put hint names the real idle-behavior choices of the same locale.
+      assert.ok(strings[lang].rowCompanionAutonomyDescStayPut.includes(strings[lang].idleBehaviorRoam), lang);
+      assert.ok(strings[lang].rowCompanionAutonomyDescStayPut.includes(strings[lang].idleBehaviorActivities), lang);
+    }
+    assert.strictEqual(strings["pt-BR"].sectionPetCompanion, "Personalidade e comportamento");
+  });
+
   it("keeps Settings locale keysets aligned with English", () => {
     assertLocaleObjectParity(loadSettingsI18nStrings(), "settings");
   });

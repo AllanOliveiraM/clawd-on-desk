@@ -75,6 +75,7 @@ const {
   isPetMouthAccessoryId,
 } = require("./pet-customization-catalog");
 const { isValidDisplaySnapshot } = require("./work-area");
+const { PERSONALITY_IDS } = require("./companion-model");
 const {
   MAX_AUTO_CLOSE_SECONDS,
   buildAggregateHideCommit,
@@ -597,6 +598,12 @@ const updateRegistry = {
     return { status: "ok" };
   },
   idleActivityFrequency: requireEnum("idleActivityFrequency", ["low", "medium", "high"]),
+  // Clawd Alive companion. Plain values: the runtime reacts via subscribeKey.
+  companionEnabled: requireBoolean("companionEnabled"),
+  companionPersonality: requireEnum("companionPersonality", PERSONALITY_IDS),
+  companionAutonomy: requireBoolean("companionAutonomy"),
+  companionInteractions: requireBoolean("companionInteractions"),
+  companionMemory: requireBoolean("companionMemory"),
   keepSizeAcrossDisplays: {
     validate: requireBoolean("keepSizeAcrossDisplays"),
     effect(value, deps = {}) {

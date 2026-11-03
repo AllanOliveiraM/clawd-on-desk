@@ -221,6 +221,7 @@ function createHarness(overrides = {}) {
     path: overrides.path || path,
     settingsController,
     recapRuntime: overrides.recapRuntime,
+    companionRuntime: overrides.companionRuntime,
     themeLoader,
     codexPetMain,
     officialThemeMain: overrides.officialThemeMain,
@@ -338,6 +339,7 @@ test("settings IPC registers owned channels and leaves animation override channe
   assert.ok(ipcMain.handlers.has("settings:get-roam-fence"));
   assert.ok(ipcMain.handlers.has("settings:select-roam-fence"));
   assert.ok(ipcMain.handlers.has("settings:clear-roam-fence"));
+  assert.ok(ipcMain.handlers.has("settings:companion-reset"));
   assert.ok(ipcMain.handlers.has("settings:pick-sound-file"));
   assert.ok(ipcMain.handlers.has("settings:list-themes"));
   assert.ok(ipcMain.handlers.has("settings:detect-agent-installations"));
@@ -399,6 +401,59 @@ test("recap IPC exposes only bounded queries and explicit clear to the trusted S
     message: "untrusted settings sender",
   });
   assert.equal(calls.length, 2);
+});
+
+test("companion reset calls runtime and rejects untrusted senders", async () => {
+  const calls = [];
+  const harness = createHarness({
+    companionRuntime: {
+      reset() {
+        calls.push("reset");
+      },
+    },
+  });
+  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:companion-reset"), { status: "ok" });
+  assert.deepStrictEqual(calls, ["reset"]);
+
+  const contents = harness.settingsWindow.webContents;
+  for (const event of [
+    { sender: {}, senderFrame: null },
+    { sender: contents, senderFrame: { url: contents.mainFrame.url } },
+  ]) {
+    harness.ipcMain.invokeEvent = event;
+    assert.deepStrictEqual(await harness.ipcMain.invoke("settings:companion-reset"), {
+      status: "error",
+      message: "untrusted settings sender",
+    });
+  }
+  assert.deepStrictEqual(calls, ["reset"]);
+
+  const missing = createHarness();
+  assert.deepStrictEqual(await missing.ipcMain.invoke("settings:companion-reset"), {
+    status: "error",
+    message: "unavailable",
+  });
+});
+
+test("companion reset reports runtime errors", async () => {
+  const throwing = createHarness({
+    companionRuntime: { reset() { throw new Error("disk full"); } },
+  });
+  assert.deepStrictEqual(await throwing.ipcMain.invoke("settings:companion-reset"), {
+    status: "error",
+    message: "disk full",
+  });
+  const rejecting = createHarness({
+    companionRuntime: { reset: async () => { throw new Error("write failed"); } },
+  });
+  assert.deepStrictEqual(await rejecting.ipcMain.invoke("settings:companion-reset"), {
+    status: "error",
+    message: "write failed",
+  });
+  const asyncOk = createHarness({
+    companionRuntime: { reset: async () => {} },
+  });
+  assert.deepStrictEqual(await asyncOk.ipcMain.invoke("settings:companion-reset"), { status: "ok" });
 });
 
 test("settings IPC reads, selects, and clears the shared roam fence", async () => {

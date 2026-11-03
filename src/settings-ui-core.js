@@ -97,6 +97,7 @@
       bubblePlacement: null,
       quotaAlertThresholds: null,
       roamArea: null,
+      companion: null,
       settingsSelects: new Set(),
       segmentedRadios: new Set(),
       formFields: new Set(),
@@ -2206,6 +2207,7 @@
     state.mountedControls.quotaAlertThresholds = null;
     state.mountedControls.permissionAutomationMode = null;
     state.mountedControls.roamArea = null;
+    state.mountedControls.companion = null;
     state.mountedControls.aboutAutoUpdate = null;
     state.mountedControls.aboutUpdateStatus = null;
     state.mountedControls.aboutUpdateErrorDisclosure = null;

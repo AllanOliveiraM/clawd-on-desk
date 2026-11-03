@@ -156,6 +156,7 @@ contextBridge.exposeInMainWorld("settingsAPI", {
   getRoamFence: () => ipcRenderer.invoke("settings:get-roam-fence"),
   selectRoamFence: () => ipcRenderer.invoke("settings:select-roam-fence"),
   clearRoamFence: () => ipcRenderer.invoke("settings:clear-roam-fence"),
+  resetCompanion: () => ipcRenderer.invoke("settings:companion-reset"),
   getShortcutFailures: () => ipcRenderer.invoke("settings:getShortcutFailures"),
   getAnimationOverridesData: () => ipcRenderer.invoke("settings:get-animation-overrides-data"),
   openThemeAssetsDir: () => ipcRenderer.invoke("settings:open-theme-assets-dir"),

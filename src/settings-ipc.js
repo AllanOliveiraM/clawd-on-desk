@@ -586,6 +586,22 @@ function registerSettingsIpc(options = {}) {
     const rejected = rejectUntrustedSettingsEvent(event);
     return rejected || roamFenceSettings.clearFence();
   });
+  // Clawd Alive: wipe only the companion's learned state (mood, familiarity,
+  // favorite spot). Prefs are untouched; the runtime is optional until wired.
+  handle("settings:companion-reset", async (event) => {
+    const rejected = rejectUntrustedSettingsEvent(event);
+    if (rejected) return rejected;
+    const runtime = options.companionRuntime;
+    if (!runtime || typeof runtime.reset !== "function") {
+      return { status: "error", message: "unavailable" };
+    }
+    try {
+      await runtime.reset();
+      return { status: "ok" };
+    } catch (err) {
+      return { status: "error", message: (err && err.message) || "reset failed" };
+    }
+  });
   handle("settings:update", (_event, payload) => {
     if (!payload || typeof payload !== "object") {
       return { status: "error", message: "settings:update payload must be { key, value }" };

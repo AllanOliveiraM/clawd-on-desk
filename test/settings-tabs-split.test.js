@@ -66,6 +66,11 @@ const FROZEN_KEYS = [
   "keepSizeAcrossDisplays",
   "fullscreenAutoHide",
   "petAlwaysOnTop",
+  "companionEnabled",
+  "companionPersonality",
+  "companionAutonomy",
+  "companionInteractions",
+  "companionMemory",
   "openAtLogin",
   "disableHardwareAcceleration",
   "hideBubbles",
@@ -105,6 +110,11 @@ const EXPECTED_KEYS = {
     "idleActivities",
     "idleActivityFrequency",
     "fullscreenAutoHide",
+    "companionEnabled",
+    "companionPersonality",
+    "companionAutonomy",
+    "companionInteractions",
+    "companionMemory",
   ],
   notifications: [
     "soundMuted",
@@ -750,10 +760,11 @@ describe("settings tab split", () => {
 
   it("renders the five pages in the planned section and row order", () => {
     const pet = createHarness({ tab: "pet", snapshot: makeSnapshot({ lang: "zh" }) });
-    assert.deepStrictEqual(sectionTitles(pet), ["大小", "走动与位置", "窗口置顶", "眼睛跟随", "反应"]);
+    assert.deepStrictEqual(sectionTitles(pet), ["大小", "走动与位置", "性格与行为", "窗口置顶", "眼睛跟随", "反应"]);
     assert.deepStrictEqual(sectionRowLabels(pet), [
       ["大小", "跨显示器保持大小"],
       ["空闲时", "移动方式", "活动范围", "出现频率", "允许贴靠屏幕边缘", "关闭极简模式", "全屏时自动隐藏"],
+      ["启用 Clawd Alive", "性格", "自主行为", "抚摸与鼠标反应", "跨会话记忆", "重置 Clawd 的记忆"],
       ["桌宠保持在最前"],
       ["跟随鼠标光标"],
       ["测试结果动画"],

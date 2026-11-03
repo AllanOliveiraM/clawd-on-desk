@@ -33,6 +33,7 @@ const {
   normalizePermissionReviewCommand,
 } = require("./permission-review-command");
 const { isValidDisplaySnapshot } = require("./work-area");
+const { PERSONALITY_IDS } = require("./companion-model");
 const { normalizeRemoteSsh, getDefaults: getRemoteSshDefaults } = require("./remote-ssh-profile");
 const {
   cloneDefaultTelegramApproval,
@@ -378,6 +379,19 @@ const SCHEMA = {
     default: "medium",
     enum: ["low", "medium", "high"],
   },
+  // Clawd Alive (opt-in companion): mood, personality and petting on top of
+  // the idle behavior. Off by default; with companionEnabled false nothing in
+  // the companion runtime computes, reads or writes. The child flags are only
+  // consulted while the master switch is on.
+  companionEnabled: { type: "boolean", default: false },
+  companionPersonality: {
+    type: "string",
+    default: "balanced",
+    enum: PERSONALITY_IDS,
+  },
+  companionAutonomy: { type: "boolean", default: true },
+  companionInteractions: { type: "boolean", default: true },
+  companionMemory: { type: "boolean", default: true },
   // #562: Windows-only. When ON, the pet floats ON TOP of a foreground
   // fullscreen app (e.g. a borderless game) and stays draggable, instead of
   // standing down below it (#538). Default ON — most users want to glance at

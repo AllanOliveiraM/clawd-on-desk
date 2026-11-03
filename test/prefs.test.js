@@ -2687,3 +2687,75 @@ describe("idle behavior file normalization", () => {
     assert.strictEqual(snapshot.idleActivities, false);
   });
 });
+
+describe("Clawd Alive companion prefs", () => {
+  const { PERSONALITY_IDS } = require("../src/companion-model");
+
+  it("companion prefs default off and balanced", () => {
+    const d = prefs.getDefaults();
+    assert.strictEqual(d.companionEnabled, false);
+    assert.strictEqual(d.companionPersonality, "balanced");
+    assert.strictEqual(d.companionAutonomy, true);
+    assert.strictEqual(d.companionInteractions, true);
+    assert.strictEqual(d.companionMemory, true);
+    assert.deepStrictEqual(prefs.SCHEMA.companionPersonality.enum, PERSONALITY_IDS);
+  });
+
+  it("invalid companionPersonality falls back to balanced", () => {
+    for (const bad of ["grumpy", "", 3, null, true, "Balanced"]) {
+      assert.strictEqual(prefs.validate({ companionPersonality: bad }).companionPersonality, "balanced");
+    }
+    for (const id of PERSONALITY_IDS) {
+      assert.strictEqual(prefs.validate({ companionPersonality: id }).companionPersonality, id);
+    }
+    const v = prefs.validate({
+      companionEnabled: "yes",
+      companionAutonomy: 0,
+      companionInteractions: "false",
+      companionMemory: null,
+    });
+    assert.strictEqual(v.companionEnabled, false);
+    assert.strictEqual(v.companionAutonomy, true);
+    assert.strictEqual(v.companionInteractions, true);
+    assert.strictEqual(v.companionMemory, true);
+  });
+
+  it("v21 file without companion keys loads with defaults and keeps version 21", () => {
+    assert.strictEqual(prefs.CURRENT_VERSION, 21);
+    const file = makeTempPath();
+    fs.writeFileSync(file, JSON.stringify({ version: 21, lang: "pt-BR", freeRoam: true }));
+    const { snapshot, locked } = prefs.load(file);
+    assert.strictEqual(locked, false);
+    assert.strictEqual(snapshot.version, 21);
+    assert.strictEqual(snapshot.lang, "pt-BR");
+    assert.strictEqual(snapshot.companionEnabled, false);
+    assert.strictEqual(snapshot.companionPersonality, "balanced");
+    assert.strictEqual(snapshot.companionAutonomy, true);
+    assert.strictEqual(snapshot.companionInteractions, true);
+    assert.strictEqual(snapshot.companionMemory, true);
+
+    const saved = makeTempPath("saved.json");
+    prefs.save(saved, { ...snapshot, companionEnabled: true, companionPersonality: "shy" });
+    const reloaded = prefs.load(saved).snapshot;
+    assert.strictEqual(reloaded.version, 21);
+    assert.strictEqual(reloaded.companionEnabled, true);
+    assert.strictEqual(reloaded.companionPersonality, "shy");
+  });
+
+  it("default snapshots do not share references", () => {
+    const fileA = makeTempPath("a.json");
+    const fileB = makeTempPath("b.json");
+    fs.writeFileSync(fileA, JSON.stringify({ version: 21 }));
+    fs.writeFileSync(fileB, JSON.stringify({ version: 21 }));
+    const first = prefs.load(fileA).snapshot;
+    first.companionEnabled = true;
+    first.companionPersonality = "playful";
+    const second = prefs.load(fileB).snapshot;
+    assert.notStrictEqual(first, second);
+    assert.strictEqual(second.companionEnabled, false);
+    assert.strictEqual(second.companionPersonality, "balanced");
+    const defaults = prefs.getDefaults();
+    defaults.companionMemory = false;
+    assert.strictEqual(prefs.getDefaults().companionMemory, true);
+  });
+});

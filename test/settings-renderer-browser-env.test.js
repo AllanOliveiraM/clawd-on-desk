@@ -12805,6 +12805,242 @@ describe("settings renderer browser environment", () => {
     assert.strictEqual(frequency.getValue(), "low");
   });
 
+  describe("Clawd Alive companion section", () => {
+    const { PERSONALITY_IDS } = require("../src/companion-model");
+    const CHILD_SWITCHES = ["companionAutonomy", "companionInteractions", "companionMemory"];
+    const en = loadSettingsI18nForTest().en;
+
+    function companionSnapshot(overrides = {}) {
+      return makeGeneralSnapshot({
+        freeRoam: true,
+        idleActivities: false,
+        companionEnabled: false,
+        companionPersonality: "balanced",
+        companionAutonomy: true,
+        companionInteractions: true,
+        companionMemory: true,
+        ...overrides,
+      });
+    }
+
+    function companionControls(harness) {
+      const row = harness.content.querySelector(".companion-personality-row");
+      assert.ok(row, "personality row should render");
+      return {
+        row,
+        select: row.querySelector(".settings-select"),
+        trigger: row.querySelector(".language-picker-trigger"),
+        optionDesc: row.querySelector(".companion-personality-desc"),
+        resetButton: harness.content.querySelector(".companion-reset"),
+        autonomyDesc: harness.getSwitchMeta("companionAutonomy").row.querySelector(".row-desc"),
+      };
+    }
+
+    function applyBroadcast(harness, changes) {
+      harness.core.ops.applyChanges({ changes, snapshot: { ...harness.core.state.snapshot, ...changes } });
+    }
+
+    async function flush() {
+      for (let i = 0; i < 3; i++) await new Promise((resolve) => setImmediate(resolve));
+    }
+
+    it("companion children disabled while master off", () => {
+      const harness = loadGeneralTabForTest({ tab: "pet", snapshot: companionSnapshot() });
+      harness.renderContent();
+      const master = harness.getSwitch("companionEnabled");
+      assert.ok(master);
+      assert.strictEqual(master.classList.contains("on"), false);
+      assert.strictEqual(master.getAttribute("aria-disabled"), "false");
+      for (const key of CHILD_SWITCHES) {
+        const sw = harness.getSwitch(key);
+        assert.ok(sw, key);
+        assert.strictEqual(sw.getAttribute("aria-disabled"), "true", key);
+        assert.strictEqual(sw.classList.contains("on"), true, `${key} keeps its saved value while disabled`);
+      }
+      const c = companionControls(harness);
+      assert.strictEqual(c.trigger.disabled, true);
+      assert.strictEqual(c.resetButton.disabled, true);
+      assert.strictEqual(c.resetButton.classList.contains("danger"), true);
+      const options = c.select.querySelectorAll(".language-picker-option");
+      assert.deepStrictEqual(options.map((option) => option.getAttribute("data-lang")), PERSONALITY_IDS);
+      assert.deepStrictEqual(options.map((option) => option.textContent),
+        ["Balanced", "Playful", "Curious", "Calm", "Shy"]);
+      assert.strictEqual(c.optionDesc.textContent, en.companionPersonalityBalancedDesc);
+      assert.strictEqual(harness.getSwitchMeta("companionEnabled").row.querySelector(".row-label").textContent,
+        "Enable Clawd Alive");
+    });
+
+    it("patchInPlace enables children when master turns on", () => {
+      const harness = loadGeneralTabForTest({ tab: "pet", snapshot: companionSnapshot() });
+      harness.renderContent();
+      const c = companionControls(harness);
+      const before = harness.getContentRenderCount();
+
+      applyBroadcast(harness, { companionEnabled: true });
+      assert.strictEqual(harness.getContentRenderCount(), before);
+      assert.strictEqual(harness.content.querySelector(".companion-personality-row"), c.row);
+      assert.strictEqual(harness.getSwitch("companionEnabled").classList.contains("on"), true);
+      for (const key of CHILD_SWITCHES) {
+        assert.strictEqual(harness.getSwitch(key).getAttribute("aria-disabled"), "false", key);
+      }
+      assert.strictEqual(c.trigger.disabled, false);
+      assert.strictEqual(c.resetButton.disabled, false);
+
+      applyBroadcast(harness, { companionPersonality: "curious", companionMemory: false });
+      assert.strictEqual(harness.getContentRenderCount(), before);
+      assert.strictEqual(getSelectedPickerValue(c.select), "curious");
+      assert.strictEqual(c.trigger.textContent, "Curious");
+      assert.strictEqual(c.optionDesc.textContent, en.companionPersonalityCuriousDesc);
+      assert.strictEqual(harness.getSwitch("companionMemory").classList.contains("on"), false);
+
+      applyBroadcast(harness, { companionEnabled: false });
+      assert.strictEqual(harness.getContentRenderCount(), before);
+      for (const key of CHILD_SWITCHES) {
+        assert.strictEqual(harness.getSwitch(key).getAttribute("aria-disabled"), "true", key);
+      }
+      assert.strictEqual(c.trigger.disabled, true);
+      assert.strictEqual(c.resetButton.disabled, true);
+    });
+
+    it("autonomy description switches for stay-put", () => {
+      const harness = loadGeneralTabForTest({
+        tab: "pet",
+        snapshot: companionSnapshot({ companionEnabled: true }),
+      });
+      harness.renderContent();
+      const c = companionControls(harness);
+      const before = harness.getContentRenderCount();
+      assert.strictEqual(c.autonomyDesc.textContent, en.rowCompanionAutonomyDesc);
+
+      applyBroadcast(harness, { freeRoam: false, idleActivities: false });
+      assert.strictEqual(harness.getContentRenderCount(), before);
+      assert.strictEqual(c.autonomyDesc.textContent, en.rowCompanionAutonomyDescStayPut);
+
+      applyBroadcast(harness, { idleActivities: true });
+      assert.strictEqual(harness.getContentRenderCount(), before);
+      assert.strictEqual(c.autonomyDesc.textContent, en.rowCompanionAutonomyDesc);
+
+      const stayPut = loadGeneralTabForTest({
+        tab: "pet",
+        snapshot: companionSnapshot({ freeRoam: false, idleActivities: false }),
+      });
+      stayPut.renderContent();
+      assert.strictEqual(companionControls(stayPut).autonomyDesc.textContent, en.rowCompanionAutonomyDescStayPut);
+    });
+
+    it("failed personality save rolls back the select and toasts", async () => {
+      const writes = [];
+      const toasts = [];
+      let reply = { status: "error", message: "disk full" };
+      const harness = loadGeneralTabForTest({
+        tab: "pet",
+        snapshot: companionSnapshot({ companionEnabled: true }),
+        settingsAPI: {
+          update: async (key, value) => {
+            writes.push({ key, value });
+            if (reply instanceof Error) throw reply;
+            return reply;
+          },
+        },
+      });
+      harness.core.ops.showToast = (message, options) => toasts.push({ message, options });
+      harness.renderContent();
+      const c = companionControls(harness);
+
+      choosePickerOption(c.select, "playful");
+      await flush();
+      assert.deepStrictEqual(writes, [{ key: "companionPersonality", value: "playful" }]);
+      assert.strictEqual(getSelectedPickerValue(c.select), "balanced");
+      assert.strictEqual(c.trigger.textContent, "Balanced");
+      assert.strictEqual(c.optionDesc.textContent, en.companionPersonalityBalancedDesc);
+      assert.strictEqual(toasts.length, 1);
+      assert.strictEqual(toasts[0].options.error, true);
+      assert.ok(toasts[0].message.includes("disk full"));
+
+      reply = new Error("IPC unavailable");
+      choosePickerOption(c.select, "calm");
+      await flush();
+      assert.strictEqual(getSelectedPickerValue(c.select), "balanced");
+      assert.strictEqual(toasts.length, 2);
+      assert.ok(toasts[1].message.includes("IPC unavailable"));
+
+      reply = { status: "ok" };
+      choosePickerOption(c.select, "shy");
+      await flush();
+      assert.strictEqual(getSelectedPickerValue(c.select), "shy");
+      assert.strictEqual(toasts.length, 2);
+      applyBroadcast(harness, { companionPersonality: "shy" });
+      assert.strictEqual(c.optionDesc.textContent, en.companionPersonalityShyDesc);
+    });
+
+    it("reset asks for confirmation and does nothing on cancel", async () => {
+      const resets = [];
+      const toasts = [];
+      const modals = [];
+      let answer = "cancel";
+      let resetReply = () => ({ status: "ok" });
+      const harness = loadGeneralTabForTest({
+        tab: "pet",
+        snapshot: companionSnapshot({ companionEnabled: true }),
+        settingsAPI: {
+          resetCompanion: () => {
+            resets.push("reset");
+            return resetReply();
+          },
+        },
+      });
+      harness.core.ops.showToast = (message, options) => toasts.push({ message, options });
+      harness.core.helpers.showSettingsConfirmModal = (options) => {
+        modals.push(options);
+        return Promise.resolve(answer);
+      };
+      harness.renderContent();
+      const button = companionControls(harness).resetButton;
+
+      button.dispatchEvent({ type: "click", bubbles: false });
+      await flush();
+      assert.strictEqual(modals.length, 1);
+      assert.strictEqual(modals[0].title, en.companionResetConfirmTitle);
+      assert.strictEqual(modals[0].detail, en.companionResetConfirmDetail);
+      assert.deepStrictEqual(JSON.parse(JSON.stringify(modals[0].actions.map((action) => [action.id, action.tone]))),
+        [["cancel", "neutral"], ["confirm", "danger"]]);
+      assert.strictEqual(modals[0].actions[0].defaultFocus, true);
+      assert.deepStrictEqual(resets, []);
+      assert.deepStrictEqual(toasts, []);
+      assert.strictEqual(button.disabled, false);
+
+      answer = "confirm";
+      const pending = createDeferred();
+      resetReply = () => pending.promise;
+      button.dispatchEvent({ type: "click", bubbles: false });
+      await flush();
+      assert.deepStrictEqual(resets, ["reset"]);
+      assert.strictEqual(button.disabled, true, "reset button is pending while the IPC runs");
+      assert.strictEqual(button.classList.contains("pending"), true);
+      button.dispatchEvent({ type: "click", bubbles: false });
+      await flush();
+      assert.strictEqual(modals.length, 2, "a pending reset ignores further clicks");
+      pending.resolve({ status: "ok" });
+      await flush();
+      assert.strictEqual(button.disabled, false);
+      assert.deepStrictEqual(toasts.map((toast) => [toast.message, !!(toast.options && toast.options.error)]),
+        [[en.toastCompanionResetDone, false]]);
+
+      resetReply = () => ({ status: "error", message: "unavailable" });
+      button.dispatchEvent({ type: "click", bubbles: false });
+      await flush();
+      resetReply = () => Promise.reject(new Error("boom"));
+      button.dispatchEvent({ type: "click", bubbles: false });
+      await flush();
+      assert.deepStrictEqual(resets, ["reset", "reset", "reset"]);
+      assert.deepStrictEqual(toasts.slice(1).map((toast) => [toast.message, toast.options.error]), [
+        [en.toastCompanionResetFailed, true],
+        [en.toastCompanionResetFailed, true],
+      ]);
+      assert.strictEqual(button.disabled, false);
+    });
+  });
+
   it("uses snapshot mode changes when a broadcast arrives before the optimistic save resolves", async () => {
     let resolveSave;
     const harness = loadGeneralTabForTest({

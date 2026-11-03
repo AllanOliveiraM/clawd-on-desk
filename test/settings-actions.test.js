@@ -270,6 +270,27 @@ describe("updateRegistry pure-data validators", () => {
     assert.strictEqual(updateRegistry.idleActivityFrequency(true).status, "error");
   });
 
+  it("companionPersonality rejects unknown id", () => {
+    const { PERSONALITY_IDS } = require("../src/companion-model");
+    for (const id of PERSONALITY_IDS) {
+      assert.strictEqual(updateRegistry.companionPersonality(id).status, "ok");
+    }
+    for (const bad of ["grumpy", "Balanced", "", null, 1, true]) {
+      assert.strictEqual(updateRegistry.companionPersonality(bad).status, "error");
+    }
+  });
+
+  it("companion booleans require booleans", () => {
+    for (const key of ["companionEnabled", "companionAutonomy", "companionInteractions", "companionMemory"]) {
+      assert.strictEqual(typeof updateRegistry[key], "function", key);
+      assert.strictEqual(updateRegistry[key](true).status, "ok", key);
+      assert.strictEqual(updateRegistry[key](false).status, "ok", key);
+      for (const bad of ["true", 1, 0, null, undefined]) {
+        assert.strictEqual(updateRegistry[key](bad).status, "error", `${key} ${String(bad)}`);
+      }
+    }
+  });
+
   it("accepts only supported quota ring display modes", () => {
     assert.strictEqual(updateRegistry.quotaRingDisplayMode("used").status, "ok");
     assert.strictEqual(updateRegistry.quotaRingDisplayMode("remaining").status, "ok");

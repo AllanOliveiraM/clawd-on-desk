@@ -87,6 +87,12 @@ test("settings preload exposes the three roam area operations", async () => {
   ]);
 });
 
+test("settings preload exposes the companion reset on its dedicated IPC channel", async () => {
+  const { exposed, invokes } = loadPreload();
+  await exposed.get("settingsAPI").resetCompanion();
+  assert.deepStrictEqual(invokes, [["settings:companion-reset"]]);
+});
+
 test("settings preload queries the current size context on its dedicated IPC channel", async () => {
   const { exposed, invokes } = loadPreload();
   await exposed.get("settingsAPI").getSizeContext();

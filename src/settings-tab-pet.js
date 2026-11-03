@@ -17,7 +17,24 @@
     "idleActivities",
     "idleActivityFrequency",
     "fullscreenAutoHide",
+    "companionEnabled",
+    "companionPersonality",
+    "companionAutonomy",
+    "companionInteractions",
+    "companionMemory",
   ]);
+
+  // Clawd Alive keys owned by the companion section. Switches are patched by
+  // the generic switch loop; the select, description swaps and child
+  // disabled state are re-synced by syncCompanionFromSnapshot.
+  const COMPANION_KEYS = [
+    "companionEnabled",
+    "companionPersonality",
+    "companionAutonomy",
+    "companionInteractions",
+    "companionMemory",
+  ];
+  const COMPANION_CHILD_SWITCH_KEYS = ["companionAutonomy", "companionInteractions", "companionMemory"];
 
   let state = null;
   let readers = null;
@@ -33,6 +50,10 @@
   const ROAM_MOVEMENT_AXIS = "axis";
   const IDLE_ACTIVITY_FREQUENCIES = ["low", "medium", "high"];
   const IDLE_ACTIVITY_DEFAULT_FREQUENCY = "medium";
+  // Mirrors PERSONALITY_IDS in src/companion-model.js. The renderer can't
+  // require that module; a test asserts the rendered options stay in sync.
+  const COMPANION_PERSONALITIES = ["balanced", "playful", "curious", "calm", "shy"];
+  const COMPANION_DEFAULT_PERSONALITY = "balanced";
 
   function t(key) {
     return helpers.t(key);
@@ -398,6 +419,207 @@
   }
 
 
+  function readCompanionEnabled() {
+    return !!(state.snapshot && state.snapshot.companionEnabled === true);
+  }
+
+  function readCompanionPersonality() {
+    const value = state.snapshot && state.snapshot.companionPersonality;
+    return COMPANION_PERSONALITIES.includes(value) ? value : COMPANION_DEFAULT_PERSONALITY;
+  }
+
+  function companionPersonalityLabelKey(id) {
+    return `companionPersonality${id.charAt(0).toUpperCase()}${id.slice(1)}`;
+  }
+
+  // Autonomy only acts through roam or idle activities, so "Stay put" gets a
+  // hint pointing at the idle behavior choice instead of the normal text.
+  function readCompanionAutonomyDescKey() {
+    return readIdleBehavior() === "none"
+      ? "rowCompanionAutonomyDescStayPut"
+      : "rowCompanionAutonomyDesc";
+  }
+
+  async function saveCompanionPersonality(next) {
+    if (next === readCompanionPersonality()) return true;
+    try {
+      const result = await window.settingsAPI.update("companionPersonality", next);
+      if (result && result.status === "ok") return true;
+      const message = (result && result.message) || "unknown error";
+      ops.showToast(t("toastSaveFailed") + message, { error: true });
+    } catch (err) {
+      ops.showToast(t("toastSaveFailed") + (err && err.message), { error: true });
+    }
+    return false;
+  }
+
+  function buildCompanionPersonalityRow(enabled) {
+    const row = document.createElement("div");
+    row.className = "row companion-personality-row";
+
+    const text = document.createElement("div");
+    text.className = "row-text";
+    const label = document.createElement("span");
+    label.className = "row-label";
+    label.textContent = t("rowCompanionPersonality");
+    const description = document.createElement("span");
+    description.className = "row-desc";
+    description.textContent = t("rowCompanionPersonalityDesc");
+    const optionDescription = document.createElement("span");
+    optionDescription.className = "row-desc row-desc-extra companion-personality-desc";
+    optionDescription.textContent = t(`${companionPersonalityLabelKey(readCompanionPersonality())}Desc`);
+    text.appendChild(label);
+    text.appendChild(description);
+    text.appendChild(optionDescription);
+
+    const controlHost = document.createElement("div");
+    controlHost.className = "row-control";
+    const select = helpers.buildSettingsSelect({
+      value: readCompanionPersonality(),
+      options: COMPANION_PERSONALITIES.map((id) => ({
+        value: id,
+        label: t(companionPersonalityLabelKey(id)),
+      })),
+      ariaLabel: t("rowCompanionPersonality"),
+      className: "companion-personality-select",
+      disabled: !enabled,
+      onChange: saveCompanionPersonality,
+    });
+    controlHost.appendChild(select.element);
+    row.appendChild(text);
+    row.appendChild(controlHost);
+    return { row, select, optionDescription };
+  }
+
+  function buildCompanionResetRow(enabled) {
+    const row = document.createElement("div");
+    row.className = "row companion-reset-row";
+
+    const text = document.createElement("div");
+    text.className = "row-text";
+    const label = document.createElement("span");
+    label.className = "row-label";
+    label.textContent = t("rowCompanionReset");
+    const description = document.createElement("span");
+    description.className = "row-desc";
+    description.textContent = t("rowCompanionResetDesc");
+    text.appendChild(label);
+    text.appendChild(description);
+
+    const controlHost = document.createElement("div");
+    controlHost.className = "row-control";
+    const button = helpers.buildButton({
+      labelKey: "companionResetConfirmAction",
+      tone: "danger",
+      size: "compact",
+      className: "companion-reset",
+      disabled: !enabled,
+    });
+    controlHost.appendChild(button);
+    row.appendChild(text);
+    row.appendChild(controlHost);
+
+    let busy = false;
+    function isMounted() {
+      return document.body.contains(row);
+    }
+    button.addEventListener("click", async () => {
+      if (busy || !readCompanionEnabled()) return;
+      if (!window.settingsAPI || typeof window.settingsAPI.resetCompanion !== "function") return;
+      const action = await helpers.showSettingsConfirmModal({
+        title: t("companionResetConfirmTitle"),
+        detail: t("companionResetConfirmDetail"),
+        actions: [
+          { id: "cancel", label: t("companionResetConfirmCancel"), tone: "neutral", defaultFocus: true },
+          { id: "confirm", label: t("companionResetConfirmAction"), tone: "danger" },
+        ],
+      });
+      if (action !== "confirm" || busy) return;
+      busy = true;
+      helpers.setButtonState(button, { pending: true });
+      try {
+        const result = await window.settingsAPI.resetCompanion();
+        if (result && result.status === "ok") ops.showToast(t("toastCompanionResetDone"));
+        else ops.showToast(t("toastCompanionResetFailed"), { error: true });
+      } catch {
+        ops.showToast(t("toastCompanionResetFailed"), { error: true });
+      } finally {
+        busy = false;
+        if (isMounted()) helpers.setButtonState(button, { pending: false });
+      }
+    });
+    return { row, button };
+  }
+
+  function buildCompanionSection() {
+    const enabled = readCompanionEnabled();
+    const personality = buildCompanionPersonalityRow(enabled);
+    const autonomyRow = helpers.buildSwitchRow({
+      key: "companionAutonomy",
+      labelKey: "rowCompanionAutonomy",
+      descKey: readCompanionAutonomyDescKey(),
+      disabled: !enabled,
+    });
+    const reset = buildCompanionResetRow(enabled);
+    const section = helpers.buildSection(t("sectionPetCompanion"), [
+      helpers.buildSwitchRow({
+        key: "companionEnabled",
+        labelKey: "rowCompanionEnabled",
+        descKey: "rowCompanionEnabledDesc",
+      }),
+      personality.row,
+      autonomyRow,
+      helpers.buildSwitchRow({
+        key: "companionInteractions",
+        labelKey: "rowCompanionInteractions",
+        descKey: "rowCompanionInteractionsDesc",
+        disabled: !enabled,
+      }),
+      helpers.buildSwitchRow({
+        key: "companionMemory",
+        labelKey: "rowCompanionMemory",
+        descKey: "rowCompanionMemoryDesc",
+        disabled: !enabled,
+      }),
+      reset.row,
+    ]);
+    state.mountedControls.companion = {
+      element: section,
+      personalitySelect: personality.select,
+      personalityDescription: personality.optionDescription,
+      autonomyDescription: autonomyRow.querySelector(".row-desc"),
+      resetButton: reset.button,
+    };
+    return section;
+  }
+
+  function getMountedCompanion() {
+    const mounted = state.mountedControls.companion;
+    if (!mounted || !document.body.contains(mounted.element)) return null;
+    return mounted;
+  }
+
+  // Re-applies everything the companion section derives from the snapshot:
+  // the selected personality, child disabled state and the autonomy text.
+  // The select value is only reset when the personality itself changed, so an
+  // unrelated broadcast never cancels a personality save still in flight.
+  function syncCompanionFromSnapshot({ personalityChanged = true } = {}) {
+    const mounted = getMountedCompanion();
+    if (!mounted) return false;
+    const enabled = readCompanionEnabled();
+    for (const key of COMPANION_CHILD_SWITCH_KEYS) {
+      if (!setGeneralSwitchDisabled(key, !enabled)) return false;
+    }
+    const personality = readCompanionPersonality();
+    if (personalityChanged) mounted.personalitySelect.setValue(personality);
+    mounted.personalitySelect.setDisabled(!enabled);
+    mounted.personalityDescription.textContent = t(`${companionPersonalityLabelKey(personality)}Desc`);
+    mounted.autonomyDescription.textContent = t(readCompanionAutonomyDescKey());
+    helpers.setButtonState(mounted.resetButton, { disabled: !enabled });
+    return true;
+  }
+
+
   // = prefsSizeToUi(9): the prefs `size` default is "P:9" (see src/prefs.js).
   const SIZE_UI_DEFAULT = 30;
 
@@ -646,6 +868,8 @@
       })] : []),
     ]));
 
+    parent.appendChild(buildCompanionSection());
+
     // #1275: master always-on-top switch. Cross-platform — the pet body's
     // topmost band is maintained on every OS, so the opt-out is too.
     parent.appendChild(helpers.buildSection(t("sectionPetTopmost"), [
@@ -686,6 +910,10 @@
     const idleBehavior = state.mountedControls.idleBehavior;
     const behaviorChanged = keys.includes("freeRoam") || keys.includes("idleActivities");
     if (behaviorChanged && (!idleBehavior || !document.body.contains(idleBehavior.element))) return false;
+    // The autonomy description depends on the idle behavior, so both the
+    // companion keys and freeRoam/idleActivities re-sync the section.
+    const companionChanged = behaviorChanged || keys.some((key) => COMPANION_KEYS.includes(key));
+    if (companionChanged && !getMountedCompanion()) return false;
     // #1275: adding or removing the restart note/button needs a new row.
     if (keys.includes("petAlwaysOnTop")
       && isPetAlwaysOnTopRestartPending() !== mountedPetAlwaysOnTopRestartPending) {
@@ -694,6 +922,7 @@
     for (const key of keys) {
       if (key === "size" || key === "roamConstrainAxis") continue;
       if (key === "idleActivityFrequency" || key === "freeRoam" || key === "idleActivities") continue;
+      if (key === "companionPersonality") continue;
       const meta = state.mountedControls.generalSwitches.get(key);
       if (!meta || !document.body.contains(meta.element)) return false;
     }
@@ -701,6 +930,7 @@
       if (key === "size") continue;
       if (key === "roamConstrainAxis") continue;
       if (key === "idleActivityFrequency" || key === "freeRoam" || key === "idleActivities") continue;
+      if (key === "companionPersonality") continue;
       const meta = state.mountedControls.generalSwitches.get(key);
       state.transientUiState.generalSwitches.delete(key);
       meta.control.setState({
@@ -717,6 +947,9 @@
       && !syncRoamMovementStyleFromSnapshot()) return false;
     if ((keys.includes("idleActivities") || keys.includes("idleActivityFrequency"))
       && !syncIdleActivityFrequencyFromSnapshot()) return false;
+    if (companionChanged && !syncCompanionFromSnapshot({
+      personalityChanged: keys.includes("companionPersonality"),
+    })) return false;
     return true;
   }
 
