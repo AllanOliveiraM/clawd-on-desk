@@ -23,6 +23,8 @@ if (window.hitAPI && window.hitAPI.onThemeConfig) {
 let currentState = null;
 let miniMode = false;
 let dndEnabled = false;
+// Clawd Alive (opt-in): companionEnabled && companionInteractions, pushed by main.
+let petGesturesEnabled = false;
 
 window.hitAPI.onStateSync((data) => {
   if (data.currentState !== undefined) currentState = data.currentState;
@@ -31,6 +33,8 @@ window.hitAPI.onStateSync((data) => {
     area.style.cursor = miniMode ? "default" : "";
   }
   if (data.dndEnabled !== undefined) dndEnabled = data.dndEnabled;
+  if (data.petGesturesEnabled !== undefined) petGesturesEnabled = data.petGesturesEnabled === true;
+  if (!petGesturesEnabled || miniMode) endPetGestures();
 });
 
 // --- Drag state ---
@@ -48,6 +52,7 @@ let isDragReacting = false;
 
 // Cancel signal from main (e.g. state change)
 window.hitAPI.onCancelReaction(() => {
+  endPetGestures();
   if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; clickCount = 0; firstClickDir = null; }
   isReacting = false;
   isDragReacting = false;
@@ -69,8 +74,92 @@ function clearQueuedDragMove() {
   dragMoveRAF = null;
 }
 
+// --- Petting / hover gestures (Clawd Alive, opt-in) ---
+// Everything here is inert unless main sent petGesturesEnabled=true AND the
+// detector script loaded (hit.html includes pet-stroke-detector.js before this
+// file). Listeners never preventDefault, capture the pointer or touch the
+// drag / click state: they only observe button-less hover moves and report
+// "pet-start" / "pet-continue" / "pet-end" / "hover-dwell" to main, which
+// re-validates everything. Both timers exist only while needed: the 500 ms
+// poll while the detector is active, the 1200 ms dwell inside a fresh entry.
+const PET_POLL_MS = 500;
+const HOVER_DWELL_MS = 1200;
+const HOVER_DWELL_SLOP_PX = 3;
+const _petStrokeApi = window.ClawdPetStrokeDetector || null;
+const petDetector = _petStrokeApi && typeof _petStrokeApi.createPetStrokeDetector === "function"
+  ? _petStrokeApi.createPetStrokeDetector()
+  : null;
+let petPollTimer = null;
+let hoverDwellTimer = null;
+let hoverEntryX = 0;
+let hoverEntryY = 0;
+
+function petGesturesAllowed() {
+  return petGesturesEnabled && !!petDetector && !miniMode && !dndEnabled && !isDragging;
+}
+
+function sendPetGesture(kind) {
+  if (window.hitAPI.petGesture) window.hitAPI.petGesture(kind);
+}
+
+function cancelHoverDwell() {
+  if (hoverDwellTimer === null) return;
+  clearTimeout(hoverDwellTimer);
+  hoverDwellTimer = null;
+}
+
+function schedulePetPoll() {
+  if (petPollTimer !== null) return;
+  petPollTimer = setTimeout(() => {
+    petPollTimer = null;
+    if (!petDetector) return;
+    const out = petDetector.poll();
+    if (out) sendPetGesture(out);
+    if (petDetector.isActive()) schedulePetPoll();
+  }, PET_POLL_MS);
+}
+
+// Every end path: drop both timers, reset the detector, and report the end
+// only when a petting session was actually running.
+function endPetGestures() {
+  cancelHoverDwell();
+  if (petPollTimer !== null) {
+    clearTimeout(petPollTimer);
+    petPollTimer = null;
+  }
+  if (!petDetector) return;
+  const wasActive = petDetector.isActive();
+  petDetector.reset();
+  if (wasActive) sendPetGesture("pet-end");
+}
+
+function handlePetHoverMove(e) {
+  if (hoverDwellTimer !== null
+    && Math.hypot(e.clientX - hoverEntryX, e.clientY - hoverEntryY) > HOVER_DWELL_SLOP_PX) {
+    cancelHoverDwell();
+  }
+  const out = petDetector.feed(e.clientX, e.clientY);
+  if (out) sendPetGesture(out);
+  if (petDetector.isActive()) schedulePetPoll();
+}
+
+area.addEventListener("pointerenter", (e) => {
+  cancelHoverDwell();
+  if (!petGesturesAllowed()) return;
+  hoverEntryX = e.clientX;
+  hoverEntryY = e.clientY;
+  hoverDwellTimer = setTimeout(() => {
+    hoverDwellTimer = null;
+    if (petGesturesAllowed()) sendPetGesture("hover-dwell");
+  }, HOVER_DWELL_MS);
+});
+
+area.addEventListener("pointerleave", () => endPetGestures());
+window.addEventListener("blur", () => endPetGestures());
+
 // --- Pointer handlers ---
 area.addEventListener("pointerdown", (e) => {
+  endPetGestures();
   if (e.button === 0) {
     if (miniMode) { didDrag = false; return; }
     area.setPointerCapture(e.pointerId);
@@ -111,6 +200,8 @@ document.addEventListener("pointermove", (e) => {
     }
     lastDragClientX = e.clientX;
     queueDragMove();
+  } else if (e.buttons === 0 && petGesturesAllowed()) {
+    handlePetHoverMove(e);
   }
 });
 
@@ -157,7 +248,7 @@ document.addEventListener("pointerup", (e) => {
 });
 
 area.addEventListener("pointercancel", () => stopDrag());
-area.addEventListener("lostpointercapture", () => { if (isDragging) stopDrag(); });
+area.addEventListener("lostpointercapture", () => { endPetGestures(); if (isDragging) stopDrag(); });
 window.addEventListener("blur", stopDrag);
 
 // Main released the lock because a user-invoked recovery ran (bring to
@@ -343,6 +434,7 @@ if (!isMac) {
 // strand regardless of what the menu loop swallows.
 document.addEventListener("contextmenu", (e) => {
   e.preventDefault();
+  endPetGestures();
   if (isDragging) stopDrag();
   window.hitAPI.showContextMenu();
 });

@@ -16,6 +16,21 @@ function isTrustedMainFrameEvent(event, webContents) {
   }
 }
 
+// Clawd Alive gesture kinds the hit renderer may report.
+const PET_GESTURE_KINDS = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell"]);
+// A drag whose lock lasted longer than this counts as "dragLong" for the mood.
+const DRAG_LONG_MS = 1500;
+
+function clamp01(value) {
+  return value < 0 ? 0 : (value > 1 ? 1 : value);
+}
+
+function reactionFiles(reaction) {
+  if (!reaction || typeof reaction !== "object") return [];
+  if (Array.isArray(reaction.files)) return reaction.files;
+  return reaction.file ? [reaction.file] : [];
+}
+
 function registerPetInteractionIpc(options = {}) {
   const ipcMain = requiredDependency(options.ipcMain, "ipcMain");
   const showContextMenu = requiredDependency(options.showContextMenu, "showContextMenu");
@@ -85,7 +100,35 @@ function registerPetInteractionIpc(options = {}) {
   const isMacPlatform = options.isMacPlatform != null
     ? !!options.isMacPlatform
     : process.platform === "darwin";
+  // Clawd Alive companion (all optional; absent = exactly the old behavior).
+  // handlePetGesture: receives validated petting / hover gestures; without it
+  //   the gesture channel is not registered at all.
+  // hitWebContents: the hit window's webContents, or a getter for it. When
+  //   supplied, gestures from any other sender / sub-frame are dropped; when
+  //   omitted every sender is accepted (tests and back-compat).
+  // noteCompanionEvent: observes "click" / "clickBurst" / "drag" / "dragLong"
+  //   without changing what the existing handlers do.
+  // noteCompanionDragEnd({displayId, x, y}): the pet's final center as a
+  //   fraction of its display's work area, needs getDisplayNearestPoint.
+  const handlePetGesture = typeof options.handlePetGesture === "function" ? options.handlePetGesture : null;
+  const noteCompanionEvent = typeof options.noteCompanionEvent === "function" ? options.noteCompanionEvent : null;
+  const noteCompanionDragEnd = typeof options.noteCompanionDragEnd === "function"
+    ? options.noteCompanionDragEnd
+    : null;
+  const hitWebContents = options.hitWebContents || null;
+  const isDragLockedOption = typeof options.isDragLocked === "function" ? options.isDragLocked : null;
+  const getThemeReactions = typeof options.getThemeReactions === "function" ? options.getThemeReactions : null;
+  const getDisplayNearestPoint = typeof options.getDisplayNearestPoint === "function"
+    ? options.getDisplayNearestPoint
+    : null;
+  const now = typeof options.now === "function" ? options.now : Date.now;
+  const companionLog = options.companionLog || (() => {});
   const disposers = [];
+  // Local view of the drag lock this module handles; only used for the
+  // duration measurement and as the gesture gate when main gives no getter.
+  let localDragLocked = false;
+  let dragLockedAt = null;
+  let lastDragLockMs = null;
 
   function on(channel, listener) {
     ipcMain.on(channel, listener);
@@ -115,7 +158,55 @@ function registerPetInteractionIpc(options = {}) {
     setAccessoryMirror(!!mirrored);
   });
 
+  function observeCompanion(fn) {
+    try {
+      fn();
+    } catch (err) {
+      companionLog(`companion observer failed: ${(err && err.message) || err}`);
+    }
+  }
+
+  function isClickBurstFile(svg) {
+    const reactions = getThemeReactions ? getThemeReactions() : null;
+    if (!reactions || typeof reactions !== "object") return false;
+    return reactionFiles(reactions.annoyed).includes(svg) || reactionFiles(reactions.double).includes(svg);
+  }
+
+  function takeDragDurationMs() {
+    const duration = dragLockedAt != null ? now() - dragLockedAt : lastDragLockMs;
+    dragLockedAt = null;
+    lastDragLockMs = null;
+    return duration;
+  }
+
+  function noteDragRestSpot(finalBounds) {
+    if (!noteCompanionDragEnd || !getDisplayNearestPoint) return;
+    // The clamped bounds just applied are where the pet came to rest; fall
+    // back to the live bounds when no clamp was needed.
+    const bounds = finalBounds || getPetWindowBounds();
+    if (!bounds) return;
+    const cx = bounds.x + bounds.width / 2;
+    const cy = bounds.y + bounds.height / 2;
+    if (!Number.isFinite(cx) || !Number.isFinite(cy)) return;
+    const display = getDisplayNearestPoint({ x: Math.round(cx), y: Math.round(cy) });
+    const wa = display && display.workArea;
+    if (!wa || !(wa.width > 0) || !(wa.height > 0)) return;
+    noteCompanionDragEnd({
+      displayId: display.id,
+      x: clamp01((cx - wa.x) / wa.width),
+      y: clamp01((cy - wa.y) / wa.height),
+    });
+  }
+
   on("drag-lock", (_event, locked) => {
+    localDragLocked = !!locked;
+    if (locked) {
+      dragLockedAt = now();
+      lastDragLockMs = null;
+    } else if (dragLockedAt != null) {
+      lastDragLockMs = now() - dragLockedAt;
+      dragLockedAt = null;
+    }
     setDragLocked(!!locked);
     if (locked) {
       setMouseOverPet(true);
@@ -138,9 +229,32 @@ function registerPetInteractionIpc(options = {}) {
   on("play-click-reaction", (_event, svg, duration) => {
     if (requestClickReaction) requestClickReaction(svg, duration);
     else sendToRenderer("play-click-reaction", svg, duration);
+    if (noteCompanionEvent && typeof svg === "string" && svg) {
+      observeCompanion(() => noteCompanionEvent(isClickBurstFile(svg) ? "clickBurst" : "click"));
+    }
   });
 
+  if (handlePetGesture) {
+    on("pet-interaction:gesture", (event, kind) => {
+      if (typeof kind !== "string" || !PET_GESTURE_KINDS.has(kind)) return;
+      if (hitWebContents) {
+        const wc = typeof hitWebContents === "function" ? hitWebContents() : hitWebContents;
+        if (!isTrustedMainFrameEvent(event, wc)) return;
+      }
+      if (isMiniMode() || isMiniTransitioning()) return;
+      if (isDragLockedOption ? isDragLockedOption() : localDragLocked) return;
+      observeCompanion(() => handlePetGesture(kind));
+    });
+  }
+
   on("drag-end", () => {
+    // The renderer sends drag-end only after real movement: one mood event
+    // per completed drag, measured from the drag lock.
+    const dragMs = takeDragDurationMs();
+    localDragLocked = false;
+    if (noteCompanionEvent) {
+      observeCompanion(() => noteCompanionEvent(dragMs != null && dragMs > DRAG_LONG_MS ? "dragLong" : "drag"));
+    }
     try {
       if (!isMiniMode() && !isMiniTransitioning()) {
         if (!getDisableMiniMode()) checkMiniModeSnap();
@@ -159,6 +273,7 @@ function registerPetInteractionIpc(options = {}) {
           syncDisplayedVisualGeometry();
           repositionFloatingBubbles();
           refreshIdleVisualAfterDrag();
+          observeCompanion(() => noteDragRestSpot(clamped));
         }
       }
     } finally {

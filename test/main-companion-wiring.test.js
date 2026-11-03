@@ -86,6 +86,7 @@ function companionHarness(prefs = {}) {
   };
   const subscriptions = new Map();
   const configureCalls = [];
+  const hitSends = [];
   let runtimeOptions = null;
   let storeOptions = null;
   const runtime = {
@@ -125,10 +126,14 @@ function companionHarness(prefs = {}) {
     isPetFreeForIdle: () => "free",
     isVisualGenerationCurrent: () => true,
     sendToRenderer: () => null,
+    sendToHitWin: (...args) => hitSends.push(JSON.parse(JSON.stringify(args))),
     console: { warn() {} },
   };
-  vm.runInNewContext(`${companionSource}\nthis._companionOut = _companion;`, ctx);
-  return { ctx, values, subscriptions, configureCalls, runtime, runtimeOptions, storeOptions, out: ctx._companionOut };
+  vm.runInNewContext(`${companionSource}\nthis._companionOut = _companion;\nthis._isPetGesturesEnabled = isPetGesturesEnabled;`, ctx);
+  return {
+    ctx, values, subscriptions, configureCalls, hitSends, runtime, runtimeOptions, storeOptions,
+    out: ctx._companionOut, isPetGesturesEnabled: ctx._isPetGesturesEnabled,
+  };
 }
 
 it("companion is created with the shared gate, lazy mode and its own state file", () => {
@@ -219,4 +224,63 @@ it("idle activities, tick and settings IPC reach the companion", () => {
 
 it("does not reuse the telegram companion name", () => {
   assert.ok(!companionSource.includes("telegramCompanion"));
+});
+
+// ── Task 9: petting / hover gestures and click / drag observation ──
+
+it("petGesturesEnabled is companionEnabled && companionInteractions", () => {
+  const cases = [
+    [false, false, false],
+    [false, true, false],
+    [true, false, false],
+    [true, true, true],
+  ];
+  for (const [enabled, interactions, expected] of cases) {
+    const h = companionHarness({ companionEnabled: enabled, companionInteractions: interactions });
+    assert.equal(h.isPetGesturesEnabled(), expected, `${enabled}/${interactions}`);
+    assert.equal(h.isPetGesturesEnabled({ companionEnabled: enabled, companionInteractions: interactions }), expected);
+  }
+});
+
+it("hit-state-sync carries petGesturesEnabled after load", () => {
+  const sync = slice("function syncHitStateAfterLoad() {", "\n}");
+  assert.ok(sync.includes("petGesturesEnabled: isPetGesturesEnabled(),"));
+  // The existing fields stay.
+  assert.ok(sync.includes("currentState: _state.getCurrentState(),"));
+  assert.ok(sync.includes("miniMode: _mini.getMiniMode(),"));
+  assert.ok(sync.includes("dndEnabled: doNotDisturb,"));
+});
+
+it("toggling either gesture pref pushes hit-state-sync, other companion keys do not", () => {
+  const h = companionHarness();
+  const snapshot = {
+    companionEnabled: true,
+    companionPersonality: "balanced",
+    companionAutonomy: true,
+    companionInteractions: true,
+    companionMemory: true,
+  };
+  for (const key of ["companionPersonality", "companionAutonomy", "companionMemory"]) {
+    h.subscriptions.get(key)(snapshot[key], snapshot);
+  }
+  assert.deepEqual(h.hitSends, []);
+  h.subscriptions.get("companionEnabled")(true, snapshot);
+  h.subscriptions.get("companionInteractions")(false, { ...snapshot, companionInteractions: false });
+  assert.deepEqual(h.hitSends, [
+    ["hit-state-sync", { petGesturesEnabled: true }],
+    ["hit-state-sync", { petGesturesEnabled: false }],
+  ]);
+  // configure() still runs for every key.
+  assert.equal(h.configureCalls.length, 1 + 5);
+});
+
+it("pet interaction IPC reaches the companion and trusts only the hit window", () => {
+  const registration = slice("registerPetInteractionIpc({", "registerPermissionIpc({");
+  assert.ok(registration.includes("handlePetGesture: (kind) => _companion.handleGesture(kind),"));
+  assert.ok(registration.includes("noteCompanionEvent: (kind) => _companion.noteEvent(kind),"));
+  assert.ok(registration.includes("noteCompanionDragEnd: (spot) => _companion.noteDragEnd(spot),"));
+  assert.ok(registration.includes("hitWebContents: () => (hitWin && !hitWin.isDestroyed() ? hitWin.webContents : null),"));
+  assert.ok(registration.includes("isDragLocked: () => petWindowRuntime.isDragLocked(),"));
+  assert.ok(registration.includes("getThemeReactions: () => {"));
+  assert.ok(registration.includes("getDisplayNearestPoint: (point) => screen.getDisplayNearestPoint(point),"));
 });

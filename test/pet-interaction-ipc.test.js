@@ -114,6 +114,7 @@ function createHarness(overrides = {}) {
     // Default to the enabled platforms so the suite behaves the same on a
     // macOS dev machine; the macOS-disabled path has its own explicit test.
     isMacPlatform: overrides.isMacPlatform != null ? overrides.isMacPlatform : false,
+    ...(overrides.extra || {}),
   });
   return { ipcMain, runtime, calls, state };
 }
@@ -567,4 +568,214 @@ test("pet drop does not ping the hit window when the terminal launch fails", asy
   assert.deepStrictEqual(sender.sent, []);
   const logs = calls.filter((c) => c[0] === "dropLog").map((c) => c[1]);
   assert.ok(logs.some((m) => m.includes("launch failed") && m.includes("no terminal")), logs.join("; "));
+});
+
+// ── Clawd Alive: gestures and companion observations (Task 9) ──
+
+function companionHarness({ extra = {}, state = {}, checkMiniModeSnap } = {}) {
+  const companion = [];
+  const clock = { now: 10_000 };
+  const flags = { dragLocked: false };
+  const harness = createHarness({
+    state,
+    checkMiniModeSnap,
+    extra: {
+      handlePetGesture: (kind) => companion.push(["gesture", kind]),
+      noteCompanionEvent: (kind) => companion.push(["event", kind]),
+      noteCompanionDragEnd: (spot) => companion.push(["dragEnd", spot]),
+      isDragLocked: () => flags.dragLocked,
+      getThemeReactions: () => ({
+        double: { files: ["flail-a.svg", "flail-b.svg"], duration: 3500 },
+        annoyed: { file: "annoyed.svg", duration: 3500 },
+        clickLeft: { file: "left.svg" },
+        clickRight: { file: "right.svg" },
+      }),
+      getDisplayNearestPoint: (point) => {
+        companion.push(["displayFor", point]);
+        return { id: 7, workArea: { x: 0, y: 0, width: 1000, height: 500 } };
+      },
+      now: () => clock.now,
+      ...extra,
+    },
+  });
+  return { ...harness, companion, clock, flags };
+}
+
+test("gesture rejects unknown kinds", () => {
+  const h = companionHarness();
+  for (const kind of ["pet-start", "pet-continue", "pet-end", "hover-dwell"]) {
+    h.ipcMain.send("pet-interaction:gesture", kind);
+  }
+  for (const kind of ["pet", "click", "", null, undefined, 1, { kind: "pet-start" }, "PET-START", "toString"]) {
+    h.ipcMain.send("pet-interaction:gesture", kind);
+  }
+  assert.deepStrictEqual(h.companion, [
+    ["gesture", "pet-start"],
+    ["gesture", "pet-continue"],
+    ["gesture", "pet-end"],
+    ["gesture", "hover-dwell"],
+  ]);
+});
+
+test("gesture ignored in mini, transition and drag lock", () => {
+  const h = companionHarness();
+  h.state.miniMode = true;
+  h.ipcMain.send("pet-interaction:gesture", "pet-start");
+  h.state.miniMode = false;
+  h.state.miniTransitioning = true;
+  h.ipcMain.send("pet-interaction:gesture", "pet-start");
+  h.state.miniTransitioning = false;
+  h.flags.dragLocked = true;
+  h.ipcMain.send("pet-interaction:gesture", "pet-start");
+  h.flags.dragLocked = false;
+  assert.deepStrictEqual(h.companion, []);
+  h.ipcMain.send("pet-interaction:gesture", "pet-start");
+  assert.deepStrictEqual(h.companion, [["gesture", "pet-start"]]);
+
+  // Without an isDragLocked getter the module falls back to its own view of
+  // the drag-lock IPC it already handles.
+  const local = companionHarness({ extra: { isDragLocked: undefined } });
+  local.ipcMain.send("drag-lock", true);
+  local.ipcMain.send("pet-interaction:gesture", "hover-dwell");
+  local.ipcMain.send("drag-lock", false);
+  local.ipcMain.send("pet-interaction:gesture", "hover-dwell");
+  assert.deepStrictEqual(local.companion.filter((c) => c[0] === "gesture"), [["gesture", "hover-dwell"]]);
+});
+
+test("gesture ignored from untrusted sender", () => {
+  const mainFrame = { name: "hit-main-frame" };
+  const hitWc = { mainFrame };
+  for (const option of [hitWc, () => hitWc]) {
+    const h = companionHarness({ extra: { hitWebContents: option } });
+    const listener = h.ipcMain.listeners.get("pet-interaction:gesture");
+    listener({ sender: { mainFrame } , senderFrame: mainFrame }, "pet-start");
+    listener({ sender: hitWc, senderFrame: { name: "iframe" } }, "pet-start");
+    listener({ sender: "sender-web-contents" }, "pet-start");
+    listener({ sender: hitWc, senderFrame: mainFrame }, "pet-end");
+    assert.deepStrictEqual(h.companion, [["gesture", "pet-end"]]);
+  }
+  // A getter that has no live hit window rejects everything.
+  const gone = companionHarness({ extra: { hitWebContents: () => null } });
+  gone.ipcMain.listeners.get("pet-interaction:gesture")({ sender: hitWc, senderFrame: mainFrame }, "pet-start");
+  assert.deepStrictEqual(gone.companion, []);
+});
+
+test("click reaction notes click vs clickBurst", () => {
+  const h = companionHarness();
+  h.ipcMain.send("play-click-reaction", "left.svg", 2500);
+  h.ipcMain.send("play-click-reaction", "annoyed.svg", 3500);
+  h.ipcMain.send("play-click-reaction", "flail-b.svg", 3500);
+  h.ipcMain.send("play-click-reaction", "right.svg", 2500);
+  assert.deepStrictEqual(h.companion, [
+    ["event", "click"],
+    ["event", "clickBurst"],
+    ["event", "clickBurst"],
+    ["event", "click"],
+  ]);
+  // What plays is untouched.
+  assert.deepStrictEqual(h.calls.filter((c) => c[0] === "sendToRenderer"), [
+    ["sendToRenderer", "play-click-reaction", "left.svg", 2500],
+    ["sendToRenderer", "play-click-reaction", "annoyed.svg", 3500],
+    ["sendToRenderer", "play-click-reaction", "flail-b.svg", 3500],
+    ["sendToRenderer", "play-click-reaction", "right.svg", 2500],
+  ]);
+
+  // A theme with the single-file double form.
+  const single = companionHarness({ extra: { getThemeReactions: () => ({ double: { file: "flail.svg" } }) } });
+  single.ipcMain.send("play-click-reaction", "flail.svg", 3500);
+  assert.deepStrictEqual(single.companion, [["event", "clickBurst"]]);
+  // A throwing observer never blocks the reaction.
+  const boom = companionHarness({ extra: { noteCompanionEvent: () => { throw new Error("boom"); } } });
+  boom.ipcMain.send("play-click-reaction", "left.svg", 2500);
+  assert.deepStrictEqual(boom.calls.filter((c) => c[0] === "sendToRenderer").length, 1);
+});
+
+test("long drag notes dragLong and reports relative drop", () => {
+  const h = companionHarness({ state: { clampedBounds: { x: 200, y: 100, width: 100, height: 100 } } });
+  h.ipcMain.send("drag-lock", true);
+  h.clock.now += 1500;
+  h.ipcMain.send("drag-lock", false);
+  h.ipcMain.send("drag-end");
+  // Exactly 1500 ms is not long.
+  assert.deepStrictEqual(h.companion.filter((c) => c[0] === "event"), [["event", "drag"]]);
+
+  h.ipcMain.send("drag-lock", true);
+  h.clock.now += 1501;
+  h.ipcMain.send("drag-lock", false);
+  h.ipcMain.send("drag-end");
+  assert.deepStrictEqual(h.companion.filter((c) => c[0] === "event"), [["event", "drag"], ["event", "dragLong"]]);
+
+  // drag-end without the paired drag-lock(false) still measures from the lock.
+  h.ipcMain.send("drag-lock", true);
+  h.clock.now += 2000;
+  h.ipcMain.send("drag-end");
+  assert.deepStrictEqual(h.companion.filter((c) => c[0] === "event").length, 3);
+  assert.deepStrictEqual(h.companion.filter((c) => c[0] === "event")[2], ["event", "dragLong"]);
+
+  // Final pet center (250,150) on the 1000x500 work area of display 7.
+  const ends = h.companion.filter((c) => c[0] === "dragEnd");
+  assert.strictEqual(ends.length, 3);
+  assert.deepStrictEqual(ends[0], ["dragEnd", { displayId: 7, x: 0.25, y: 0.3 }]);
+  assert.deepStrictEqual(h.companion.find((c) => c[0] === "displayFor"), ["displayFor", { x: 250, y: 150 }]);
+
+  // A plain lock/unlock without drag-end (a click) notes nothing.
+  const click = companionHarness();
+  click.ipcMain.send("drag-lock", true);
+  click.ipcMain.send("drag-lock", false);
+  assert.deepStrictEqual(click.companion, []);
+});
+
+test("rest spot is clamped to the work area and skipped without a display", () => {
+  const h = companionHarness({ state: { clampedBounds: { x: 950, y: -80, width: 100, height: 100 } } });
+  h.ipcMain.send("drag-end");
+  assert.deepStrictEqual(h.companion.find((c) => c[0] === "dragEnd"), ["dragEnd", { displayId: 7, x: 1, y: 0 }]);
+
+  // No clamped bounds: the live bounds are used.
+  const live = companionHarness({ state: { clampedBounds: null, petWindowBounds: { x: 0, y: 0, width: 100, height: 50 } } });
+  live.ipcMain.send("drag-end");
+  assert.deepStrictEqual(live.companion.find((c) => c[0] === "dragEnd"), ["dragEnd", { displayId: 7, x: 0.05, y: 0.05 }]);
+
+  const none = companionHarness({ extra: { getDisplayNearestPoint: () => null } });
+  none.ipcMain.send("drag-end");
+  assert.deepStrictEqual(none.companion, [["event", "drag"]]);
+  const zero = companionHarness({ extra: { getDisplayNearestPoint: () => ({ id: 1, workArea: { x: 0, y: 0, width: 0, height: 0 } }) } });
+  zero.ipcMain.send("drag-end");
+  assert.deepStrictEqual(zero.companion, [["event", "drag"]]);
+  const boom = companionHarness({ extra: { noteCompanionDragEnd: () => { throw new Error("boom"); } } });
+  boom.ipcMain.send("drag-end");
+  assert.ok(boom.calls.some((c) => c[0] === "repositionFloatingBubbles"));
+  assert.ok(boom.calls.some((c) => c[0] === "setDragLocked" && c[1] === false));
+});
+
+test("drop in mini mode records no rest spot", () => {
+  // Already in mini.
+  const mini = companionHarness({ state: { miniMode: true } });
+  mini.ipcMain.send("drag-end");
+  assert.deepStrictEqual(mini.companion.filter((c) => c[0] === "dragEnd"), []);
+
+  // The drop snapped into mini.
+  const snap = companionHarness({ checkMiniModeSnap: ({ state }) => { state.miniTransitioning = true; } });
+  snap.ipcMain.send("drag-end");
+  assert.deepStrictEqual(snap.companion, [["event", "drag"]]);
+  assert.ok(!snap.calls.some((c) => c[0] === "applyPetWindowBounds"));
+});
+
+test("missing companion options keep existing behavior", () => {
+  const plain = createHarness();
+  const withCompanion = companionHarness();
+  // No gesture channel without a handler.
+  assert.strictEqual(plain.ipcMain.listeners.has("pet-interaction:gesture"), false);
+  assert.strictEqual(withCompanion.ipcMain.listeners.has("pet-interaction:gesture"), true);
+  for (const h of [plain, withCompanion]) {
+    h.ipcMain.send("drag-lock", true);
+    h.ipcMain.send("drag-lock", false);
+    h.ipcMain.send("drag-end");
+    h.ipcMain.send("play-click-reaction", "annoyed.svg", 3500);
+  }
+  // The existing side effects are byte-identical with or without the companion.
+  assert.deepStrictEqual(withCompanion.calls, plain.calls);
+  assert.strictEqual(plain.calls.length > 0, true);
+
+  withCompanion.runtime.dispose();
+  assert.strictEqual(withCompanion.ipcMain.listeners.size, 0);
 });

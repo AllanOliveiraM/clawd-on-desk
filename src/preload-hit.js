@@ -58,6 +58,8 @@ contextBridge.exposeInMainWorld("hitAPI", {
   startDragReaction: (direction) => ipcRenderer.send("start-drag-reaction", direction),
   endDragReaction: () => ipcRenderer.send("end-drag-reaction"),
   playClickReaction: (svg, duration) => ipcRenderer.send("play-click-reaction", svg, duration),
+  // Clawd Alive petting / hover gestures → main (validated there)
+  petGesture: (kind) => ipcRenderer.send("pet-interaction:gesture", kind),
   // State sync ← main
   onStateSync: (cb) => ipcRenderer.on("hit-state-sync", (_, data) => cb(data)),
   onCancelReaction: (cb) => ipcRenderer.on("hit-cancel-reaction", () => cb()),

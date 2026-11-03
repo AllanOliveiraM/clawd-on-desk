@@ -8,6 +8,7 @@ const vm = require("node:vm");
 
 const HIT_RENDERER = path.join(__dirname, "..", "src", "hit-renderer.js");
 const SOURCE = fs.readFileSync(HIT_RENDERER, "utf8").replace(/\r\n/g, "\n");
+const PET_STROKE_DETECTOR = require("../src/pet-stroke-detector");
 
 class FakeArea {
   constructor() {
@@ -24,10 +25,19 @@ class FakeArea {
   setPointerCapture() {}
 }
 
-function createHarness({ isMac = false, sendState = {} } = {}) {
+function createHarness({ isMac = false, sendState = {}, detector = false } = {}) {
   const apiCalls = [];
   const apiHandlers = {};
   const area = new FakeArea();
+  const windowListeners = new Map();
+  // Clawd Alive: the real petting detector, loaded from its file, driven by a
+  // fake clock so stroke timing is deterministic. Absent by default, exactly
+  // like hit windows built before the <script> tag existed.
+  const clock = { now: 1000 };
+  const petStrokeDetector = detector ? {
+    PET_STROKE: PET_STROKE_DETECTOR.PET_STROKE,
+    createPetStrokeDetector: () => PET_STROKE_DETECTOR.createPetStrokeDetector({ now: () => clock.now }),
+  } : undefined;
 
   const fakeDocument = {
     getElementById(id) { return id === "hit-area" ? area : null; },
@@ -74,8 +84,13 @@ function createHarness({ isMac = false, sendState = {} } = {}) {
         getPathForFile: (file) => (file && file.path) || "",
         dropPaths: (paths) => apiCalls.push(["dropPaths", paths]),
         onDropAccepted: (cb) => { apiHandlers.dropAccepted = cb; },
+        petGesture: (kind) => apiCalls.push(["petGesture", kind]),
       },
-      addEventListener: () => {},
+      ClawdPetStrokeDetector: petStrokeDetector,
+      addEventListener: (event, cb) => {
+        if (!windowListeners.has(event)) windowListeners.set(event, []);
+        windowListeners.get(event).push(cb);
+      },
     },
     setTimeout: (cb, ms) => {
       const t = { id: ++timerId, cb, ms, cleared: false };
@@ -112,6 +127,20 @@ function createHarness({ isMac = false, sendState = {} } = {}) {
     fakeDocument._dispatch("pointermove", { clientX, clientY, buttons });
   }
 
+  function pointerenter({ clientX = 100, clientY = 100 } = {}) {
+    const cb = area.listeners.get("pointerenter");
+    if (cb) cb({ clientX, clientY, buttons: 0 });
+  }
+
+  function pointerleave() {
+    const cb = area.listeners.get("pointerleave");
+    if (cb) cb({ buttons: 0 });
+  }
+
+  function windowEvent(event) {
+    for (const cb of windowListeners.get(event) || []) cb({});
+  }
+
   function fireTimer(predicate) {
     const t = timers.find((x) => !x.cleared && predicate(x));
     if (!t) return false;
@@ -120,7 +149,10 @@ function createHarness({ isMac = false, sendState = {} } = {}) {
     return true;
   }
 
-  return { apiCalls, apiHandlers, pointerdown, pointermove, pointerup, fireTimer, timers, area, context };
+  return {
+    apiCalls, apiHandlers, pointerdown, pointermove, pointerup, pointerenter, pointerleave,
+    windowEvent, fireTimer, timers, area, context, clock,
+  };
 }
 
 describe("hit-renderer input layer", () => {
@@ -514,5 +546,238 @@ describe("hit-renderer context menu during drag (#1260)", () => {
     const h = createHarness();
     contextmenu(h);
     assert.deepStrictEqual(h.apiCalls, [["showContextMenu"]]);
+  });
+});
+
+// ── Clawd Alive: petting and hover gestures (Task 9) ──
+describe("hit-renderer pet gestures", () => {
+  const GESTURES_ON = { currentState: "idle", miniMode: false, dndEnabled: false, petGesturesEnabled: true };
+
+  function gestureHarness(opts = {}) {
+    return createHarness({ detector: true, sendState: GESTURES_ON, ...opts });
+  }
+
+  function gestures(h) {
+    return h.apiCalls.filter((c) => c[0] === "petGesture").map((c) => c[1]);
+  }
+
+  // Hover strokes: x swings by 20 px with no button pressed, 100 ms apart.
+  function stroke(h, xs = [100, 120, 100, 120]) {
+    for (const x of xs) {
+      h.clock.now += 100;
+      h.pointermove({ clientX: x, clientY: 100, buttons: 0 });
+    }
+  }
+
+  function startPetting(h) {
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    stroke(h);
+    assert.deepStrictEqual(gestures(h), ["pet-start"]);
+  }
+
+  function liveTimers(h, ms) {
+    return h.timers.filter((t) => !t.cleared && t.ms === ms);
+  }
+
+  it("gestures disabled by default send nothing", () => {
+    // Detector loaded but the flag never arrived: identical to today.
+    const h = createHarness({ detector: true });
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    stroke(h, [100, 120, 100, 120, 100, 120, 100]);
+    h.pointerleave();
+    assert.deepStrictEqual(h.apiCalls, []);
+    assert.deepStrictEqual(h.timers.filter((t) => !t.cleared), []);
+
+    // Flag on but no detector script (old hit.html / other harnesses): inert.
+    const bare = createHarness({ sendState: GESTURES_ON });
+    bare.pointerenter({ clientX: 100, clientY: 100 });
+    stroke(bare, [100, 120, 100, 120, 100, 120, 100]);
+    assert.deepStrictEqual(bare.apiCalls, []);
+    assert.deepStrictEqual(bare.timers.filter((t) => !t.cleared), []);
+  });
+
+  it("hover strokes send pet-start", () => {
+    const h = gestureHarness();
+    startPetting(h);
+    // Nothing else is sent: no lock, no drag, no reaction.
+    assert.deepStrictEqual(h.apiCalls.map((c) => c[0]), ["petGesture"]);
+    // The 500 ms poll exists only while the detector is active.
+    assert.strictEqual(liveTimers(h, 500).length, 1);
+    h.fireTimer((t) => t.ms === 500); // 400 ms after the last stroke: still active
+    assert.strictEqual(liveTimers(h, 500).length, 1);
+    h.clock.now += 1000;
+    h.fireTimer((t) => t.ms === 500);
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"]);
+    assert.strictEqual(liveTimers(h, 500).length, 0, "poll stops once petting ends");
+  });
+
+  it("stationary hover sends nothing", () => {
+    const h = gestureHarness();
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    for (let i = 0; i < 10; i++) {
+      h.clock.now += 100;
+      h.pointermove({ clientX: 100 + (i % 2), clientY: 100, buttons: 0 });
+    }
+    assert.deepStrictEqual(gestures(h), []);
+    assert.strictEqual(liveTimers(h, 500).length, 0);
+  });
+
+  it("hover dwell fires once per entry", () => {
+    const h = gestureHarness();
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    assert.strictEqual(liveTimers(h, 1200).length, 1);
+    h.pointermove({ clientX: 102, clientY: 101, buttons: 0 }); // within 3 px
+    assert.ok(h.fireTimer((t) => t.ms === 1200));
+    assert.deepStrictEqual(gestures(h), ["hover-dwell"]);
+    // Staying inside does not re-arm it.
+    h.pointermove({ clientX: 101, clientY: 100, buttons: 0 });
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+
+    // Leaving cancels; a fresh entry arms again; moving > 3 px cancels.
+    h.pointerleave();
+    h.pointerenter({ clientX: 50, clientY: 50 });
+    assert.strictEqual(liveTimers(h, 1200).length, 1);
+    h.pointerleave();
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+    h.pointerenter({ clientX: 50, clientY: 50 });
+    h.pointermove({ clientX: 55, clientY: 50, buttons: 0 });
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+    h.pointerenter({ clientX: 50, clientY: 50 });
+    h.fireTimer((t) => t.ms === 1200);
+    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-dwell"]);
+  });
+
+  it("pointerdown during petting ends petting and still starts drag lock", () => {
+    const h = gestureHarness();
+    startPetting(h);
+    h.pointerdown({ clientX: 120, clientY: 100 });
+    assert.deepStrictEqual(
+      h.apiCalls.map((c) => c.slice(0, 2)),
+      [["petGesture", "pet-start"], ["petGesture", "pet-end"], ["dragLock", true]],
+    );
+    assert.strictEqual(liveTimers(h, 500).length, 0);
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+    // The drag itself is the existing one.
+    h.pointermove({ clientX: 140, clientY: 100, buttons: 1 });
+    h.pointerup({ clientX: 140 });
+    assert.deepStrictEqual(
+      h.apiCalls.filter((c) => c[0] === "dragLock").map((c) => c[1]),
+      [true, false],
+    );
+    assert.strictEqual(h.apiCalls.filter((c) => c[0] === "dragEnd").length, 1);
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"]);
+  });
+
+  it("double and four click reactions unchanged with gestures enabled", () => {
+    for (const harness of [createHarness, gestureHarness]) {
+      const h = harness();
+      vm.runInContext("Math.random = () => 0.9;", h.context); // skip annoyed → poke by first-click side
+      h.pointerup({ clientX: 50 });
+      h.pointerup({ clientX: 50 });
+      h.fireTimer((t) => t.ms === 400);
+      assert.deepStrictEqual(
+        h.apiCalls.filter((c) => c[0] === "playClickReaction"),
+        [["playClickReaction", "left.svg", 2500]],
+      );
+
+      const four = harness();
+      vm.runInContext("Math.random = () => 0;", four.context);
+      for (let i = 0; i < 4; i++) four.pointerup({ clientX: 150 });
+      assert.deepStrictEqual(
+        four.apiCalls.filter((c) => c[0] === "playClickReaction"),
+        [["playClickReaction", "flail.svg", 3500]],
+      );
+      assert.deepStrictEqual(gestures(four), []);
+    }
+  });
+
+  it("mac ctrl-click and dashboard modifier click unchanged", () => {
+    for (const isMac of [true, false]) {
+      const base = createHarness({ isMac });
+      const live = gestureHarness({ isMac });
+      for (const h of [base, live]) {
+        h.pointerup({ ctrlKey: true });
+        h.pointerup({ metaKey: true });
+      }
+      assert.deepStrictEqual(live.apiCalls, base.apiCalls, `isMac=${isMac}`);
+    }
+  });
+
+  it("contextmenu, lostpointercapture and cancel-reaction end petting", () => {
+    const enders = [
+      ["contextmenu", (h) => h.context.document._dispatch("contextmenu", { preventDefault() {} })],
+      ["lostpointercapture", (h) => h.area.listeners.get("lostpointercapture")()],
+      ["cancel-reaction", (h) => h.apiHandlers.cancelReaction()],
+      ["pointerleave", (h) => h.pointerleave()],
+      ["blur", (h) => h.windowEvent("blur")],
+    ];
+    for (const [name, end] of enders) {
+      const h = gestureHarness();
+      startPetting(h);
+      end(h);
+      assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"], name);
+      assert.strictEqual(liveTimers(h, 500).length, 0, `${name}: poll cleared`);
+      assert.strictEqual(liveTimers(h, 1200).length, 0, `${name}: hover cleared`);
+      // Ending twice never double-reports.
+      end(h);
+      assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"], `${name} twice`);
+    }
+    // The menu request still goes out, after the petting end.
+    const m = gestureHarness();
+    startPetting(m);
+    m.context.document._dispatch("contextmenu", { preventDefault() {} });
+    assert.deepStrictEqual(m.apiCalls.map((c) => c[0]).slice(-2), ["petGesture", "showContextMenu"]);
+  });
+
+  it("disabling mid-gesture ends petting", () => {
+    const h = gestureHarness();
+    startPetting(h);
+    h.apiHandlers.stateSync({ petGesturesEnabled: false });
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"]);
+    assert.strictEqual(liveTimers(h, 500).length, 0);
+    stroke(h, [100, 120, 100, 120, 100]);
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"]);
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+
+    // A sync that omits the field leaves it alone.
+    const keep = gestureHarness();
+    keep.apiHandlers.stateSync({ currentState: "working" });
+    startPetting(keep);
+  });
+
+  it("mini mode suppresses gestures", () => {
+    const h = gestureHarness();
+    startPetting(h);
+    h.apiHandlers.stateSync({ miniMode: true });
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"]);
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    stroke(h, [100, 120, 100, 120, 100, 120]);
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"]);
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+    assert.strictEqual(liveTimers(h, 500).length, 0);
+    // The mini click still exits mini as before.
+    h.pointerup({});
+    assert.ok(h.apiCalls.some((c) => c[0] === "exitMiniMode"));
+  });
+
+  it("dnd suppresses petting strokes", () => {
+    const h = gestureHarness({ sendState: { ...GESTURES_ON, dndEnabled: true } });
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    stroke(h, [100, 120, 100, 120, 100, 120]);
+    assert.ok(!gestures(h).includes("pet-start"));
+  });
+
+  it("the stranded-drag self-heal is untouched with gestures enabled", () => {
+    const h = gestureHarness();
+    h.pointerdown({});
+    h.pointermove({ clientX: 120, clientY: 120, buttons: 1 });
+    h.pointermove({ clientX: 140, clientY: 140, buttons: 0 });
+    assert.deepStrictEqual(
+      h.apiCalls.filter((c) => c[0] === "dragLock").map((c) => c[1]),
+      [true, false],
+    );
+    assert.strictEqual(h.apiCalls.filter((c) => c[0] === "dragEnd").length, 1);
+    assert.deepStrictEqual(gestures(h), []);
   });
 });

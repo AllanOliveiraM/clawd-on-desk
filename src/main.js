@@ -1779,6 +1779,7 @@ function syncHitStateAfterLoad() {
     currentState: _state.getCurrentState(),
     miniMode: _mini.getMiniMode(),
     dndEnabled: doNotDisturb,
+    petGesturesEnabled: isPetGesturesEnabled(),
   });
 }
 
@@ -5555,6 +5556,19 @@ function createWindow() {
     statPath: (p) => fs.promises.stat(p),
     openTerminalAt: (dir) => openTerminalAt(dir),
     dropLog: (message) => console.log(`Clawd: ${message}`),
+    // Clawd Alive: gestures and click / drag observations feed the companion
+    // (each call is a no-op while the feature or interactions are off).
+    handlePetGesture: (kind) => _companion.handleGesture(kind),
+    noteCompanionEvent: (kind) => _companion.noteEvent(kind),
+    noteCompanionDragEnd: (spot) => _companion.noteDragEnd(spot),
+    hitWebContents: () => (hitWin && !hitWin.isDestroyed() ? hitWin.webContents : null),
+    isDragLocked: () => petWindowRuntime.isDragLocked(),
+    getThemeReactions: () => {
+      const theme = getActiveTheme();
+      return (theme && theme.reactions) || null;
+    },
+    getDisplayNearestPoint: (point) => screen.getDisplayNearestPoint(point),
+    companionLog: (message) => console.warn(`Clawd: ${message}`),
   });
 
   registerPermissionIpc({
@@ -5984,6 +5998,11 @@ function readCompanionConfig(snapshot) {
     memory: read("companionMemory") === true,
   };
 }
+// Hit-window petting / hover gestures run only with both switches on.
+function isPetGesturesEnabled(snapshot) {
+  const config = readCompanionConfig(snapshot);
+  return config.enabled && config.interactions;
+}
 const _companion = require("./companion-runtime").createCompanionRuntime({
   getTheme: () => getActiveTheme(),
   getCurrentState: () => _state.getCurrentState(),
@@ -6012,6 +6031,9 @@ try {
   for (const key of COMPANION_PREF_KEYS) {
     _settingsController.subscribeKey(key, (_value, snapshot) => {
       _companion.configure(readCompanionConfig(snapshot));
+      if (key === "companionEnabled" || key === "companionInteractions") {
+        sendToHitWin("hit-state-sync", { petGesturesEnabled: isPetGesturesEnabled(snapshot) });
+      }
     });
   }
 } catch (err) {
