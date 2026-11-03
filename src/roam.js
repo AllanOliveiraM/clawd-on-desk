@@ -23,6 +23,13 @@
 //     reports an active fence, targets are confined to that sub-rectangle of
 //     the work area. Without an active fence every code path below behaves
 //     exactly as it did before the fence existed.
+//   • Optional Clawd Alive hooks (all absent → today's behavior, untouched):
+//     ctx.getRoamDelayMs(isFirst, baseMs) modulates the pause (clamped to
+//     [0.5×, 3×] base), ctx.pickPreferredTarget(args) proposes a target for
+//     unconstrained walks (clamped into the same band/fence; null → random),
+//     ctx.onWalkFinished({preferred}) reports each natural arrival, and
+//     ctx.isCompanionPlaying() holds walks while a companion beat owns the
+//     visual. Hook failures never break the scheduling chain.
 
 const ROAM_IDLE_DELAY_MS = 8000; // first roam after entering idle
 const ROAM_BETWEEN_DELAY_MS = 4000; // delay between consecutive roams
@@ -31,6 +38,8 @@ const ROAM_MIN_DIST = 100;
 const ROAM_MARGIN_RATIO = 0.15;
 const ROAM_FRAME_MS = 16;
 const ROAM_TARGET_ATTEMPTS = 8;
+const ROAM_DELAY_MIN_FACTOR = 0.5; // companion hook may shorten the pause to 0.5×…
+const ROAM_DELAY_MAX_FACTOR = 3; // …or stretch it to 3× the base delay
 
 module.exports = function initRoam(ctx) {
   let enabled = false;
@@ -116,7 +125,75 @@ module.exports = function initRoam(ctx) {
       ctx.isIdleActivityPlaying()
     )
       return false;
+    // Clawd Alive: a companion beat borrows the visual the same way.
+    if (
+      typeof ctx.isCompanionPlaying === "function" &&
+      ctx.isCompanionPlaying()
+    )
+      return false;
     return true;
+  }
+
+  // Clawd Alive: optional pause modulation. Anything unusable — no hook, a
+  // throw, a non-finite answer — keeps the historical base delay.
+  function resolveRoamDelay(isFirst, baseMs) {
+    if (typeof ctx.getRoamDelayMs !== "function") return baseMs;
+    let value;
+    try {
+      value = ctx.getRoamDelayMs(isFirst, baseMs);
+    } catch {
+      return baseMs;
+    }
+    if (typeof value !== "number" || !Number.isFinite(value)) return baseMs;
+    return Math.round(Math.min(
+      baseMs * ROAM_DELAY_MAX_FACTOR,
+      Math.max(baseMs * ROAM_DELAY_MIN_FACTOR, value),
+    ));
+  }
+
+  // Clawd Alive: optional preferred target for unconstrained walks. Returns
+  // undefined to mean "use the original random picker", null to hold this
+  // round, or a target clamped into the already-computed band/fence.
+  function pickHookTarget({ xMin, xMax, yMin, yMax, bounds, size, fenceRect, wa, minDist }) {
+    if (typeof ctx.pickPreferredTarget !== "function") return undefined;
+    let proposal;
+    try {
+      proposal = ctx.pickPreferredTarget({
+        xMin,
+        xMax,
+        yMin,
+        yMax,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+        size: size
+          ? { width: size.width, height: size.height }
+          : { width: bounds.width, height: bounds.height },
+        fence: fenceRect ? { ...fenceRect } : null,
+        displayId: null,
+        workArea: { x: wa.x, y: wa.y, width: wa.width, height: wa.height },
+      });
+    } catch {
+      return undefined;
+    }
+    if (
+      !proposal ||
+      typeof proposal !== "object" ||
+      typeof proposal.x !== "number" ||
+      typeof proposal.y !== "number" ||
+      !Number.isFinite(proposal.x) ||
+      !Number.isFinite(proposal.y)
+    )
+      return undefined;
+    const x = Math.round(Math.min(xMax, Math.max(xMin, proposal.x)));
+    const y = Math.round(Math.min(yMax, Math.max(yMin, proposal.y)));
+    const preferred = proposal.preferred === true;
+    const dx = x - bounds.x;
+    const dy = y - bounds.y;
+    if (Math.sqrt(dx * dx + dy * dy) < minDist) {
+      // Already at the favorite spot: stay put this round instead of
+      // wandering off. An explore target that close is just not worth it.
+      return preferred ? null : undefined;
+    }
+    return { x, y, size, fence: fenceRect, preferred };
   }
 
   function pickRandomTarget() {
@@ -412,6 +489,11 @@ module.exports = function initRoam(ctx) {
       if (xMax < xMin || yMax < yMin) return null;
     } else if (xMax <= xMin || yMax <= yMin) return null;
 
+    const hookTarget = pickHookTarget({
+      xMin, xMax, yMin, yMax, bounds, size, fenceRect, wa, minDist,
+    });
+    if (hookTarget !== undefined) return hookTarget;
+
     for (let i = 0; i < ROAM_TARGET_ATTEMPTS; i += 1) {
       const targetX = xMin + Math.floor(Math.random() * (xMax - xMin));
       const targetY = yMin + Math.floor(Math.random() * (yMax - yMin));
@@ -623,6 +705,12 @@ module.exports = function initRoam(ctx) {
         if (typeof ctx.setState === "function") {
           ctx.setState("idle");
         }
+        // Clawd Alive: report the natural arrival (never a cancel or skip).
+        if (typeof ctx.onWalkFinished === "function") {
+          try {
+            ctx.onWalkFinished({ preferred: target.preferred === true });
+          } catch {}
+        }
         scheduleNextRoam();
       }
     }
@@ -648,7 +736,11 @@ module.exports = function initRoam(ctx) {
         ctx.roamFence.refresh();
       } catch {}
     }
-    const delay = firstRoam ? ROAM_IDLE_DELAY_MS : ROAM_BETWEEN_DELAY_MS;
+    const isFirst = firstRoam;
+    const delay = resolveRoamDelay(
+      isFirst,
+      isFirst ? ROAM_IDLE_DELAY_MS : ROAM_BETWEEN_DELAY_MS,
+    );
     firstRoam = false;
     roamPauseTimer = setTimeout(() => {
       roamPauseTimer = null;

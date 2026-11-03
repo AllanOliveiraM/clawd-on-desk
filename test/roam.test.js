@@ -3083,3 +3083,269 @@ describe("roam fence round-4 review (#810): edge fences", () => {
     );
   });
 });
+
+// ── Clawd Alive: optional companion hooks ──
+describe("roam companion hooks", () => {
+  beforeEach(() => {
+    const randomValues = [0.9, 0.9, 0.9, 0.1];
+    let randomIndex = 0;
+    mock.method(
+      Math,
+      "random",
+      () => randomValues[randomIndex++ % randomValues.length],
+    );
+    mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  });
+
+  afterEach(() => {
+    mock.timers.reset();
+    mock.reset();
+  });
+
+  function finishWalk(roam) {
+    for (let i = 0; i < 5000 && roam.isRoamAnimating(); i += 1) {
+      mock.timers.tick(16);
+    }
+    assert.equal(roam.isRoamAnimating(), false, "walk must finish");
+  }
+
+  function startOf(roam, ms) {
+    mock.timers.tick(ms - 1);
+    const before = roam.isRoamAnimating();
+    mock.timers.tick(1);
+    return { before, after: roam.isRoamAnimating() };
+  }
+
+  function lastApplied(ctx) {
+    const last = ctx._appliedBounds[ctx._appliedBounds.length - 1];
+    return { x: last.x, y: last.y };
+  }
+
+  // Walk start delays + final positions of two consecutive walks.
+  function scriptedRun(overrides) {
+    const ctx = makeCtx(overrides);
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    const first = startOf(roam, 8000);
+    finishWalk(roam);
+    const firstEnd = lastApplied(ctx);
+    const second = startOf(roam, 4000);
+    finishWalk(roam);
+    const secondEnd = lastApplied(ctx);
+    roam.setEnabled(false);
+    return { first, firstEnd, second, secondEnd, states: ctx._stateLog.map((e) => `${e.type}:${e.state}`) };
+  }
+
+  it("no hooks keeps original delays 8000/4000", () => {
+    const run = scriptedRun({});
+    assert.deepStrictEqual(run.first, { before: false, after: true });
+    assert.deepStrictEqual(run.second, { before: false, after: true });
+    assert.deepStrictEqual(run.firstEnd, { x: 1389, y: 734 });
+    // Hooks that decline (identity delay, null target) are indistinguishable.
+    const declined = scriptedRun({
+      getRoamDelayMs: (_isFirst, base) => base,
+      pickPreferredTarget: () => null,
+      onWalkFinished: () => {},
+    });
+    assert.deepStrictEqual(declined, run);
+  });
+
+  it("getRoamDelayMs is clamped", () => {
+    const calls = [];
+    const results = [1e9, 1];
+    const ctx = makeCtx({
+      getRoamDelayMs: (isFirst, base) => {
+        calls.push([isFirst, base]);
+        return results.shift();
+      },
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    // 1e9 → 3 × 8000
+    assert.deepStrictEqual(startOf(roam, 24000), { before: false, after: true });
+    finishWalk(roam);
+    // 1 → 0.5 × 4000
+    assert.deepStrictEqual(startOf(roam, 2000), { before: false, after: true });
+    assert.deepStrictEqual(calls, [[true, 8000], [false, 4000]]);
+    roam.setEnabled(false);
+  });
+
+  it("getRoamDelayMs that throws or returns garbage keeps the base delay", () => {
+    for (const hook of [() => { throw new Error("boom"); }, () => NaN, () => "soon", () => null]) {
+      const ctx = makeCtx({ getRoamDelayMs: hook });
+      const roam = roamModule(ctx);
+      roam.setEnabled(true);
+      roam.tick();
+      assert.deepStrictEqual(startOf(roam, 8000), { before: false, after: true });
+      roam.setEnabled(false);
+    }
+  });
+
+  it("preferred target is clamped into the margin band", () => {
+    const seen = [];
+    const ctx = makeCtx({
+      pickPreferredTarget: (args) => {
+        seen.push(args);
+        return { x: -5000, y: 99999, preferred: true };
+      },
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam);
+    assert.deepStrictEqual(lastApplied(ctx), { x: 288, y: 798 });
+    assert.equal(seen.length, 1);
+    const args = seen[0];
+    assert.deepStrictEqual(
+      { xMin: args.xMin, xMax: args.xMax, yMin: args.yMin, yMax: args.yMax },
+      { xMin: 288, xMax: 1512, yMin: 162, yMax: 798 },
+    );
+    assert.deepStrictEqual(args.bounds, { x: 400, y: 300, width: 120, height: 120 });
+    assert.deepStrictEqual(args.size, { width: 120, height: 120 });
+    assert.deepStrictEqual(args.workArea, { x: 0, y: 0, width: 1920, height: 1080 });
+    assert.equal(args.fence, null);
+    assert.equal(args.displayId, null);
+    roam.setEnabled(false);
+  });
+
+  it("preferred target is clamped into fence", () => {
+    const seen = [];
+    const ctx = makeCtx({
+      roamFence: {
+        get: () => ({ active: true, left: 0.5, top: 0.5, right: 1, bottom: 1 }),
+        refresh() {},
+      },
+      pickPreferredTarget: (args) => {
+        seen.push(args);
+        return { x: 0, y: 0, preferred: false };
+      },
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam);
+    assert.deepStrictEqual(lastApplied(ctx), { x: 960, y: 540 });
+    assert.deepStrictEqual(seen[0].fence, { left: 960, top: 540, right: 1920, bottom: 1080 });
+    roam.setEnabled(false);
+  });
+
+  it("null preferred target falls back to random", () => {
+    let calls = 0;
+    const run = scriptedRun({ pickPreferredTarget: () => { calls += 1; return null; } });
+    assert.equal(calls, 2);
+    assert.deepStrictEqual(run.firstEnd, { x: 1389, y: 734 });
+    assert.deepStrictEqual(run, scriptedRun({}));
+  });
+
+  it("malformed or throwing preferred targets fall back to random", () => {
+    const baseline = scriptedRun({});
+    for (const hook of [
+      () => { throw new Error("boom"); },
+      () => ({ x: NaN, y: 10 }),
+      () => ({ x: 10 }),
+      () => "here",
+    ]) {
+      assert.deepStrictEqual(scriptedRun({ pickPreferredTarget: hook }), baseline);
+    }
+  });
+
+  it("a preferred rest spot within the minimum hop holds instead of wandering", () => {
+    const ctx = makeCtx({
+      pickPreferredTarget: () => ({ x: 410, y: 310, preferred: true }),
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    assert.equal(roam.isRoamAnimating(), false);
+    assert.deepStrictEqual(ctx._appliedBounds, []);
+    roam.setEnabled(false);
+  });
+
+  it("an explore target within the minimum hop falls back to random", () => {
+    const run = scriptedRun({ pickPreferredTarget: () => ({ x: 410, y: 310, preferred: false }) });
+    assert.deepStrictEqual(run.firstEnd, { x: 1389, y: 734 });
+  });
+
+  it("axis-constrained walks ignore preferred target", () => {
+    let calls = 0;
+    const ctx = makeCtx({
+      pickPreferredTarget: () => { calls += 1; return { x: 288, y: 798, preferred: true }; },
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.setConstrainAxis(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam);
+    assert.equal(calls, 0);
+    const end = lastApplied(ctx);
+    assert.ok(end.x === 400 || end.y === 300, "walk stays on one axis");
+    roam.setEnabled(false);
+  });
+
+  it("onWalkFinished reports preferred", () => {
+    const reports = [];
+    const targets = [{ x: 1500, y: 700, preferred: true }, null];
+    const ctx = makeCtx({
+      pickPreferredTarget: () => targets.shift(),
+      onWalkFinished: (info) => reports.push(info),
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    assert.deepStrictEqual(reports, [], "not reported at walk start");
+    finishWalk(roam);
+    assert.deepStrictEqual(reports, [{ preferred: true }]);
+    assert.deepStrictEqual(lastApplied(ctx), { x: 1500, y: 700 });
+    mock.timers.tick(4000);
+    finishWalk(roam);
+    assert.deepStrictEqual(reports, [{ preferred: true }, { preferred: false }]);
+    roam.setEnabled(false);
+  });
+
+  it("onWalkFinished is not reported for a cancelled walk and a throwing hook keeps the chain", () => {
+    let reports = 0;
+    const ctx = makeCtx({ onWalkFinished: () => { reports += 1; throw new Error("boom"); } });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    mock.timers.tick(160);
+    roam.cancelRoam();
+    assert.equal(reports, 0);
+    roam.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam);
+    assert.equal(reports, 1);
+    assert.equal(ctx.getCurrentState(), "idle");
+    assert.deepStrictEqual(startOf(roam, 4000), { before: false, after: true }, "next walk still scheduled");
+    roam.setEnabled(false);
+  });
+
+  it("companion beat blocks walking via isCompanionPlaying", () => {
+    let beat = false;
+    const ctx = makeCtx({ isCompanionPlaying: () => beat });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    beat = true;
+    mock.timers.tick(8000);
+    assert.equal(roam.isRoamAnimating(), false);
+    assert.deepStrictEqual(ctx._appliedBounds, []);
+    beat = false;
+    roam.tick();
+    mock.timers.tick(8000);
+    assert.equal(roam.isRoamAnimating(), true);
+    // A beat that starts mid-walk cancels the walk on the next frame.
+    beat = true;
+    mock.timers.tick(16);
+    assert.equal(roam.isRoamAnimating(), false);
+    roam.setEnabled(false);
+  });
+});

@@ -2753,6 +2753,7 @@ const _tickCtx = {
   getAssetPointerPayload,
   get roam() { return _roam; },
   get idleActivity() { return _idleActivity; },
+  get companion() { return _companion; },
 };
 const _tick = require("./tick")(_tickCtx);
 requestFastTick = (maxDelay) => _tick.scheduleSoon(maxDelay);
@@ -5230,6 +5231,9 @@ quotaAlertsRuntime = createQuotaAlertsRuntime({
 });
 
 const settingsIpcRuntime = registerSettingsIpc({
+  // Getter: the companion is constructed further down; the reset handler reads
+  // this at call time.
+  get companionRuntime() { return _companion; },
   ipcMain,
   app,
   BrowserWindow,
@@ -5837,6 +5841,12 @@ const _roamCtx = {
   isScreenCaptureOverlayForeground: () => _isForegroundFullscreen.getLastObservation().captureOverlay === true,
   isPetHidden: () => petWindowRuntime.isPetEffectivelyHidden(),
   isIdleActivityPlaying: () => _idleActivity.isAnimating(),
+  // Clawd Alive (optional roam hooks; the companion answers "original path"
+  // unless it is enabled and autonomous). Roam keeps every bounds write.
+  isCompanionPlaying: () => _companion.isAnimating(),
+  getRoamDelayMs: (isFirst, baseMs) => _companion.getRoamDelayMs(isFirst, baseMs),
+  pickPreferredTarget: (args) => _companion.pickRoamTarget(args),
+  onWalkFinished: (info) => _companion.noteWalkFinished(info),
   get miniTransitioning() { return _mini.getMiniTransitioning(); },
   applyState: (state, svgOverride, opts) => _state.applyState(state, svgOverride, opts),
   setState: (state, svgOverride, opts) => _state.setState(state, svgOverride, opts),
@@ -5891,7 +5901,14 @@ try {
 // so every normal event path still wins. These gates mirror Free roam's plus
 // the ones that make a passive animation inappropriate (sleep, low power,
 // settings previews, hidden windows).
+// The idle-activity gate keeps its historical name; its body is the shared
+// "pet is free for a passive idle visual" check that the Clawd Alive companion
+// reuses (spec §9: one gate, not a fourth one written from scratch).
 function canPlayIdleActivity() {
+  return isPetFreeForIdle();
+}
+
+function isPetFreeForIdle() {
   if (!win || win.isDestroyed()) return false;
   if (doNotDisturb || lowPowerIdlePaused || idlePaused || menuOpen) return false;
   if (petWindowRuntime.isDragLocked()) return false;
@@ -5924,6 +5941,9 @@ const _idleActivity = require("./idle-activity").createIdleActivityController({
   restoreIdleVisual: () => _tick.restoreIdleVisual(),
   isVisualGenerationCurrent,
   sendToRenderer,
+  // Clawd Alive: null unless the companion is on, autonomous and in
+  // "activities" mode — then the original uniform pick runs unchanged.
+  chooser: (args) => _companion.chooseIdleActivity(args),
 });
 _idleActivity.setEnabled(_settingsController.get("idleActivities") === true);
 _idleActivity.setFrequency(_settingsController.get("idleActivityFrequency"));
@@ -5936,6 +5956,66 @@ try {
   });
 } catch (err) {
   console.warn("Clawd: idleActivity subscribeKey failed:", err && err.message);
+}
+
+// ── Clawd Alive companion — opt-in mood/intent arbiter (off by default) ──
+// Rides the existing idle tick, idle-activity chooser and roam hooks; it never
+// writes window bounds or operational states itself. With companionEnabled
+// false every hook answers "original path" and no state file is touched.
+// The idle mode is read at call time, so freeRoam / idleActivities changes need
+// no subscription here: a running beat finishes (≤ 8 s) and restores idle on
+// its own, and no new one starts outside the matching mode.
+const COMPANION_PREF_KEYS = [
+  "companionEnabled",
+  "companionPersonality",
+  "companionAutonomy",
+  "companionInteractions",
+  "companionMemory",
+];
+function readCompanionConfig(snapshot) {
+  const read = snapshot && typeof snapshot === "object"
+    ? (key) => snapshot[key]
+    : (key) => _settingsController.get(key);
+  return {
+    enabled: read("companionEnabled") === true,
+    personality: read("companionPersonality"),
+    autonomy: read("companionAutonomy") === true,
+    interactions: read("companionInteractions") === true,
+    memory: read("companionMemory") === true,
+  };
+}
+const _companion = require("./companion-runtime").createCompanionRuntime({
+  getTheme: () => getActiveTheme(),
+  getCurrentState: () => _state.getCurrentState(),
+  canPlay: isPetFreeForIdle,
+  restoreIdleVisual: () => _tick.restoreIdleVisual(),
+  isVisualGenerationCurrent,
+  sendToRenderer,
+  getIdleMode: () => (_settingsController.get("freeRoam") === true
+    ? "roam"
+    : _settingsController.get("idleActivities") === true ? "activities" : "none"),
+  isRoamAnimating: () => _roam.isRoamAnimating(),
+  getDisplayWorkArea: (displayId) => {
+    try {
+      const display = screen.getAllDisplays().find((d) => d.id === displayId);
+      return (display && display.workArea) || null;
+    } catch {
+      return null;
+    }
+  },
+  store: require("./companion-store").createCompanionStore({
+    filePath: path.join(app.getPath("userData"), "companion-state.json"),
+  }),
+});
+_companion.configure(readCompanionConfig());
+try {
+  for (const key of COMPANION_PREF_KEYS) {
+    _settingsController.subscribeKey(key, (_value, snapshot) => {
+      _companion.configure(readCompanionConfig(snapshot));
+    });
+  }
+} catch (err) {
+  console.warn("Clawd: companion subscribeKey failed:", err && err.message);
 }
 
 // Convenience getters for mini state (used throughout main.js)
@@ -6340,6 +6420,8 @@ if (!gotTheLock) {
     _cloakInspector.dispose();
     try { stopUpdateScheduler(); } catch {}
     releasePowerSaveBlocker();
+    // Clawd Alive: stop beat/petting timers and flush companion-state.json.
+    try { _companion.dispose(); } catch (err) { console.warn("Clawd: companion dispose failed:", err && err.message); }
     flushRuntimeStateToPrefs();
     globalShortcut.unregisterAll();
     void settingsSizePreviewSession.cleanup();

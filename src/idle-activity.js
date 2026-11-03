@@ -94,6 +94,9 @@ function createIdleActivityController(options = {}) {
   const now = typeof options.now === "function" ? options.now : Date.now;
   const setTimer = typeof options.setTimeout === "function" ? options.setTimeout : setTimeout;
   const clearTimer = typeof options.clearTimeout === "function" ? options.clearTimeout : clearTimeout;
+  // Optional Clawd Alive hook: ({theme}) -> null | {skip:true} | {file, durationMs}.
+  // Absent, null, malformed or throwing → the original uniform pick, unchanged.
+  const chooser = typeof options.chooser === "function" ? options.chooser : null;
 
   let enabled = false;
   let frequency = DEFAULT_FREQUENCY;
@@ -131,8 +134,39 @@ function createIdleActivityController(options = {}) {
     if (enabled) schedule(false);
   }
 
+  function askChooser(theme) {
+    if (!chooser) return null;
+    let choice;
+    try {
+      choice = chooser({ theme });
+    } catch {
+      return null;
+    }
+    if (!choice || typeof choice !== "object") return null;
+    if (choice.skip === true) return { skip: true };
+    if (typeof choice.file !== "string" || !choice.file) return null;
+    const duration = Number(choice.durationMs);
+    return {
+      file: choice.file,
+      duration: Number.isFinite(duration) && duration > 0
+        ? Math.min(MAX_DURATION_MS, Math.max(MIN_DURATION_MS, Math.round(duration)))
+        : DEFAULT_DURATION_MS,
+    };
+  }
+
   function play() {
     const theme = getTheme();
+    const choice = askChooser(theme);
+    if (choice && choice.skip) {
+      // The chooser consumed this opportunity (e.g. "observe"): wait a full
+      // repeat window, exactly as if a beat had just finished.
+      schedule(false);
+      return;
+    }
+    if (choice) {
+      startAttempt({ state: null, svg: choice.file, duration: choice.duration });
+      return;
+    }
     const states = listIdleActivityStates(theme);
     if (states.length === 0) {
       nextAt = now() + RETRY_MS;
@@ -144,10 +178,18 @@ function createIdleActivityController(options = {}) {
       nextAt = now() + RETRY_MS;
       return;
     }
-    const attempt = {
+    startAttempt({
       state: state.state,
       svg,
       duration: pickDuration(theme, state.state, random),
+    });
+  }
+
+  function startAttempt({ state, svg, duration }) {
+    const attempt = {
+      state,
+      svg,
+      duration,
       visualGeneration: null,
       committed: false,
     };

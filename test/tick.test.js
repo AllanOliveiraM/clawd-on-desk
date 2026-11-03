@@ -1919,3 +1919,104 @@ describe("tick conditional idle easter eggs", () => {
     assert.deepStrictEqual(idleFiles(), ["clawd-outlaw-bender.svg"]);
   });
 });
+
+describe("tick companion coordination", () => {
+  let loader;
+  let tickApi;
+  let ctx;
+  let calls;
+  let companionTicks;
+  let companionPlaying;
+
+  beforeEach(() => {
+    mock.timers.enable({ apis: ["setTimeout", "Date"] });
+    loader = loadTickWithScreen(() => ({ x: 300, y: 260 }));
+    const theme = cloneTheme(_defaultTheme);
+    theme.timings.mouseIdleTimeout = 100;
+    theme.timings.mouseSleepTimeout = 100000;
+    theme.idleAnimations = [{ file: "clawd-idle-look.svg", duration: 500 }];
+    theme.idleEasterEggs = [];
+    ctx = makeCtx(theme, []);
+    calls = [];
+    companionTicks = 0;
+    companionPlaying = false;
+    let generation = 0;
+    ctx.sendToRenderer = (channel, state, svg, options) => {
+      calls.push([channel, state, svg]);
+      if (channel !== "state-change") return;
+      const request = { visualGeneration: ++generation };
+      if (options && options.onLogicalSettlement) {
+        options.onLogicalSettlement({ status: "committed", ...request });
+      }
+      return request;
+    };
+    ctx.isVisualGenerationCurrent = (value) => value === generation;
+    ctx.companion = {
+      tick: () => { companionTicks++; },
+      isAnimating: () => companionPlaying,
+    };
+  });
+
+  afterEach(() => {
+    if (tickApi) tickApi.cleanup();
+    tickApi = null;
+    loader.restore();
+    mock.timers.reset();
+  });
+
+  function start() {
+    tickApi = loader.initTick(ctx);
+    tickApi.startMainTick();
+    mock.timers.tick(1);
+  }
+
+  function advance(ms) {
+    for (let remaining = ms; remaining > 0; remaining -= 50) {
+      mock.timers.tick(Math.min(50, remaining));
+    }
+  }
+
+  function idleFiles() {
+    return calls.filter(([channel]) => channel === "state-change").map(([, , svg]) => svg);
+  }
+
+  it("companion tick runs only in idle branch and not during idle-look", () => {
+    ctx.currentState = "working";
+    start();
+    advance(300);
+    assert.equal(companionTicks, 0, "never ticks outside idle");
+
+    ctx.currentState = "idle";
+    tickApi.scheduleSoon(0);
+    mock.timers.tick(1);
+    assert.ok(companionTicks > 0, "ticks in the idle branch");
+    // Idle-look starts after mouseIdleTimeout and owns the visual for 500ms.
+    while (idleFiles().length === 0) advance(50);
+    const ticksBeforeLook = companionTicks;
+    advance(300);
+    assert.equal(companionTicks, ticksBeforeLook, "paused while idle-look plays");
+    advance(500);
+    assert.ok(companionTicks > ticksBeforeLook, "resumes after idle-look");
+  });
+
+  it("a companion beat suppresses idle-look and eye messages like an idle activity", () => {
+    companionPlaying = true;
+    ctx.forceEyeResend = true;
+    start();
+    advance(1000);
+    assert.deepStrictEqual(calls, []);
+    assert.ok(companionTicks > 0);
+    companionPlaying = false;
+    advance(500);
+    assert.deepStrictEqual(idleFiles(), ["clawd-idle-look.svg"]);
+  });
+
+  it("without a companion the idle-look and eyes behave as today", () => {
+    delete ctx.companion;
+    ctx.forceEyeResend = true;
+    start();
+    assert.ok(calls.some(([channel]) => channel === "eye-move"));
+    advance(900);
+    assert.deepStrictEqual(idleFiles(), ["clawd-idle-look.svg", ctx.theme.states.idle[0]]);
+  });
+});

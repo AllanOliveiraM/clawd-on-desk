@@ -498,3 +498,117 @@ test("entering idle during a beat preserves its duration and repeat schedule", (
   h.controller.tick();
   assert.equal(h.sent.length, 2);
 });
+
+// ── Clawd Alive: optional chooser hook ──
+
+function runScriptedBeats(h) {
+  h.controller.setEnabled(true);
+  h.controller.tick();
+  const trace = [];
+  for (let i = 0; i < 3; i += 1) {
+    h.clock.advance(200000);
+    h.controller.tick();
+    if (h.sent.length > i) h.settle(undefined, i);
+    trace.push(h.clock.now(), h.restores.length);
+  }
+  h.clock.advance(200000);
+  return {
+    sent: h.sent.map((entry) => entry.args.slice(0, 3)),
+    restores: h.restores.slice(),
+    trace,
+  };
+}
+
+test("no chooser is identical to today", () => {
+  const baseline = runScriptedBeats(harness());
+  const nullChooser = runScriptedBeats(harness({ chooser: undefined }));
+  assert.deepEqual(nullChooser, baseline);
+  assert.deepEqual(baseline.sent, [
+    ["state-change", "idle", "think.svg"],
+    ["state-change", "idle", "think.svg"],
+    ["state-change", "idle", "think.svg"],
+  ]);
+});
+
+test("chooser null keeps uniform pick", () => {
+  const seen = [];
+  const baseline = runScriptedBeats(harness());
+  const withNull = runScriptedBeats(harness({
+    chooser: (args) => { seen.push(args); return null; },
+  }));
+  assert.deepEqual(withNull, baseline);
+  assert.equal(seen.length, 3);
+  assert.equal(seen[0].theme, THEME);
+});
+
+test("chooser skip reschedules without playing", () => {
+  let calls = 0;
+  const h = harness({ chooser: () => { calls += 1; return { skip: true }; } });
+  h.controller.setEnabled(true);
+  h.controller.tick();
+  h.clock.advance(20000);
+  h.controller.tick();
+  assert.equal(calls, 1);
+  assert.equal(h.sent.length, 0);
+  assert.equal(h.controller.isAnimating(), false);
+  // Consumed the opportunity: the next one waits the repeat window (60s min).
+  h.clock.advance(59999);
+  h.controller.tick();
+  assert.equal(calls, 1);
+  h.clock.advance(1);
+  h.controller.tick();
+  assert.equal(calls, 2);
+  assert.equal(h.sent.length, 0);
+});
+
+test("chooser file plays with its duration", () => {
+  const h = harness({ chooser: () => ({ file: "clawd-content.svg", durationMs: 4200 }) });
+  h.controller.setEnabled(true);
+  h.controller.tick();
+  h.clock.advance(20000);
+  h.controller.tick();
+  assert.deepEqual(h.sent[0].args.slice(0, 3), ["state-change", "idle", "clawd-content.svg"]);
+  assert.equal(h.controller.isAnimating(), true);
+  h.clock.advance(5000);
+  assert.deepEqual(h.restores, [], "duration starts only at committed display");
+  h.settle();
+  h.clock.advance(4199);
+  assert.deepEqual(h.restores, []);
+  h.clock.advance(1);
+  assert.deepEqual(h.restores, [29200]);
+  assert.equal(h.controller.isAnimating(), false);
+});
+
+test("chooser file still yields to a superseding generation", () => {
+  const h = harness({ chooser: () => ({ file: "clawd-content.svg", durationMs: 3000 }) });
+  h.controller.setEnabled(true);
+  h.controller.tick();
+  h.clock.advance(20000);
+  h.controller.tick();
+  h.settle();
+  h.setCurrentGeneration(999);
+  assert.equal(h.controller.isAnimating(), false);
+  h.clock.advance(3000);
+  assert.deepEqual(h.restores, []);
+});
+
+test("chooser durations are clamped and malformed or throwing choosers fall back", () => {
+  const long = harness({ chooser: () => ({ file: "a.svg", durationMs: 999999 }) });
+  long.controller.setEnabled(true);
+  long.controller.tick();
+  long.clock.advance(20000);
+  long.controller.tick();
+  long.settle();
+  long.clock.advance(8000);
+  assert.deepEqual(long.restores, [28000]);
+
+  const baseline = runScriptedBeats(harness());
+  for (const chooser of [
+    () => ({ file: "" }),
+    () => ({ durationMs: 3000 }),
+    () => 42,
+    () => { throw new Error("boom"); },
+  ]) {
+    assert.deepEqual(runScriptedBeats(harness({ chooser })), baseline);
+  }
+});
