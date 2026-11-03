@@ -80,8 +80,10 @@ function clearQueuedDragMove() {
 // file). Listeners never preventDefault, capture the pointer or touch the
 // drag / click state: they only observe button-less hover moves and report
 // "pet-start" / "pet-continue" / "pet-end" / "hover-dwell" to main, which
-// re-validates everything. Both timers exist only while needed: the 500 ms
-// poll while the detector is active, the 1200 ms dwell inside a fresh entry.
+// re-validates everything. After a dwell, the first move > 3 px (or the leave)
+// reports one "hover-move" (Clawd Mischief: the catch turns into a miss).
+// Both timers exist only while needed: the 500 ms poll while the detector is
+// active, the 1200 ms dwell inside a fresh entry.
 const PET_POLL_MS = 500;
 const HOVER_DWELL_MS = 1200;
 const HOVER_DWELL_SLOP_PX = 3;
@@ -93,6 +95,12 @@ let petPollTimer = null;
 let hoverDwellTimer = null;
 let hoverEntryX = 0;
 let hoverEntryY = 0;
+let hoverLastX = 0;
+let hoverLastY = 0;
+// Set when a dwell was sent; cleared once hover-move goes out or on the next entry.
+let hoverMoveArmed = false;
+let hoverMoveX = 0;
+let hoverMoveY = 0;
 
 function petGesturesAllowed() {
   return petGesturesEnabled && !!petDetector && !miniMode && !dndEnabled && !isDragging;
@@ -133,7 +141,19 @@ function endPetGestures() {
   if (wasActive) sendPetGesture("pet-end");
 }
 
+function sendHoverMoveOnce() {
+  if (!hoverMoveArmed) return;
+  hoverMoveArmed = false;
+  if (petGesturesAllowed()) sendPetGesture("hover-move");
+}
+
 function handlePetHoverMove(e) {
+  hoverLastX = e.clientX;
+  hoverLastY = e.clientY;
+  if (hoverMoveArmed
+    && Math.hypot(e.clientX - hoverMoveX, e.clientY - hoverMoveY) > HOVER_DWELL_SLOP_PX) {
+    sendHoverMoveOnce();
+  }
   if (hoverDwellTimer !== null
     && Math.hypot(e.clientX - hoverEntryX, e.clientY - hoverEntryY) > HOVER_DWELL_SLOP_PX) {
     cancelHoverDwell();
@@ -145,16 +165,26 @@ function handlePetHoverMove(e) {
 
 area.addEventListener("pointerenter", (e) => {
   cancelHoverDwell();
+  hoverMoveArmed = false;
   if (!petGesturesAllowed()) return;
   hoverEntryX = e.clientX;
   hoverEntryY = e.clientY;
+  hoverLastX = e.clientX;
+  hoverLastY = e.clientY;
   hoverDwellTimer = setTimeout(() => {
     hoverDwellTimer = null;
-    if (petGesturesAllowed()) sendPetGesture("hover-dwell");
+    if (!petGesturesAllowed()) return;
+    sendPetGesture("hover-dwell");
+    hoverMoveArmed = true;
+    hoverMoveX = hoverLastX;
+    hoverMoveY = hoverLastY;
   }, HOVER_DWELL_MS);
 });
 
-area.addEventListener("pointerleave", () => endPetGestures());
+area.addEventListener("pointerleave", () => {
+  sendHoverMoveOnce();
+  endPetGestures();
+});
 window.addEventListener("blur", () => endPetGestures());
 
 // --- Pointer handlers ---

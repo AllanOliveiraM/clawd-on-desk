@@ -5987,6 +5987,7 @@ const COMPANION_PREF_KEYS = [
   "companionAutonomy",
   "companionInteractions",
   "companionMemory",
+  "companionMischief",
 ];
 function readCompanionConfig(snapshot) {
   const read = snapshot && typeof snapshot === "object"
@@ -5998,6 +5999,8 @@ function readCompanionConfig(snapshot) {
     autonomy: read("companionAutonomy") === true,
     interactions: read("companionInteractions") === true,
     memory: read("companionMemory") === true,
+    // Clawd Mischief: effective only with companionEnabled (runtime gates it).
+    mischief: read("companionMischief") === true,
   };
 }
 // Hit-window petting / hover gestures run only with both switches on.
@@ -6017,6 +6020,8 @@ const _companion = require("./companion-runtime").createCompanionRuntime({
     : _settingsController.get("idleActivities") === true ? "activities" : "none"),
   isRoamAnimating: () => _roam.isRoamAnimating(),
   isOtherIdleVisualPlaying: () => _idleActivity.isAnimating(),
+  // Mischief: the close-button corner is top left on macOS.
+  getPlatform: () => process.platform,
   getDisplayWorkArea: (displayId) => {
     try {
       const display = screen.getAllDisplays().find((d) => d.id === displayId);

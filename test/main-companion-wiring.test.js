@@ -24,6 +24,7 @@ const COMPANION_KEYS = [
   "companionAutonomy",
   "companionInteractions",
   "companionMemory",
+  "companionMischief",
 ];
 
 function gateHarness() {
@@ -128,6 +129,7 @@ function companionHarness(prefs = {}) {
     sendToRenderer: () => null,
     sendToHitWin: (...args) => hitSends.push(JSON.parse(JSON.stringify(args))),
     console: { warn() {} },
+    process: { platform: process.platform },
   };
   vm.runInNewContext(`${companionSource}\nthis._companionOut = _companion;\nthis._isPetGesturesEnabled = isPetGesturesEnabled;`, ctx);
   return {
@@ -170,6 +172,7 @@ it("companion subscribes to all companion keys", () => {
     autonomy: true,
     interactions: true,
     memory: false,
+    mischief: false,
   }]);
   assert.deepEqual([...h.subscriptions.keys()].sort(), [...COMPANION_KEYS].sort());
   for (const key of COMPANION_KEYS) {
@@ -179,6 +182,7 @@ it("companion subscribes to all companion keys", () => {
       companionAutonomy: false,
       companionInteractions: false,
       companionMemory: true,
+      companionMischief: true,
     };
     h.subscriptions.get(key)(snapshot[key], snapshot);
     assert.deepEqual(h.configureCalls[h.configureCalls.length - 1], {
@@ -187,6 +191,7 @@ it("companion subscribes to all companion keys", () => {
       autonomy: false,
       interactions: false,
       memory: true,
+      mischief: true,
     }, key);
   }
 });
@@ -283,4 +288,34 @@ it("pet interaction IPC reaches the companion and trusts only the hit window", (
   assert.ok(registration.includes("isDragLocked: () => petWindowRuntime.isDragLocked(),"));
   assert.ok(registration.includes("getThemeReactions: () => {"));
   assert.ok(registration.includes("getDisplayNearestPoint: (point) => screen.getDisplayNearestPoint(point),"));
+});
+
+// ── Clawd Mischief (Task 4) ──
+
+it("main wires companionMischief", () => {
+  // Pref default is true; only a strict true turns it on.
+  const on = companionHarness({ companionEnabled: true, companionMischief: true });
+  assert.equal(on.configureCalls[0].mischief, true);
+  for (const value of [false, undefined, "true", 1]) {
+    const h = companionHarness({ companionEnabled: true, companionMischief: value });
+    assert.equal(h.configureCalls[0].mischief, false, String(value));
+  }
+  // Toggling the key reconfigures without touching the hit window.
+  const h = companionHarness({ companionEnabled: true, companionMischief: true });
+  const snapshot = {
+    companionEnabled: true,
+    companionPersonality: "balanced",
+    companionAutonomy: true,
+    companionInteractions: true,
+    companionMemory: true,
+    companionMischief: false,
+  };
+  h.subscriptions.get("companionMischief")(false, snapshot);
+  assert.equal(h.configureCalls[h.configureCalls.length - 1].mischief, false);
+  assert.deepEqual(h.hitSends, []);
+  // petGesturesEnabled ignores the mischief switch.
+  assert.equal(h.isPetGesturesEnabled({ ...snapshot, companionMischief: false }), true);
+  // The runtime gets the platform for the close-button corner.
+  assert.equal(typeof h.runtimeOptions.getPlatform, "function");
+  assert.equal(h.runtimeOptions.getPlatform(), process.platform);
 });

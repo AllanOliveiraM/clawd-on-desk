@@ -21,6 +21,13 @@ let yawnDelayTimer = null;     // tracked setTimeout for yawn/idle-look transiti
 // Track idle visual edges separately from walks that preserve unattended timing.
 let idleWasActive = false;
 let roamWasActive = false;
+// Clawd Mischief: the pet's hit rect from the last bounds read of this idle
+// stretch (dropped whenever the pet may have moved), and the non-idle period
+// since idle was last left, classified for the companion's idle entry.
+let companionPetRect = null;
+let awaySince = null;
+let awaySawSleep = false;
+let awaySawWork = false;
 let lastEyeDx = 0, lastEyeDy = 0;
 let lastPointerBridgeKey = null;
 let lastPointerBridgePayload = null;
@@ -51,6 +58,9 @@ const RECENT_MOUSE_MS = 2000;
 const POINTER_BRIDGE_STATES = new Set(["idle", "mini-idle", "mini-peek"]);
 const LOW_POWER_PAUSE_STATES = new Set(["idle", "mini-idle", "dozing", "collapsing", "sleeping"]);
 const POINTER_BRIDGE_EPSILON = 0.001;
+const SLEEP_FLOW_STATES = new Set(["yawning", "dozing", "collapsing", "sleeping", "waking"]);
+// A non-idle stretch shorter than this (a thinking flicker) is not "work".
+const MIN_WORK_AWAY_MS = 2000;
 
 // ── Theme-driven state (refreshed on hot theme switch) ──
 let theme = null;
@@ -274,6 +284,41 @@ function resetIdlePeriodForMouseMove() {
   }
 }
 
+// Clawd Mischief: the idle origin for companion.noteIdleEntered. "sleep" when
+// the away period passed through the sleep flow; "work" when it saw any other
+// non-idle state (except roam and mini mode) and lasted MIN_WORK_AWAY_MS;
+// "other" otherwise (app start, short blips, mini mode, idle pause).
+function noteAwayState(state) {
+  if (awaySince === null) awaySince = now();
+  if (SLEEP_FLOW_STATES.has(state)) awaySawSleep = true;
+  else if (state !== "idle" && state !== "roam" && !String(state).startsWith("mini-")) awaySawWork = true;
+}
+
+function resetAway() {
+  awaySince = null;
+  awaySawSleep = false;
+  awaySawWork = false;
+}
+
+function takeIdleOrigin() {
+  const awayMs = awaySince === null ? 0 : Math.max(0, now() - awaySince);
+  let from = "other";
+  if (awaySawSleep) from = "sleep";
+  else if (awaySawWork && awayMs >= MIN_WORK_AWAY_MS) from = "work";
+  resetAway();
+  return { from, awayMs };
+}
+
+// Clawd Mischief: the cursor already read this tick plus the cached hit rect;
+// null until this idle stretch has read the pet bounds. No native call.
+function companionCursorSample(cursor) {
+  const r = companionPetRect;
+  if (!r || !cursor) return null;
+  const overPet = cursor.x >= r.x && cursor.x <= r.x + r.width
+    && cursor.y >= r.y && cursor.y <= r.y + r.height;
+  return { x: cursor.x, y: cursor.y, petRect: { ...r }, overPet };
+}
+
 function shouldSuppressPassiveIpc() {
   return !!ctx.lowPowerIdlePaused && LOW_POWER_PAUSE_STATES.has(ctx.currentState);
 }
@@ -301,6 +346,9 @@ function runMainTickOnce() {
 
     const enteredIdle = idleNow && !idleWasActive;
     const cameFromWalk = enteredIdle && roamWasActive;
+    if (!idleNow) noteAwayState(ctx.currentState);
+    // The pet may move outside idle (walks, drags, mini): re-read its rect.
+    if (!idleNow || ctx.dragLocked) companionPetRect = null;
     // #1276: eye tracking off parks the gaze forward. Only the follow IPC is
     // suppressed — the rest of the idle machinery (sleep sequence, idle-look,
     // pointer-over-pet) keeps running, and themes with a dizzy state still get
@@ -328,7 +376,11 @@ function runMainTickOnce() {
         lastCursorY = null;
         mouseStillSince = Date.now();
         if (ctx.idleActivity) ctx.idleActivity.noteIdleEntered();
-        if (ctx.companion && typeof ctx.companion.noteIdleEntered === "function") ctx.companion.noteIdleEntered();
+        const origin = takeIdleOrigin();
+        if (ctx.companion && typeof ctx.companion.noteIdleEntered === "function") ctx.companion.noteIdleEntered(origin);
+      } else {
+        // The walk is part of the same idle period.
+        resetAway();
       }
     }
 
@@ -370,6 +422,9 @@ function runMainTickOnce() {
       const over = cursor.x >= hit.left && cursor.x <= hit.right
                 && cursor.y >= hit.top  && cursor.y <= hit.bottom;
       ctx.mouseOverPet = over;
+      if (idleNow) {
+        companionPetRect = { x: hit.left, y: hit.top, width: hit.right - hit.left, height: hit.bottom - hit.top };
+      }
     }
 
     // ── Mini mode peek hover ──
@@ -533,7 +588,8 @@ function runMainTickOnce() {
       if (ctx.idleActivity && !isMouseIdle) ctx.idleActivity.tick();
       // Clawd Alive: the companion arbiter rides the same idle tick (no loop of
       // its own) and, like idle activities, stays out while idle-look plays.
-      if (ctx.companion && !isMouseIdle) ctx.companion.tick();
+      // It gets the cursor sample this tick already read (Clawd Mischief).
+      if (ctx.companion && !isMouseIdle) ctx.companion.tick(companionCursorSample(cursor));
 
       if (ctx.roam) ctx.roam.tick();
     }

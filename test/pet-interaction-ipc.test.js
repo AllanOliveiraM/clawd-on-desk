@@ -617,6 +617,18 @@ test("gesture rejects unknown kinds", () => {
   ]);
 });
 
+test("hover-move accepted by the IPC enum", () => {
+  const h = companionHarness();
+  h.ipcMain.send("pet-interaction:gesture", "hover-move");
+  h.ipcMain.send("pet-interaction:gesture", "HOVER-MOVE");
+  h.ipcMain.send("pet-interaction:gesture", "hover-moved");
+  assert.deepStrictEqual(h.companion, [["gesture", "hover-move"]]);
+  // Same gates as every gesture.
+  h.state.miniMode = true;
+  h.ipcMain.send("pet-interaction:gesture", "hover-move");
+  assert.deepStrictEqual(h.companion, [["gesture", "hover-move"]]);
+});
+
 test("gesture ignored in mini, transition and drag lock", () => {
   const h = companionHarness();
   h.state.miniMode = true;

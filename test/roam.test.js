@@ -3347,6 +3347,59 @@ describe("roam companion hooks", () => {
     roam.setEnabled(false);
   });
 
+  it("roam reports mischief kind and edge distance on arrival", () => {
+    const reports = [];
+    const targets = [
+      // Work area 1920x1080, pet 120x120, margin band x 288..1512, y 162..798.
+      { x: 1500, y: 700, preferred: true, mischief: "wall" },
+      { x: 400, y: 99999, preferred: true, mischief: "sitEdge" },
+      { x: 300, y: -5000, preferred: true, mischief: "reachClose" },
+      { x: 1000, y: 500, preferred: true, mischief: "poke" },
+      { x: 400, y: 300, preferred: true, mischief: 42 },
+    ];
+    let platform = "darwin";
+    const ctx = makeCtx({
+      pickPreferredTarget: () => targets.shift() || null,
+      onWalkFinished: (info) => reports.push(info),
+      getPlatform: () => platform,
+      // The final bounds come after the screen clamp.
+      clampToScreenVisual: (x, y, w, h) => ({ x: Math.min(x, 1450), y, width: w, height: h }),
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam);
+    for (let i = 0; i < 4; i += 1) {
+      mock.timers.tick(4000);
+      finishWalk(roam);
+    }
+    assert.deepStrictEqual(reports, [
+      // Clamped to x 1450: right gap 1920 - 1570.
+      { preferred: true, mischief: "wall", reachedEdgeDistancePx: 350 },
+      // y clamped to 798: bottom gap 1080 - 918.
+      { preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 162 },
+      // Close-button corner on darwin is top left: max(top 162, left 300).
+      { preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 300 },
+      { preferred: true, mischief: "poke", reachedEdgeDistancePx: 0 },
+      // A malformed kind is dropped: today's report shape.
+      { preferred: true },
+    ]);
+    roam.setEnabled(false);
+
+    // Elsewhere the corner is top right: max(top 162, right 1920 - 1450 - 120).
+    platform = "linux";
+    reports.length = 0;
+    targets.push({ x: 99999, y: -5000, preferred: true, mischief: "reachClose" });
+    const roam2 = roamModule(ctx);
+    roam2.setEnabled(true);
+    roam2.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam2);
+    assert.deepStrictEqual(reports, [{ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 350 }]);
+    roam2.setEnabled(false);
+  });
+
   it("onWalkFinished is not reported for a cancelled walk and a throwing hook keeps the chain", () => {
     let reports = 0;
     const ctx = makeCtx({ onWalkFinished: () => { reports += 1; throw new Error("boom"); } });

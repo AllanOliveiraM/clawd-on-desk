@@ -2033,6 +2033,116 @@ describe("tick companion coordination", () => {
     assert.equal(entries, 2);
   });
 
+  it("tick passes the cursor sample it already read", () => {
+    let cursor = { x: 300, y: 260 };
+    // Same idle period with and without a companion: identical native traffic.
+    function run(withCompanion, eyeResend, eyeTrackingEnabled = true) {
+      let cursorCalls = 0;
+      let boundsCalls = 0;
+      const samples = [];
+      const local = loadTickWithScreen(() => { cursorCalls++; return { ...cursor }; });
+      const theme = cloneTheme(ctx.theme);
+      theme.timings.mouseIdleTimeout = 1e9;
+      const c = makeCtx(theme, []);
+      const getBounds = c.win.getBounds;
+      c.win.getBounds = () => { boundsCalls++; return getBounds(); };
+      c.sendToRenderer = () => null;
+      c.forceEyeResend = eyeResend;
+      c.eyeTrackingEnabled = eyeTrackingEnabled;
+      if (withCompanion) c.companion = { tick: (s) => samples.push(s), isAnimating: () => false };
+      const api = local.initTick(c);
+      api.startMainTick();
+      const step = (ms) => { for (let r = ms; r > 0; r -= 50) mock.timers.tick(Math.min(50, r)); };
+      const setState = (state) => { c.currentState = state; api.scheduleSoon(0); mock.timers.tick(1); };
+      cursor = { x: 300, y: 260 };
+      step(1000);
+      const still = samples.length;
+      cursor = { x: 50, y: 60 };
+      step(500);
+      const overStart = samples.length;
+      setState("roam");
+      // The walk moved the pet.
+      c.getHitRectScreen = () => ({ left: 500, top: 400, right: 620, bottom: 520 });
+      setState("idle");
+      const afterWalk = samples.length;
+      step(500);
+      api.cleanup();
+      local.restore();
+      return { cursorCalls, boundsCalls, samples, still, overStart, afterWalk };
+    }
+    const withCompanion = run(true, true);
+    const without = run(false, true);
+    assert.equal(withCompanion.cursorCalls, without.cursorCalls, "no extra getCursorScreenPoint");
+    assert.equal(withCompanion.boundsCalls, without.boundsCalls, "no extra bounds read");
+
+    const s = withCompanion.samples;
+    const petRect = { x: 0, y: 0, width: 120, height: 120 };
+    assert.ok(withCompanion.still > 2);
+    for (const sample of s.slice(0, withCompanion.still)) {
+      assert.deepStrictEqual(sample, { x: 300, y: 260, petRect, overPet: false });
+    }
+    assert.deepStrictEqual(s[withCompanion.overStart - 1], { x: 50, y: 60, petRect, overPet: true });
+    // The pet moved during the walk: never the stale rect.
+    const moved = { x: 500, y: 400, width: 120, height: 120 };
+    for (const sample of s.slice(withCompanion.afterWalk - 1)) {
+      assert.ok(sample === null || JSON.stringify(sample.petRect) === JSON.stringify(moved), JSON.stringify(sample));
+    }
+    assert.deepStrictEqual(s[s.length - 1], { x: 50, y: 60, petRect: moved, overPet: false });
+
+    // No bounds read yet in this idle period (eye tracking off, cursor still):
+    // the sample is null.
+    const cold = run(true, false, false);
+    assert.equal(cold.samples[0], null);
+  });
+
+  it("tick reports sleep and work origins", () => {
+    const entries = [];
+    ctx.companion.noteIdleEntered = (info) => entries.push(info);
+    function sample(state, ms = 0) {
+      ctx.currentState = state;
+      tickApi.scheduleSoon(0);
+      mock.timers.tick(1);
+      for (let r = ms; r > 0; r -= 1000) mock.timers.tick(Math.min(1000, r));
+    }
+    start();
+    assert.deepStrictEqual(entries, [{ from: "other", awayMs: 0 }]);
+
+    sample("working", 700000);
+    sample("idle");
+    assert.equal(entries.length, 2);
+    assert.equal(entries[1].from, "work");
+    assert.ok(entries[1].awayMs >= 700000 && entries[1].awayMs < 702000, String(entries[1].awayMs));
+
+    sample("attention", 3000);
+    sample("yawning", 1000);
+    sample("sleeping", 5000);
+    sample("waking", 1000);
+    sample("idle");
+    assert.equal(entries[2].from, "sleep");
+    assert.ok(entries[2].awayMs >= 10000 && entries[2].awayMs < 12000, String(entries[2].awayMs));
+
+    // A short non-idle blip is not a work stretch.
+    sample("thinking", 500);
+    sample("idle");
+    assert.equal(entries[3].from, "other");
+
+    // Mini mode is the user parking the pet, not work.
+    sample("mini-idle", 5000);
+    sample("idle");
+    assert.equal(entries[4].from, "other");
+
+    // Walks stay part of the idle period (no entry); a walk cut by work counts
+    // from the moment idle was left.
+    sample("roam", 1000);
+    sample("idle");
+    assert.equal(entries.length, 5);
+    sample("roam", 1000);
+    sample("working", 3000);
+    sample("idle");
+    assert.equal(entries[5].from, "work");
+    assert.ok(entries[5].awayMs >= 4000 && entries[5].awayMs < 5000, String(entries[5].awayMs));
+  });
+
   it("without a companion the idle-look and eyes behave as today", () => {
     delete ctx.companion;
     ctx.forceEyeResend = true;

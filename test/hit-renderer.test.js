@@ -644,7 +644,50 @@ describe("hit-renderer pet gestures", () => {
     assert.strictEqual(liveTimers(h, 1200).length, 0);
     h.pointerenter({ clientX: 50, clientY: 50 });
     h.fireTimer((t) => t.ms === 1200);
-    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-dwell"]);
+    // The leave after the first dwell reports one hover-move (mischief catch).
+    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-move", "hover-dwell"]);
+  });
+
+  it("hover-move is sent once after a dwell", () => {
+    const h = gestureHarness();
+    // No dwell yet: moving or leaving sends nothing.
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    h.pointerleave();
+    assert.deepStrictEqual(gestures(h), []);
+
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    h.pointermove({ clientX: 101, clientY: 100, buttons: 0 });
+    h.fireTimer((t) => t.ms === 1200);
+    // Within 3 px of where the dwell fired: still nothing.
+    h.pointermove({ clientX: 103, clientY: 101, buttons: 0 });
+    assert.deepStrictEqual(gestures(h), ["hover-dwell"]);
+    h.pointermove({ clientX: 110, clientY: 100, buttons: 0 });
+    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-move"]);
+    // Once per dwell: more moves and the leave send nothing else.
+    h.pointermove({ clientX: 130, clientY: 100, buttons: 0 });
+    h.pointerleave();
+    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-move"]);
+
+    // Next entry: dwell then leave sends it.
+    h.pointerenter({ clientX: 50, clientY: 50 });
+    h.fireTimer((t) => t.ms === 1200);
+    h.pointerleave();
+    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-move", "hover-dwell", "hover-move"]);
+
+    // The flag clears on the next entry even when the dwell was never resolved.
+    h.pointerenter({ clientX: 50, clientY: 50 });
+    h.fireTimer((t) => t.ms === 1200);
+    h.pointerenter({ clientX: 50, clientY: 50 });
+    h.pointerleave();
+    assert.deepStrictEqual(gestures(h).slice(4), ["hover-dwell"]);
+
+    // Gestures off: nothing at all.
+    const off = createHarness({ detector: true });
+    off.pointerenter({ clientX: 100, clientY: 100 });
+    off.fireTimer((t) => t.ms === 1200);
+    off.pointermove({ clientX: 130, clientY: 100, buttons: 0 });
+    off.pointerleave();
+    assert.deepStrictEqual(off.apiCalls, []);
   });
 
   it("pointerdown during petting ends petting and still starts drag lock", () => {

@@ -17,7 +17,7 @@ function isTrustedMainFrameEvent(event, webContents) {
 }
 
 // Clawd Alive gesture kinds the hit renderer may report.
-const PET_GESTURE_KINDS = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell"]);
+const PET_GESTURE_KINDS = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell", "hover-move"]);
 // A drag whose lock lasted longer than this counts as "dragLong" for the mood.
 const DRAG_LONG_MS = 1500;
 

@@ -27,7 +27,9 @@
 //     ctx.getRoamDelayMs(isFirst, baseMs) modulates the pause (clamped to
 //     [0.5×, 3×] base), ctx.pickPreferredTarget(args) proposes a target for
 //     unconstrained walks (clamped into the same band/fence; null → random),
-//     ctx.onWalkFinished({preferred}) reports each natural arrival,
+//     ctx.onWalkFinished({preferred}) reports each natural arrival (plus
+//     {mischief, reachedEdgeDistancePx} when the target carried a mischief
+//     kind: the final bounds' gap to the work-area edge that kind aims at),
 //     ctx.onPreferredTargetDiscarded() reports a proposal roam did not walk, and
 //     ctx.isCompanionPlaying() holds walks while a companion beat owns the
 //     visual. Hook failures never break the scheduling chain.
@@ -41,6 +43,9 @@ const ROAM_FRAME_MS = 16;
 const ROAM_TARGET_ATTEMPTS = 8;
 const ROAM_DELAY_MIN_FACTOR = 0.5; // companion hook may shorten the pause to 0.5×…
 const ROAM_DELAY_MAX_FACTOR = 3; // …or stretch it to 3× the base delay
+
+// Same edge math the companion uses for a walk it proposed (Clawd Mischief).
+const { walkEdgeDistance } = require("./companion-scenes");
 
 module.exports = function initRoam(ctx) {
   let enabled = false;
@@ -202,7 +207,28 @@ module.exports = function initRoam(ctx) {
       }
       return preferred ? null : undefined;
     }
-    return { x, y, size, fence: fenceRect, preferred };
+    const target = { x, y, size, fence: fenceRect, preferred };
+    // Clawd Mischief: remember the kind and the work area for the arrival report.
+    if (typeof proposal.mischief === "string" && proposal.mischief) {
+      target.mischief = proposal.mischief;
+      target.workArea = { x: wa.x, y: wa.y, width: wa.width, height: wa.height };
+    }
+    return target;
+  }
+
+  // Gap between the final pet bounds and the work-area edge the mischief kind
+  // aims at; walkEdgeDistance is the companion's own formula, so a discarded
+  // walk and an arrival are judged the same way.
+  function mischiefArrival(target, finalBounds) {
+    const area = target.workArea;
+    const leftGap = finalBounds.x - area.x;
+    const rightGap = area.x + area.width - (finalBounds.x + finalBounds.width);
+    const platform = typeof ctx.getPlatform === "function" ? ctx.getPlatform() : process.platform;
+    const reachedEdgeDistancePx = walkEdgeDistance(
+      { id: target.mischief, side: leftGap <= rightGap ? "left" : "right" },
+      { area, bounds: finalBounds, goal: { x: target.x, y: target.y }, platform },
+    );
+    return { mischief: target.mischief, reachedEdgeDistancePx };
   }
 
   function pickRandomTarget() {
@@ -717,7 +743,11 @@ module.exports = function initRoam(ctx) {
         // Clawd Alive: report the natural arrival (never a cancel or skip).
         if (typeof ctx.onWalkFinished === "function") {
           try {
-            ctx.onWalkFinished({ preferred: target.preferred === true });
+            const info = { preferred: target.preferred === true };
+            if (target.mischief) {
+              Object.assign(info, mischiefArrival(target, { x: finalX, y: finalY, width: roamW, height: roamH }));
+            }
+            ctx.onWalkFinished(info);
           } catch {}
         }
         scheduleNextRoam();
