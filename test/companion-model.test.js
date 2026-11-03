@@ -1,0 +1,135 @@
+"use strict";
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const model = require("../src/companion-model");
+const {
+  PERSONALITY_IDS, PERSONALITY_TRAITS, DEFAULT_MOOD, EVENT_KINDS,
+  normalizePersonality, getTraits, createInitialState, sanitizeState,
+  applyEvent, advance, moodLabel,
+} = model;
+
+const HOUR = 3600 * 1000;
+const T0 = 1_000_000;
+
+function stateWith(mood, extra) {
+  return { ...createInitialState(), mood: { ...DEFAULT_MOOD, ...mood }, ...extra };
+}
+
+function deepFreeze(obj) {
+  for (const v of Object.values(obj)) if (v && typeof v === "object") deepFreeze(v);
+  return Object.freeze(obj);
+}
+
+test("exports expected constants", () => {
+  assert.deepEqual(PERSONALITY_IDS, ["balanced", "playful", "curious", "calm", "shy"]);
+  assert.ok(Object.isFrozen(PERSONALITY_TRAITS));
+  assert.equal(EVENT_KINDS.length, 8);
+});
+
+test("normalizePersonality rejects unknown ids", () => {
+  assert.equal(normalizePersonality("x"), "balanced");
+  assert.equal(normalizePersonality(null), "balanced");
+  assert.equal(normalizePersonality("shy"), "shy");
+});
+
+test("getTraits returns fresh copies", () => {
+  const a = getTraits("playful");
+  a.activity = 0;
+  assert.equal(getTraits("playful").activity, 0.8);
+  assert.equal(getTraits("bogus").calm, 0.5);
+});
+
+test("createInitialState matches defaults", () => {
+  const s = createInitialState();
+  assert.deepEqual(s.mood, DEFAULT_MOOD);
+  assert.notEqual(s.mood, DEFAULT_MOOD);
+  assert.equal(s.label, "neutral");
+  assert.equal(s.streak, null);
+  assert.equal(s.lastAdvanceAt, null);
+  assert.equal(s.lastInteractionAt, null);
+});
+
+test("sanitizeState clamps and repairs", () => {
+  const s = sanitizeState({ mood: { energy: 999, contentment: "x", familiarity: -4 } }, T0);
+  assert.deepEqual(s.mood, { energy: 100, contentment: 55, familiarity: 0 });
+  assert.deepEqual(sanitizeState(null, T0), createInitialState());
+  assert.equal(sanitizeState({ label: "bogus" }, T0).label, "neutral");
+});
+
+test("pet raises contentment more for playful than calm", () => {
+  const gain = (id) => applyEvent(createInitialState(), { kind: "pet" }, getTraits(id), T0).mood.contentment - 55;
+  assert.ok(gain("playful") > gain("calm"));
+});
+
+test("repeated pets have diminishing returns", () => {
+  const traits = getTraits("balanced");
+  let s = createInitialState();
+  const gains = [];
+  for (let i = 0; i < 5; i++) {
+    const before = advance(s, T0 + i * 1000, traits).mood.contentment;
+    s = applyEvent(s, { kind: "pet" }, traits, T0 + i * 1000);
+    gains.push(s.mood.contentment - before);
+  }
+  assert.ok(gains[4] < gains[0] * 0.3);
+  const before = advance(s, T0 + 35000, traits).mood.contentment;
+  const later = applyEvent(s, { kind: "pet" }, traits, T0 + 35000);
+  assert.ok(Math.abs(later.mood.contentment - before - gains[0]) < 0.01);
+});
+
+test("clickBurst lowers contentment and can reach grumpy", () => {
+  const traits = getTraits("shy");
+  let s = createInitialState();
+  for (let i = 0; i < 6; i++) s = applyEvent(s, { kind: "clickBurst" }, traits, T0 + i * 100);
+  assert.ok(s.mood.contentment < 55);
+  assert.equal(s.label, "grumpy");
+});
+
+test("hysteresis prevents flapping", () => {
+  assert.equal(moodLabel({ energy: 70, contentment: 24, familiarity: 0 }, "neutral"), "grumpy");
+  assert.equal(moodLabel({ energy: 70, contentment: 30, familiarity: 0 }, "grumpy"), "grumpy");
+  assert.equal(moodLabel({ energy: 70, contentment: 36, familiarity: 0 }, "grumpy"), "neutral");
+  assert.equal(moodLabel({ energy: 20, contentment: 20, familiarity: 0 }, "neutral"), "tired");
+  assert.equal(moodLabel({ energy: 30, contentment: 80, familiarity: 0 }, "tired"), "tired");
+  assert.equal(moodLabel({ energy: 70, contentment: 70, familiarity: 0 }, "content"), "content");
+  assert.equal(moodLabel({ energy: 70, contentment: 70, familiarity: 0 }, "neutral"), "neutral");
+});
+
+test("advance recovers toward baselines without overshoot", () => {
+  const s = stateWith({ contentment: 20 }, { lastAdvanceAt: T0 });
+  const out = advance(s, T0 + 10 * HOUR, getTraits("balanced"));
+  assert.equal(out.mood.contentment, 55);
+  const hi = stateWith({ contentment: 90 }, { lastAdvanceAt: T0 });
+  assert.equal(advance(hi, T0 + 10 * HOUR, getTraits("balanced")).mood.contentment, 55);
+});
+
+test("long unattended gap counts as rest", () => {
+  const traits = getTraits("balanced");
+  const rest = advance(stateWith({ energy: 20 }, { lastAdvanceAt: T0 }), T0 + 2 * HOUR, traits);
+  assert.equal(rest.mood.energy, 80);
+  const busy = advance(stateWith({ energy: 20 }, { lastAdvanceAt: T0, lastInteractionAt: T0 + HOUR }), T0 + 2 * HOUR, traits);
+  assert.equal(busy.mood.energy, 40);
+});
+
+test("familiarity never decays", () => {
+  const s = stateWith({ familiarity: 40 }, { lastAdvanceAt: T0 });
+  assert.equal(advance(s, T0 + 30 * 24 * HOUR, getTraits("balanced")).mood.familiarity, 40);
+});
+
+test("elapsed is capped and negative time is ignored", () => {
+  const s = stateWith({ energy: 20, contentment: 30 }, { lastAdvanceAt: T0 });
+  const out = advance(s, T0 - HOUR, getTraits("balanced"));
+  assert.deepEqual(out.mood, s.mood);
+  const capped = advance(stateWith({ energy: 0 }, { lastAdvanceAt: T0 }), T0 + 365 * 24 * HOUR, getTraits("balanced"));
+  assert.equal(capped.mood.energy, 100);
+  const first = advance(createInitialState(), T0, getTraits("balanced"));
+  assert.equal(first.lastAdvanceAt, T0);
+  assert.deepEqual(first.mood, DEFAULT_MOOD);
+});
+
+test("applyEvent is pure and updates interaction time", () => {
+  const frozen = deepFreeze(stateWith({}, { lastAdvanceAt: T0 }));
+  const out = applyEvent(frozen, { kind: "pet" }, getTraits("balanced"), T0 + 1000);
+  assert.equal(out.lastInteractionAt, T0 + 1000);
+  assert.equal(out.streak.count, 1);
+  assert.equal(applyEvent(frozen, { kind: "walk" }, getTraits("balanced"), T0 + 1000).lastInteractionAt, null);
+});
