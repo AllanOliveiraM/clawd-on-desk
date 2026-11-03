@@ -1180,3 +1180,68 @@ test("turning mischief off mid-scene restores idle and drops pending work", () =
   env.runtime.tick();
   assert.equal(env.sends.length, 1, "queued welcome was dropped");
 });
+
+test("a pet already at the bottom edge sits in place once and is not re-picked", () => {
+  const env = setup();
+  env.theme = themeWith(["sitEdge"]);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  const atBottom = { ...ROAM_ARGS, bounds: { x: 950, y: 900, width: 100, height: 100 } };
+  assert.equal(env.runtime.pickRoamTarget(atBottom).mischief, "sitEdge");
+  env.runtime.onPreferredTargetDiscarded(); // roam: already there (< minDist)
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.sends[0].file, "sitEdge.svg");
+  runCommitting(env, 20000);
+  const sends = env.sends.length;
+  for (let i = 0; i < 900; i += 1) {
+    env.clock.advance(1000);
+    env.runtime.tick();
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "sitEdge is not picked again");
+  }
+  assert.equal(env.sends.length, sends);
+});
+
+test("a discarded walking mischief far from its edge spends its cooldown", () => {
+  const env = setup();
+  env.theme = themeWith(["reachClose"]);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  assert.equal(env.runtime.pickRoamTarget(ROAM_ARGS).mischief, "reachClose");
+  env.runtime.onPreferredTargetDiscarded();
+  assert.equal(env.sends.length, 0);
+  for (let i = 0; i < 900; i += 1) {
+    env.clock.advance(1000);
+    env.runtime.tick();
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "no repeat while on cooldown");
+  }
+  assert.equal(env.sends.length, 0);
+});
+
+test("an expired pending walk spends its cooldown", () => {
+  const env = setup();
+  env.theme = themeWith(["reachClose"]);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000);
+  // The roam never asks for a target: dropped after 120 s.
+  for (let i = 0; i < 121; i += 1) {
+    env.clock.advance(1000);
+    env.runtime.tick();
+  }
+  for (let i = 0; i < 900; i += 1) {
+    env.clock.advance(1000);
+    env.runtime.tick();
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "not re-picked after expiry");
+  }
+});
+
+test("mischief off reproduces the 40b54948 golden runs exactly", () => {
+  // Golden produced by test/fixtures/companion-alive-script.js against the
+  // pre-mischief runtime (40b54948); every new input is fed, mischief is off.
+  const { runScript } = require("./fixtures/companion-alive-script");
+  const golden = require("./fixtures/companion-alive-golden.json");
+  assert.equal(golden.length, 9);
+  for (const { script, result } of golden) {
+    assert.deepEqual(runScript(createCompanionRuntime, script), result, JSON.stringify(script));
+  }
+});

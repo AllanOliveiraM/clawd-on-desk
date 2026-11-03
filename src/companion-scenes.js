@@ -148,6 +148,25 @@ function walkTarget(walk, { area, bounds, size, platform }) {
   return null;
 }
 
+// How far the pet (bounds) still is from where a walking mischief wants it:
+// the relevant work-area edge or corner, or the goal next to the cursor (poke).
+function walkEdgeDistance(walk, { area, bounds, goal, platform }) {
+  const hasBounds = !!bounds && [bounds.x, bounds.y, bounds.width, bounds.height].every(isNum);
+  if (!hasBounds || !area) return Infinity;
+  const leftGap = bounds.x - area.x;
+  const rightGap = area.x + area.width - (bounds.x + bounds.width);
+  const topGap = bounds.y - area.y;
+  const bottomGap = area.y + area.height - (bounds.y + bounds.height);
+  let distance = Infinity;
+  if (walk.id === "reachClose") distance = Math.max(topGap, platform === "darwin" ? leftGap : rightGap);
+  else if (walk.id === "wall") distance = walk.side === "left" ? leftGap : rightGap;
+  else if (walk.id === "sitEdge") distance = bottomGap;
+  else if (walk.id === "poke" && goal && isNum(goal.x) && isNum(goal.y)) {
+    distance = Math.hypot(bounds.x - goal.x, bounds.y - goal.y);
+  }
+  return Math.max(0, distance);
+}
+
 function createScenePlayer(deps) {
   const {
     play, // (kind, file, durationMs, scene) -> runtime play protocol
@@ -233,4 +252,5 @@ module.exports = {
   createScenePlayer,
   mischiefAvailable,
   walkTarget,
+  walkEdgeDistance,
 };

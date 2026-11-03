@@ -38,6 +38,7 @@ const {
   partDurationMs,
   mischiefAvailable,
   walkTarget,
+  walkEdgeDistance,
 } = require("./companion-scenes");
 
 const BEAT_DEFAULT_DURATION_MS = 3500;
@@ -117,7 +118,7 @@ function createCompanionRuntime(options = {}) {
   const brain = createMischiefBrain({ now, random, getHour });
   let napping = false; // last value given to brain.setNapping
   let pendingWalk = null; // { id, at, target? } chosen, waiting for the roam to ask
-  let walkingMischief = null; // { id, at, side, petWidth } proposed to the roam, waiting for arrival
+  let walkingMischief = null; // { id, at, side, petWidth, area, bounds, goal } proposed to the roam, waiting for arrival
   let idleQueue = null; // { id, at } welcome / stretchBack waiting for the gate
 
   const memoryOn = () => config.enabled && config.memory;
@@ -298,6 +299,12 @@ function createCompanionRuntime(options = {}) {
     return random() < clamp(reactWeight(id, config.personality), 0, 1);
   }
 
+  // A walking mischief that never reaches its scene still spends its cooldown,
+  // so the pet does not keep picking (and walking toward) the same spot.
+  function spendWalk(walk) {
+    if (walk) brain.markPlayed(walk.id, now(), traits);
+  }
+
   function clearMischiefWork() {
     pendingWalk = null;
     walkingMischief = null;
@@ -331,8 +338,14 @@ function createCompanionRuntime(options = {}) {
       pendingWalk = null;
       walkingMischief = null;
     }
-    if (pendingWalk && t - pendingWalk.at > PENDING_WALK_MAX_MS) pendingWalk = null;
-    if (walkingMischief && t - walkingMischief.at > PENDING_WALK_MAX_MS) walkingMischief = null;
+    if (pendingWalk && t - pendingWalk.at > PENDING_WALK_MAX_MS) {
+      spendWalk(pendingWalk);
+      pendingWalk = null;
+    }
+    if (walkingMischief && t - walkingMischief.at > PENDING_WALK_MAX_MS) {
+      spendWalk(walkingMischief);
+      walkingMischief = null;
+    }
     if (idleQueue && t - idleQueue.at > IDLE_QUEUE_MAX_WAIT_MS) idleQueue = null;
     syncNap();
     const hit = brain.observeCursor(cursor);
@@ -489,16 +502,22 @@ function createCompanionRuntime(options = {}) {
       grid[cellOf(area, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)] += 1;
     }
     pendingWalkCell = null;
-    walkingMischief = null; // a new walk supersedes an older, never-finished one
+    // A new walk supersedes an older one that never reported its arrival.
+    spendWalk(walkingMischief);
+    walkingMischief = null;
 
     if (mischiefOn() && pendingWalk) {
       const walk = pendingWalk;
       pendingWalk = null;
       const spot = walkTarget(walk, { area, bounds, size, platform: getPlatform() });
       if (spot) {
-        walkingMischief = { id: walk.id, at: now(), side: spot.side, petWidth: spot.petWidth };
-        return { ...toTarget(spot.cx, spot.cy, true), mischief: walk.id };
+        const target = { ...toTarget(spot.cx, spot.cy, true), mischief: walk.id };
+        walkingMischief = {
+          id: walk.id, at: now(), side: spot.side, petWidth: spot.petWidth, area, bounds, goal: { x: target.x, y: target.y },
+        };
+        return target;
       }
+      spendWalk(walk);
     }
 
     advanceMood();
@@ -532,12 +551,21 @@ function createCompanionRuntime(options = {}) {
   }
 
   // Roam did not use the proposed target (too close, or holding): the explore
-  // cell must not be credited on the next arrival, and a mischief walk is off.
+  // cell must not be credited on the next arrival. A mischief walk discarded
+  // because the pet is already there plays its scene in place; otherwise it
+  // spends its cooldown.
   function onPreferredTargetDiscarded() {
     if (disposed) return;
     pendingWalkCell = null;
-    pendingWalk = null;
+    const walk = walkingMischief;
     walkingMischief = null;
+    spendWalk(pendingWalk);
+    pendingWalk = null;
+    if (!walk) return;
+    const distance = walkEdgeDistance(walk, { area: walk.area, bounds: walk.bounds, goal: walk.goal, platform: getPlatform() });
+    const played = mischiefOn() && autonomous() && getIdleMode() === "roam" && distance <= walk.petWidth
+      && startScene(walk.id, { side: walk.side });
+    if (!played) spendWalk(walk);
   }
 
   // A real (non-walk) idle entry: the next beat waits a fresh delay. With
@@ -643,6 +671,7 @@ function createCompanionRuntime(options = {}) {
   function tryCatch() {
     if (traits.sociability < 0.3) return false;
     const t = now();
+    // Intentionally ignores hoverReadyAt: catch has its own 90 s cooldown.
     if (!brain.canReact("catch", t) || !startScene("catch")) return false;
     hoverReadyAt = t + HOVER_COOLDOWN_MS; // no greet right after a catch
     setMood(applyEvent(state, { kind: "hoverGreet" }, traits, t));
