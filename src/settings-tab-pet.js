@@ -21,6 +21,7 @@
     "companionPersonality",
     "companionAutonomy",
     "companionInteractions",
+    "companionMischief",
     "companionMemory",
   ]);
 
@@ -32,9 +33,10 @@
     "companionPersonality",
     "companionAutonomy",
     "companionInteractions",
+    "companionMischief",
     "companionMemory",
   ];
-  const COMPANION_CHILD_SWITCH_KEYS = ["companionAutonomy", "companionInteractions", "companionMemory"];
+  const COMPANION_CHILD_SWITCH_KEYS = ["companionAutonomy", "companionInteractions", "companionMischief", "companionMemory"];
 
   let state = null;
   let readers = null;
@@ -573,6 +575,12 @@
         key: "companionInteractions",
         labelKey: "rowCompanionInteractions",
         descKey: "rowCompanionInteractionsDesc",
+        disabled: !enabled,
+      }),
+      helpers.buildSwitchRow({
+        key: "companionMischief",
+        labelKey: "rowCompanionMischief",
+        descKey: "rowCompanionMischiefDesc",
         disabled: !enabled,
       }),
       helpers.buildSwitchRow({

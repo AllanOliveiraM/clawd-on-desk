@@ -175,6 +175,7 @@ describe("i18n locales", () => {
       "companionPersonalityShy", "companionPersonalityShyDesc",
       "rowCompanionAutonomy", "rowCompanionAutonomyDesc", "rowCompanionAutonomyDescStayPut",
       "rowCompanionInteractions", "rowCompanionInteractionsDesc",
+      "rowCompanionMischief", "rowCompanionMischiefDesc",
       "rowCompanionMemory", "rowCompanionMemoryDesc",
       "rowCompanionReset", "rowCompanionResetDesc",
       "companionResetConfirmTitle", "companionResetConfirmDetail",

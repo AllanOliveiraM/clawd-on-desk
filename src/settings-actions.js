@@ -603,6 +603,7 @@ const updateRegistry = {
   companionPersonality: requireEnum("companionPersonality", PERSONALITY_IDS),
   companionAutonomy: requireBoolean("companionAutonomy"),
   companionInteractions: requireBoolean("companionInteractions"),
+  companionMischief: requireBoolean("companionMischief"),
   companionMemory: requireBoolean("companionMemory"),
   keepSizeAcrossDisplays: {
     validate: requireBoolean("keepSizeAcrossDisplays"),

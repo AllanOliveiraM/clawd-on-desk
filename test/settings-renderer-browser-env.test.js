@@ -12807,7 +12807,7 @@ describe("settings renderer browser environment", () => {
 
   describe("Clawd Alive companion section", () => {
     const { PERSONALITY_IDS } = require("../src/companion-model");
-    const CHILD_SWITCHES = ["companionAutonomy", "companionInteractions", "companionMemory"];
+    const CHILD_SWITCHES = ["companionAutonomy", "companionInteractions", "companionMischief", "companionMemory"];
     const en = loadSettingsI18nForTest().en;
 
     function companionSnapshot(overrides = {}) {
@@ -12818,6 +12818,7 @@ describe("settings renderer browser environment", () => {
         companionPersonality: "balanced",
         companionAutonomy: true,
         companionInteractions: true,
+        companionMischief: true,
         companionMemory: true,
         ...overrides,
       });
@@ -12843,6 +12844,29 @@ describe("settings renderer browser environment", () => {
     async function flush() {
       for (let i = 0; i < 3; i++) await new Promise((resolve) => setImmediate(resolve));
     }
+
+    it("mischief row sits after interactions and is disabled while master off", () => {
+      const harness = loadGeneralTabForTest({ tab: "pet", snapshot: companionSnapshot() });
+      harness.renderContent();
+      const rows = harness.content.querySelectorAll(".row");
+      const labels = rows.map((row) => row.querySelector(".row-label")?.textContent);
+      const at = labels.indexOf(en.rowCompanionInteractions);
+      assert.ok(at >= 0);
+      assert.strictEqual(labels[at + 1], en.rowCompanionMischief);
+      assert.strictEqual(harness.getSwitch("companionMischief").getAttribute("aria-disabled"), "true");
+      applyBroadcast(harness, { companionEnabled: true });
+      assert.strictEqual(harness.getSwitch("companionMischief").getAttribute("aria-disabled"), "false");
+    });
+
+    it("patchInPlace re-syncs companionMischief", () => {
+      const harness = loadGeneralTabForTest({ tab: "pet", snapshot: companionSnapshot({ companionEnabled: true }) });
+      harness.renderContent();
+      const before = harness.getContentRenderCount();
+      assert.strictEqual(harness.getSwitch("companionMischief").classList.contains("on"), true);
+      applyBroadcast(harness, { companionMischief: false });
+      assert.strictEqual(harness.getContentRenderCount(), before);
+      assert.strictEqual(harness.getSwitch("companionMischief").classList.contains("on"), false);
+    });
 
     it("companion children disabled while master off", () => {
       const harness = loadGeneralTabForTest({ tab: "pet", snapshot: companionSnapshot() });

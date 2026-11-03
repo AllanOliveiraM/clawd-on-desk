@@ -616,11 +616,20 @@ function derivePowerProfile(cfg, options = {}) {
   return hasScriptedSvgRuntime(cfg, options) ? "scripted" : "standard";
 }
 
+// Clawd Mischief visuals; same optional normalization, none required.
+const MISCHIEF_ANIMATION_KEYS = Object.freeze([
+  "catch", "catchMiss", "pounceLeft", "pounceRight", "fakeNap", "boo",
+  "pokeLeft", "pokeRight", "reachClose", "wallPushLeft", "wallPushRight",
+  "wallPeekLeft", "wallPeekRight", "sitEdge", "morningStretch", "coffee",
+  "nightSleepy", "welcome", "stretchBack", "toyBall", "toyYoyo", "toyPlane",
+]);
+
 // Optional Clawd Alive visuals. Each known key maps to { files, duration };
 // unknown keys and entries without a usable file are dropped. Accepts both the
 // authored shape ({ file } / { files }) and the already-normalized shape.
 const COMPANION_ANIMATION_KEYS = Object.freeze([
   "petting", "content", "tired", "shy", "grumpy", "curious", "greet",
+  ...MISCHIEF_ANIMATION_KEYS,
 ]);
 
 function normalizeCompanionAnimations(value) {
@@ -1864,6 +1873,7 @@ function mergeDefaults(raw, themeId, isBuiltin) {
 
 module.exports = {
   COMPANION_ANIMATION_KEYS,
+  MISCHIEF_ANIMATION_KEYS,
   normalizeCompanionAnimations,
   DEFAULT_SOUNDS,
   DEFAULT_TIMINGS,

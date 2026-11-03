@@ -391,6 +391,7 @@ const SCHEMA = {
   },
   companionAutonomy: { type: "boolean", default: true },
   companionInteractions: { type: "boolean", default: true },
+  companionMischief: { type: "boolean", default: true },
   companionMemory: { type: "boolean", default: true },
   // #562: Windows-only. When ON, the pet floats ON TOP of a foreground
   // fullscreen app (e.g. a borderless game) and stays draggable, instead of

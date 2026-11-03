@@ -38,7 +38,25 @@ describe("theme companionAnimations block", () => {
   it("exports the companion animation keys", () => {
     assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS, [
       "petting", "content", "tired", "shy", "grumpy", "curious", "greet",
+      ...schema.MISCHIEF_ANIMATION_KEYS,
     ]);
+    assert.deepStrictEqual(schema.MISCHIEF_ANIMATION_KEYS, [
+      "catch", "catchMiss", "pounceLeft", "pounceRight", "fakeNap", "boo",
+      "pokeLeft", "pokeRight", "reachClose", "wallPushLeft", "wallPushRight",
+      "wallPeekLeft", "wallPeekRight", "sitEdge", "morningStretch", "coffee",
+      "nightSleepy", "welcome", "stretchBack", "toyBall", "toyYoyo", "toyPlane",
+    ]);
+  });
+
+  it("mischief keys are optional and basenamed", () => {
+    const bare = schema.mergeDefaults(validThemeJson(), "test", false);
+    assert.deepStrictEqual(bare.companionAnimations, {});
+    const block = {};
+    for (const key of schema.MISCHIEF_ANIMATION_KEYS) block[key] = { file: `../x/${key}.svg`, duration: 900 };
+    const theme = schema.mergeDefaults(validThemeJson({ companionAnimations: block }), "test", false);
+    for (const key of schema.MISCHIEF_ANIMATION_KEYS) {
+      assert.deepStrictEqual(theme.companionAnimations[key], { files: [`${key}.svg`], duration: 900 }, key);
+    }
   });
 
   it("companionAnimations is optional", () => {
@@ -134,9 +152,11 @@ describe("theme companionAnimations block", () => {
       curious: { files: ["clawd-alive-curious.svg"], duration: 4000 },
       greet: { files: ["clawd-alive-greet.svg"], duration: 2500 },
     });
-    assert.deepStrictEqual(Object.keys(theme.companionAnimations), [...schema.COMPANION_ANIMATION_KEYS]);
+    // The mischief keys are optional and the built-in theme declares none yet.
+    const ALIVE_KEYS = schema.COMPANION_ANIMATION_KEYS.filter((key) => !schema.MISCHIEF_ANIMATION_KEYS.includes(key));
+    assert.deepStrictEqual(Object.keys(theme.companionAnimations), ALIVE_KEYS);
     const required = schema.collectRequiredAssetFiles(theme);
-    for (const key of schema.COMPANION_ANIMATION_KEYS) {
+    for (const key of ALIVE_KEYS) {
       const file = `clawd-alive-${key}.svg`;
       assert.ok(required.includes(file), `${file} required`);
       assert.ok(theme.rendering.objectChannelFiles.includes(file), `${file} objectChannel`);

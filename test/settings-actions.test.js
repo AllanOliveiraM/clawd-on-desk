@@ -281,7 +281,7 @@ describe("updateRegistry pure-data validators", () => {
   });
 
   it("companion booleans require booleans", () => {
-    for (const key of ["companionEnabled", "companionAutonomy", "companionInteractions", "companionMemory"]) {
+    for (const key of ["companionEnabled", "companionAutonomy", "companionInteractions", "companionMischief", "companionMemory"]) {
       assert.strictEqual(typeof updateRegistry[key], "function", key);
       assert.strictEqual(updateRegistry[key](true).status, "ok", key);
       assert.strictEqual(updateRegistry[key](false).status, "ok", key);

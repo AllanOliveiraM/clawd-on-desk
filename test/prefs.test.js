@@ -2689,6 +2689,15 @@ describe("idle behavior file normalization", () => {
 });
 
 describe("Clawd Alive companion prefs", () => {
+  it("companionMischief defaults true and validates boolean", () => {
+    assert.strictEqual(prefs.getDefaults().companionMischief, true);
+    assert.strictEqual(prefs.validate({ companionMischief: false }).companionMischief, false);
+    for (const bad of ["false", 0, null]) {
+      assert.strictEqual(prefs.validate({ companionMischief: bad }).companionMischief, true);
+    }
+    assert.strictEqual(prefs.CURRENT_VERSION, 21);
+  });
+
   const { PERSONALITY_IDS } = require("../src/companion-model");
 
   it("companion prefs default off and balanced", () => {
