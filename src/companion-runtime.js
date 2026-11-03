@@ -59,12 +59,18 @@ const GESTURES = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell",
 // Mischief tuning.
 const MISCHIEF_LOW_ENERGY = 25; // jumpy/walking reactions stay off below this
 const WALKING_MISCHIEF = new Set(["poke", "reachClose", "wall", "sitEdge"]);
+const EDGE_WALKS = new Set(["reachClose", "wall", "sitEdge"]); // skip roam's margin band
 const IDLE_QUEUE_MAX_WAIT_MS = 60000; // welcome / stretch wait this long for the gate
 const PENDING_WALK_MAX_MS = 120000; // a walk the roam never asked for (or cut) is dropped
 const LONG_WORK_MS = 600000;
 
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function validEdgeBounds(b) {
+  return b && isNum(b.xMin) && isNum(b.xMax) && isNum(b.yMin) && isNum(b.yMax)
+    && b.xMax >= b.xMin && b.yMax >= b.yMin ? b : null;
+}
 
 function pickFrom(list, random) {
   if (!Array.isArray(list) || list.length === 0) return null;
@@ -511,7 +517,17 @@ function createCompanionRuntime(options = {}) {
       pendingWalk = null;
       const spot = walkTarget(walk, { area, bounds, size, platform: getPlatform() });
       if (spot) {
-        const target = { ...toTarget(spot.cx, spot.cy, true), mischief: walk.id };
+        // Edge/corner kinds may leave the margin band: roam's edgeBounds is the
+        // work area (whole window) narrowed by an active fence.
+        const edge = EDGE_WALKS.has(walk.id) ? validEdgeBounds(args.edgeBounds) : null;
+        const target = edge
+          ? {
+            x: clamp(spot.cx - halfW, edge.xMin, edge.xMax),
+            y: clamp(spot.cy - halfH, edge.yMin, edge.yMax),
+            preferred: true,
+            mischief: walk.id,
+          }
+          : { ...toTarget(spot.cx, spot.cy, true), mischief: walk.id };
         walkingMischief = {
           id: walk.id, at: now(), side: spot.side, petWidth: spot.petWidth, area, bounds, goal: { x: target.x, y: target.y },
         };

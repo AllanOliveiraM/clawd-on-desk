@@ -1085,6 +1085,80 @@ test("corner target clamped by fence skips the scene", () => {
   assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "nothing pending afterwards");
 });
 
+// Roam's margin band (15%) as xMin..xMax, plus its edgeBounds (work area,
+// whole window, narrowed by an active fence).
+const BAND_ARGS = {
+  ...ROAM_ARGS,
+  xMin: 300, xMax: 1600, yMin: 150, yMax: 750,
+  bounds: { x: 300, y: 600, width: 100, height: 100 },
+  edgeBounds: { xMin: 0, xMax: 1900, yMin: 0, yMax: 900 },
+};
+
+test("edge mischief targets leave the margin band and play at the real edge", () => {
+  const cases = [
+    [["reachClose"], { x: 1900, y: 0 }, "reachClose.svg"],
+    [["wallPushLeft", "wallPushRight"], { x: 0, y: 600 }, "wallPushLeft.svg"],
+    [["sitEdge"], { x: 300, y: 900 }, "sitEdge.svg"],
+  ];
+  for (const [keys, spot, file] of cases) {
+    const env = setup();
+    env.theme = themeWith(keys);
+    env.runtime.configure(MON);
+    tickUntilBeat(env, 200000);
+    const target = env.runtime.pickRoamTarget(BAND_ARGS);
+    assert.deepEqual({ x: target.x, y: target.y }, spot, keys[0]);
+    // Roam reports the gap of its final bounds: 0 at the real edge.
+    env.runtime.noteWalkFinished({ preferred: true, mischief: target.mischief, reachedEdgeDistancePx: 0 });
+    assert.equal(env.sends.length, 1, keys[0]);
+    assert.equal(env.sends[0].file, file);
+  }
+
+  // Without edgeBounds (older roam) the band still clamps, as before.
+  const old = setup();
+  old.theme = themeWith(["reachClose"]);
+  old.runtime.configure(MON);
+  tickUntilBeat(old, 200000);
+  const { edgeBounds, ...bandOnly } = BAND_ARGS;
+  assert.ok(edgeBounds);
+  assert.deepEqual(old.runtime.pickRoamTarget(bandOnly), { x: 1600, y: 150, preferred: true, mischief: "reachClose" });
+});
+
+test("edge mischief inside a fence stays in the fence and skips the scene", () => {
+  const env = setup();
+  env.theme = themeWith(["reachClose"]);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  const fenced = { ...BAND_ARGS, edgeBounds: { xMin: 500, xMax: 1400, yMin: 250, yMax: 650 } };
+  const target = env.runtime.pickRoamTarget(fenced);
+  assert.deepEqual(target, { x: 1400, y: 250, preferred: true, mischief: "reachClose" });
+  // Final gap: max(top 250, right 2000 - 1500) = 500 > petWidth 100.
+  env.runtime.noteWalkFinished({ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 500 });
+  assert.equal(env.sends.length, 0);
+});
+
+test("poke and normal targets ignore edgeBounds", () => {
+  const poke = setup();
+  poke.theme = themeWith(["pokeLeft", "pokeRight"]);
+  poke.runtime.configure(MON);
+  // Cursor parked at the far top right: the poke goal sits outside the band.
+  const parked = { x: 1990, y: 5, petRect: { x: 300, y: 600, width: 100, height: 100 }, overPet: false };
+  for (let t = 0; t < 21000; t += 250) {
+    poke.clock.advance(250);
+    poke.runtime.tick(parked);
+  }
+  const target = poke.runtime.pickRoamTarget(BAND_ARGS);
+  assert.equal(target.mischief, "poke");
+  assert.deepEqual({ x: target.x, y: target.y }, { x: 1600, y: 150 });
+
+  const plain = setup();
+  plain.runtime.configure(MON);
+  for (let i = 0; i < 20; i++) {
+    const t = plain.runtime.pickRoamTarget(BAND_ARGS);
+    if (!t) continue;
+    assert.ok(t.x >= 300 && t.x <= 1600 && t.y >= 150 && t.y <= 750, JSON.stringify(t));
+  }
+});
+
 test("discarded preferred target clears the pending walk", () => {
   const env = setup();
   env.theme = themeWith(["reachClose"]);

@@ -26,7 +26,8 @@
 //   • Optional Clawd Alive hooks (all absent → today's behavior, untouched):
 //     ctx.getRoamDelayMs(isFirst, baseMs) modulates the pause (clamped to
 //     [0.5×, 3×] base), ctx.pickPreferredTarget(args) proposes a target for
-//     unconstrained walks (clamped into the same band/fence; null → random),
+//     unconstrained walks (clamped into the same band/fence; null → random;
+//     edge mischief kinds use args.edgeBounds = work area ∩ fence instead),
 //     ctx.onWalkFinished({preferred}) reports each natural arrival (plus
 //     {mischief, reachedEdgeDistancePx} when the target carried a mischief
 //     kind: the final bounds' gap to the work-area edge that kind aims at),
@@ -46,6 +47,9 @@ const ROAM_DELAY_MAX_FACTOR = 3; // …or stretch it to 3× the base delay
 
 // Same edge math the companion uses for a walk it proposed (Clawd Mischief).
 const { walkEdgeDistance } = require("./companion-scenes");
+// Edge/corner mischief kinds skip the 15% margin band: they may reach the
+// work-area edge (still whole-window, still inside an active fence).
+const EDGE_MISCHIEF_KINDS = new Set(["reachClose", "wall", "sitEdge"]);
 
 module.exports = function initRoam(ctx) {
   let enabled = false;
@@ -160,7 +164,7 @@ module.exports = function initRoam(ctx) {
   // Clawd Alive: optional preferred target for unconstrained walks. Returns
   // undefined to mean "use the original random picker", null to hold this
   // round, or a target clamped into the already-computed band/fence.
-  function pickHookTarget({ xMin, xMax, yMin, yMax, bounds, size, fenceRect, wa, minDist }) {
+  function pickHookTarget({ xMin, xMax, yMin, yMax, edgeBounds, bounds, size, fenceRect, wa, minDist }) {
     if (typeof ctx.pickPreferredTarget !== "function") return undefined;
     let proposal;
     try {
@@ -176,6 +180,7 @@ module.exports = function initRoam(ctx) {
         fence: fenceRect ? { ...fenceRect } : null,
         displayId: null,
         workArea: { x: wa.x, y: wa.y, width: wa.width, height: wa.height },
+        edgeBounds: edgeBounds ? { ...edgeBounds } : null,
       });
     } catch {
       return undefined;
@@ -189,8 +194,12 @@ module.exports = function initRoam(ctx) {
       !Number.isFinite(proposal.y)
     )
       return undefined;
-    const x = Math.round(Math.min(xMax, Math.max(xMin, proposal.x)));
-    const y = Math.round(Math.min(yMax, Math.max(yMin, proposal.y)));
+    const mischief = typeof proposal.mischief === "string" && proposal.mischief ? proposal.mischief : null;
+    const band = edgeBounds && EDGE_MISCHIEF_KINDS.has(mischief)
+      ? edgeBounds
+      : { xMin, xMax, yMin, yMax };
+    const x = Math.round(Math.min(band.xMax, Math.max(band.xMin, proposal.x)));
+    const y = Math.round(Math.min(band.yMax, Math.max(band.yMin, proposal.y)));
     const preferred = proposal.preferred === true;
     const dx = x - bounds.x;
     const dy = y - bounds.y;
@@ -209,8 +218,8 @@ module.exports = function initRoam(ctx) {
     }
     const target = { x, y, size, fence: fenceRect, preferred };
     // Clawd Mischief: remember the kind and the work area for the arrival report.
-    if (typeof proposal.mischief === "string" && proposal.mischief) {
-      target.mischief = proposal.mischief;
+    if (mischief) {
+      target.mischief = mischief;
       target.workArea = { x: wa.x, y: wa.y, width: wa.width, height: wa.height };
     }
     return target;
@@ -524,8 +533,25 @@ module.exports = function initRoam(ctx) {
       if (xMax < xMin || yMax < yMin) return null;
     } else if (xMax <= xMin || yMax <= yMin) return null;
 
+    // Clawd Mischief: whole-window containment in the work area, narrowed by
+    // an active fence; null (band only) when the pet cannot fit.
+    let edgeBounds = {
+      xMin: wa.x,
+      xMax: wa.x + wa.width - petW,
+      yMin: wa.y,
+      yMax: wa.y + wa.height - petH,
+    };
+    if (fenceRect) {
+      edgeBounds = {
+        xMin: Math.max(edgeBounds.xMin, fenceRect.left),
+        xMax: Math.min(edgeBounds.xMax, fenceRect.right - petW),
+        yMin: Math.max(edgeBounds.yMin, fenceRect.top),
+        yMax: Math.min(edgeBounds.yMax, fenceRect.bottom - petH),
+      };
+    }
+    if (edgeBounds.xMax < edgeBounds.xMin || edgeBounds.yMax < edgeBounds.yMin) edgeBounds = null;
     const hookTarget = pickHookTarget({
-      xMin, xMax, yMin, yMax, bounds, size, fenceRect, wa, minDist,
+      xMin, xMax, yMin, yMax, edgeBounds, bounds, size, fenceRect, wa, minDist,
     });
     if (hookTarget !== undefined) return hookTarget;
 

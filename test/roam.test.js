@@ -3377,9 +3377,9 @@ describe("roam companion hooks", () => {
     assert.deepStrictEqual(reports, [
       // Clamped to x 1450: right gap 1920 - 1570.
       { preferred: true, mischief: "wall", reachedEdgeDistancePx: 350 },
-      // y clamped to 798: bottom gap 1080 - 918.
-      { preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 162 },
-      // Close-button corner on darwin is top left: max(top 162, left 300).
+      // Edge kinds skip the margin band: y 960 touches the bottom.
+      { preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 0 },
+      // Close-button corner on darwin is top left: max(top 0, left 300).
       { preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 300 },
       { preferred: true, mischief: "poke", reachedEdgeDistancePx: 0 },
       // A malformed kind is dropped: today's report shape.
@@ -3387,7 +3387,7 @@ describe("roam companion hooks", () => {
     ]);
     roam.setEnabled(false);
 
-    // Elsewhere the corner is top right: max(top 162, right 1920 - 1450 - 120).
+    // Elsewhere the corner is top right: max(top 0, right 1920 - 1450 - 120).
     platform = "linux";
     reports.length = 0;
     targets.push({ x: 99999, y: -5000, preferred: true, mischief: "reachClose" });
@@ -3398,6 +3398,77 @@ describe("roam companion hooks", () => {
     finishWalk(roam2);
     assert.deepStrictEqual(reports, [{ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 350 }]);
     roam2.setEnabled(false);
+  });
+
+  // One walk per target, from the default start (400, 300); returns the
+  // arrival reports, the final top-left corners and the hook args.
+  function edgeRun(targets, overrides = {}) {
+    const reports = [];
+    const ends = [];
+    const seen = [];
+    const queue = [...targets];
+    const ctx = makeCtx({
+      pickPreferredTarget: (args) => { seen.push(args); return queue.shift() || null; },
+      onWalkFinished: (info) => reports.push(info),
+      getPlatform: () => "linux",
+      ...overrides,
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam);
+    ends.push(lastApplied(ctx));
+    for (let i = 1; i < targets.length; i += 1) {
+      mock.timers.tick(4000);
+      finishWalk(roam);
+      ends.push(lastApplied(ctx));
+    }
+    roam.setEnabled(false);
+    return { reports, ends, seen };
+  }
+
+  it("edge mischief reaches the real work-area edge without a fence", () => {
+    const run = edgeRun([
+      { x: 99999, y: 700, preferred: true, mischief: "wall" },
+      { x: 400, y: 99999, preferred: true, mischief: "sitEdge" },
+      { x: 99999, y: -5000, preferred: true, mischief: "reachClose" },
+      { x: -5000, y: -5000, preferred: true, mischief: "wall" },
+    ]);
+    assert.deepStrictEqual(run.ends, [
+      { x: 1800, y: 700 }, { x: 400, y: 960 }, { x: 1800, y: 0 }, { x: 0, y: 0 },
+    ]);
+    assert.deepStrictEqual(run.reports.map((r) => r.reachedEdgeDistancePx), [0, 0, 0, 0]);
+    assert.deepStrictEqual(run.seen[0].edgeBounds, { xMin: 0, xMax: 1800, yMin: 0, yMax: 960 });
+  });
+
+  it("normal walks and poke keep the margin band", () => {
+    const run = edgeRun([
+      { x: 99999, y: 99999, preferred: true },
+      { x: -5000, y: -5000, preferred: false },
+      { x: 99999, y: -5000, preferred: true, mischief: "poke" },
+      { x: -5000, y: 99999, preferred: true, mischief: "surprise" },
+    ]);
+    assert.deepStrictEqual(run.ends, [
+      { x: 1512, y: 798 }, { x: 288, y: 162 }, { x: 1512, y: 162 }, { x: 288, y: 798 },
+    ]);
+  });
+
+  it("edge mischief stays inside an active fence", () => {
+    // Fence 480..1440 x 270..810: whole-window x 480..1320, y 270..690.
+    const fence = { active: true, left: 0.25, top: 0.25, right: 0.75, bottom: 0.75 };
+    const run = edgeRun([
+      { x: 99999, y: 500, preferred: true, mischief: "wall" },
+      { x: 600, y: 99999, preferred: true, mischief: "sitEdge" },
+      { x: 99999, y: -5000, preferred: true, mischief: "reachClose" },
+    ], {
+      roamFence: { get: () => fence, refresh: () => {} },
+      getEffectiveCurrentPixelSize: () => ({ width: 120, height: 120 }),
+    });
+    assert.deepStrictEqual(run.ends, [{ x: 1320, y: 500 }, { x: 600, y: 690 }, { x: 1320, y: 270 }]);
+    // Far from the real edge: the companion skips these scenes (> petWidth).
+    assert.deepStrictEqual(run.reports.map((r) => r.reachedEdgeDistancePx), [480, 270, 480]);
+    assert.ok(run.reports.every((r) => r.reachedEdgeDistancePx > 120));
   });
 
   it("onWalkFinished is not reported for a cancelled walk and a throwing hook keeps the chain", () => {
