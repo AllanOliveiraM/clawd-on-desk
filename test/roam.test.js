@@ -3471,6 +3471,22 @@ describe("roam companion hooks", () => {
     assert.ok(run.reports.every((r) => r.reachedEdgeDistancePx > 120));
   });
 
+  it("a wall walk is measured on the side the companion proposed", () => {
+    // Fence 1152..1728 (x): the pet ends nearer the right wall, but the
+    // companion asked for the left one, so the gap is the left gap.
+    const fence = { active: true, left: 0.6, top: 0, right: 0.9, bottom: 1 };
+    const opts = {
+      roamFence: { get: () => fence, refresh: () => {} },
+      getEffectiveCurrentPixelSize: () => ({ width: 120, height: 120 }),
+    };
+    const proposed = edgeRun([{ x: 1152, y: 300, preferred: true, mischief: "wall", side: "left" }], opts);
+    assert.deepStrictEqual(proposed.ends, [{ x: 1152, y: 300 }]);
+    assert.deepStrictEqual(proposed.reports, [{ preferred: true, mischief: "wall", reachedEdgeDistancePx: 1152 }]);
+    // Without a proposed side roam falls back to the nearer wall (right).
+    const bare = edgeRun([{ x: 1152, y: 300, preferred: true, mischief: "wall", side: "up" }], opts);
+    assert.deepStrictEqual(bare.reports, [{ preferred: true, mischief: "wall", reachedEdgeDistancePx: 648 }]);
+  });
+
   it("onWalkFinished is not reported for a cancelled walk and a throwing hook keeps the chain", () => {
     let reports = 0;
     const ctx = makeCtx({ onWalkFinished: () => { reports += 1; throw new Error("boom"); } });

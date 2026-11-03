@@ -63,6 +63,7 @@ const EDGE_WALKS = new Set(["reachClose", "wall", "sitEdge"]); // skip roam's ma
 const IDLE_QUEUE_MAX_WAIT_MS = 60000; // welcome / stretch wait this long for the gate
 const PENDING_WALK_MAX_MS = 120000; // a walk the roam never asked for (or cut) is dropped
 const LONG_WORK_MS = 600000;
+const LONG_SLEEP_MS = 600000;
 
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -528,6 +529,8 @@ function createCompanionRuntime(options = {}) {
             mischief: walk.id,
           }
           : { ...toTarget(spot.cx, spot.cy, true), mischief: walk.id };
+        // The wall scene animates this side; roam measures the gap on it too.
+        if (spot.side && walk.id === "wall") target.side = spot.side;
         walkingMischief = {
           id: walk.id, at: now(), side: spot.side, petWidth: spot.petWidth, area, bounds, goal: { x: target.x, y: target.y },
         };
@@ -585,13 +588,16 @@ function createCompanionRuntime(options = {}) {
   }
 
   // A real (non-walk) idle entry: the next beat waits a fresh delay. With
-  // mischief, a return from sleep or from a long work stretch queues a short
+  // mischief, a return from a long sleep or a long work stretch queues a short
   // welcome / stretch that waits (on tick) for the gate to open.
   function noteIdleEntered(info) {
     if (disposed || !autonomous()) return;
     scheduleBeat();
     if (!mischiefOn() || !info) return;
-    if (info.from === "sleep") idleQueue = { id: "welcome", at: now() };
+    // Only a long sleep celebrates: DND and short dozes also pass the sleep flow.
+    if (info.from === "sleep") {
+      if (isNum(info.awayMs) && info.awayMs >= LONG_SLEEP_MS) idleQueue = { id: "welcome", at: now() };
+    }
     else if (info.from === "work" && isNum(info.awayMs) && info.awayMs >= LONG_WORK_MS) {
       idleQueue = { id: "stretchBack", at: now() };
     }

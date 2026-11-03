@@ -220,6 +220,8 @@ module.exports = function initRoam(ctx) {
     // Clawd Mischief: remember the kind and the work area for the arrival report.
     if (mischief) {
       target.mischief = mischief;
+      // The side the companion will animate (wall); arrival is measured there.
+      if (proposal.side === "left" || proposal.side === "right") target.side = proposal.side;
       target.workArea = { x: wa.x, y: wa.y, width: wa.width, height: wa.height };
     }
     return target;
@@ -234,7 +236,7 @@ module.exports = function initRoam(ctx) {
     const rightGap = area.x + area.width - (finalBounds.x + finalBounds.width);
     const platform = typeof ctx.getPlatform === "function" ? ctx.getPlatform() : process.platform;
     const reachedEdgeDistancePx = walkEdgeDistance(
-      { id: target.mischief, side: leftGap <= rightGap ? "left" : "right" },
+      { id: target.mischief, side: target.side || (leftGap <= rightGap ? "left" : "right") },
       { area, bounds: finalBounds, goal: { x: target.x, y: target.y }, platform },
     );
     return { mischief: target.mischief, reachedEdgeDistancePx };

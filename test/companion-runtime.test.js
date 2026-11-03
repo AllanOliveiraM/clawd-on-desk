@@ -1043,7 +1043,7 @@ test("walking mischief targets the nearest wall, the bottom edge and the cursor"
   wall.runtime.configure(MON);
   tickUntilBeat(wall, 200000);
   const nearLeft = { ...ROAM_ARGS, bounds: { x: 300, y: 600, width: 100, height: 100 } };
-  assert.deepEqual(wall.runtime.pickRoamTarget(nearLeft), { x: 0, y: 600, preferred: true, mischief: "wall" });
+  assert.deepEqual(wall.runtime.pickRoamTarget(nearLeft), { x: 0, y: 600, preferred: true, mischief: "wall", side: "left" });
   wall.runtime.noteWalkFinished({ preferred: true, mischief: "wall", reachedEdgeDistancePx: 0 });
   assert.equal(wall.sends[0].file, "wallPushLeft.svg");
 
@@ -1152,11 +1152,44 @@ test("poke and normal targets ignore edgeBounds", () => {
 
   const plain = setup();
   plain.runtime.configure(MON);
+  plain.randomValue = 0.1; // explore: a normal (non-preferred) target
+  let checked = 0;
   for (let i = 0; i < 20; i++) {
     const t = plain.runtime.pickRoamTarget(BAND_ARGS);
     if (!t) continue;
+    checked += 1;
     assert.ok(t.x >= 300 && t.x <= 1600 && t.y >= 150 && t.y <= 750, JSON.stringify(t));
   }
+  assert.ok(checked > 0, "at least one normal target was checked");
+});
+
+test("welcome needs a long sleep", () => {
+  for (const [awayMs, queued] of [[599999, false], [600000, true], [undefined, false]]) {
+    const env = setup();
+    env.theme = themeWith(["welcome"]);
+    env.runtime.configure(MON);
+    env.runtime.noteIdleEntered({ from: "sleep", awayMs });
+    for (let t = 0; t < 2000; t += 250) {
+      env.clock.advance(250);
+      env.runtime.tick(null);
+    }
+    const welcomed = env.sends.some((s) => s.file === "welcome.svg");
+    assert.equal(welcomed, queued, String(awayMs));
+  }
+});
+
+test("a fenced wall walk is judged on the side it proposed", () => {
+  const env = setup();
+  env.theme = themeWith(["wallPushLeft", "wallPushRight"]);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  // Pet near the left wall, fence on the right half of the work area.
+  const fenced = { ...BAND_ARGS, edgeBounds: { xMin: 1200, xMax: 1800, yMin: 0, yMax: 900 } };
+  const target = env.runtime.pickRoamTarget(fenced);
+  assert.deepEqual(target, { x: 1200, y: 600, preferred: true, mischief: "wall", side: "left" });
+  // Roam measures the left gap (1200), not the nearer right one: no push.
+  env.runtime.noteWalkFinished({ preferred: true, mischief: "wall", reachedEdgeDistancePx: 1200 });
+  assert.equal(env.sends.length, 0);
 });
 
 test("discarded preferred target clears the pending walk", () => {
