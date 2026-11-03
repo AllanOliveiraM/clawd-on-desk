@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 3-Second Loop — Shy: shrinks a little, looks away and down, hands
+         fidget in front of the belly, one quick peek back, then looks away
+         again. No hearts or blush (that is clawd-aegyo-shy). */
+      .action-body {
+        transform-origin: 7.5px 13px;
+        animation: shy-shrink 3s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: shy-shadow 3s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 10px;
+        animation: shy-arm-l 3s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: shy-arm-r 3s infinite ease-in-out;
+      }
+
+      .hands-front {
+        opacity: 0;
+        animation: shy-hands 3s infinite ease-in-out;
+      }
+
+      .hand-l {
+        animation: shy-fidget-l 3s infinite linear;
+      }
+
+      .hand-r {
+        animation: shy-fidget-r 3s infinite linear;
+      }
+
+      .eyes-look {
+        animation: shy-look 3s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 10px;
+        animation: shy-blink 3s infinite linear;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Shrink and lean away; straighten a touch for the peek */
+      @keyframes shy-shrink {
+        0%, 100% { transform: translate(0, 0) scale(1, 1) rotate(0deg); }
+        14%, 44% { transform: translate(-0.5px, 0) scale(0.94, 0.9) rotate(-2deg); }
+        52%, 58% { transform: translate(0, 0) scale(0.96, 0.92) rotate(0deg); }
+        66%, 86% { transform: translate(-0.5px, 0) scale(0.94, 0.9) rotate(-2deg); }
+      }
+
+      @keyframes shy-shadow {
+        0%, 100% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+        14%, 44%, 66%, 86% { transform: scaleX(0.92) translate(-0.5px, 0); opacity: 0.5; }
+        52%, 58% { transform: scaleX(0.95) translate(0, 0); opacity: 0.5; }
+      }
+
+      /* Side arms tuck in (they go "in front", drawn as darker hands) */
+      @keyframes shy-arm-l {
+        0%, 100% { transform: translate(0, 0); }
+        12%, 88% { transform: translate(2px, 0); }
+      }
+
+      @keyframes shy-arm-r {
+        0%, 100% { transform: translate(0, 0); }
+        12%, 88% { transform: translate(-2px, 0); }
+      }
+
+      @keyframes shy-hands {
+        0%, 6%, 94%, 100% { opacity: 0; }
+        14%, 86% { opacity: 1; }
+      }
+
+      /* Little fingers fidgeting against each other */
+      @keyframes shy-fidget-l {
+        0%, 20%, 30%, 40%, 70%, 80%, 100% { transform: translate(0, 0); }
+        25%, 35%, 75% { transform: translate(0.5px, -0.5px); }
+      }
+
+      @keyframes shy-fidget-r {
+        0%, 25%, 35%, 45%, 75%, 85%, 100% { transform: translate(0, 0); }
+        30%, 40%, 80% { transform: translate(-0.5px, -0.5px); }
+      }
+
+      /* Look away and down, peek back at you, look away again */
+      @keyframes shy-look {
+        0%, 100% { transform: translate(0, 0); }
+        14%, 44% { transform: translate(-2px, 0.5px); }
+        50%, 58% { transform: translate(0, 0); }
+        64%, 88% { transform: translate(-2px, 0.5px); }
+      }
+
+      @keyframes shy-blink {
+        0%, 58%, 63%, 100% { transform: scaleY(1); }
+        60.5% { transform: scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Legs -->
+  <g id="legs" fill="#DE886D">
+    <rect x="3" y="12" width="1" height="3"/>
+    <rect x="5" y="12" width="1" height="3"/>
+    <rect x="9" y="12" width="1" height="3"/>
+    <rect x="11" y="12" width="1" height="3"/>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="action-body">
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <!-- Left Arm -->
+    <g class="arm-l">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Right Arm -->
+    <g class="arm-r">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Hands held together in front of the belly -->
+    <g class="hands-front" fill="#A85A3A">
+      <g class="hand-l"><rect x="5" y="11" width="2" height="1"/></g>
+      <g class="hand-r"><rect x="8" y="11" width="2" height="1"/></g>
+    </g>
+    <!-- Eyes -->
+    <g class="eyes-look">
+      <g class="eyes-blink" fill="#000000">
+        <rect x="4" y="8" width="1" height="2"/>
+        <rect x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -31,7 +31,12 @@
       "clawd-mini-typing.svg",
       "clawd-working-building.svg",
       "clawd-alive-petting.svg",
-      "clawd-alive-content.svg"
+      "clawd-alive-content.svg",
+      "clawd-alive-tired.svg",
+      "clawd-alive-shy.svg",
+      "clawd-alive-grumpy.svg",
+      "clawd-alive-curious.svg",
+      "clawd-alive-greet.svg"
     ],
     "discreteSampling": {
       "clawd-working-thinking.svg": 24,
@@ -58,7 +63,12 @@
       "clawd-mini-typing.svg": 24,
       "clawd-working-building.svg": 24,
       "clawd-alive-petting.svg": 24,
-      "clawd-alive-content.svg": 24
+      "clawd-alive-content.svg": 24,
+      "clawd-alive-tired.svg": 24,
+      "clawd-alive-shy.svg": 24,
+      "clawd-alive-grumpy.svg": 24,
+      "clawd-alive-curious.svg": 24,
+      "clawd-alive-greet.svg": 24
     }
   },
   "customization": {
@@ -88,6 +98,81 @@
           }
         },
         "clawd-alive-content.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-tired.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-shy.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-grumpy.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-curious.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-greet.svg": {
           "staticFrame": {
             "cx": 7.5,
             "baseY": 6.5,
@@ -744,6 +829,81 @@
           }
         },
         "clawd-alive-content.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-tired.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-shy.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-grumpy.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-curious.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-greet.svg": {
           "staticFrame": {
             "cx": 14,
             "baseY": 13,
@@ -1430,6 +1590,26 @@
     "content": {
       "file": "clawd-alive-content.svg",
       "duration": 3500
+    },
+    "tired": {
+      "file": "clawd-alive-tired.svg",
+      "duration": 4000
+    },
+    "shy": {
+      "file": "clawd-alive-shy.svg",
+      "duration": 3000
+    },
+    "grumpy": {
+      "file": "clawd-alive-grumpy.svg",
+      "duration": 3500
+    },
+    "curious": {
+      "file": "clawd-alive-curious.svg",
+      "duration": 4000
+    },
+    "greet": {
+      "file": "clawd-alive-greet.svg",
+      "duration": 2500
     }
   },
   "reactions": {

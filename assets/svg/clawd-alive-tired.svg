@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 4-Second Loop — Tired: shoulders sag, heavy half-lidded eyes, one slow
+         blink and a small sigh. Eyes stay (half) open and Clawd stays standing,
+         so it never reads as the doze/sleep sequence (no "z", no lying down). */
+      .action-body {
+        transform-origin: 7.5px 13px;
+        animation: tired-sag 4s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: tired-shadow 4s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 10px;
+        animation: tired-arm-l 4s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: tired-arm-r 4s infinite ease-in-out;
+      }
+
+      .eyes-lid {
+        transform-origin: 7.5px 10px;
+        animation: tired-eyes 4s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Sag down and widen a little, a small sigh (lift + drop), then recover */
+      @keyframes tired-sag {
+        0%, 100% { transform: translate(0, 0) scale(1, 1); }
+        16%, 60% { transform: translate(0, 0.5px) scale(1.03, 0.94); }
+        68% { transform: translate(0, 0) scale(1.01, 0.99); }
+        76%, 84% { transform: translate(0, 0.5px) scale(1.04, 0.93); }
+        94% { transform: translate(0, 0) scale(1, 1); }
+      }
+
+      @keyframes tired-shadow {
+        0%, 94%, 100% { transform: scaleX(1); opacity: 0.5; }
+        16%, 60%, 76%, 84% { transform: scaleX(1.06); opacity: 0.55; }
+        68% { transform: scaleX(1.02); opacity: 0.5; }
+      }
+
+      /* Arms hang lower while slumped (stay attached to the torso) */
+      @keyframes tired-arm-l {
+        0%, 94%, 100% { transform: translate(0, 0) rotate(0deg); }
+        16%, 60%, 76%, 84% { transform: translate(0.5px, 1.5px) rotate(-10deg); }
+        68% { transform: translate(0.3px, 0.8px) rotate(-4deg); }
+      }
+
+      @keyframes tired-arm-r {
+        0%, 94%, 100% { transform: translate(0, 0) rotate(0deg); }
+        16%, 60%, 76%, 84% { transform: translate(-0.5px, 1.5px) rotate(10deg); }
+        68% { transform: translate(-0.3px, 0.8px) rotate(4deg); }
+      }
+
+      /* Heavy lids: half-closed most of the loop, one slow heavy blink */
+      @keyframes tired-eyes {
+        0%, 100% { transform: scaleY(1); }
+        16%, 36% { transform: scaleY(0.5); }
+        46%, 56% { transform: scaleY(0.1); }
+        66%, 86% { transform: scaleY(0.5); }
+        95% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Legs -->
+  <g id="legs" fill="#DE886D">
+    <rect x="3" y="12" width="1" height="3"/>
+    <rect x="5" y="12" width="1" height="3"/>
+    <rect x="9" y="12" width="1" height="3"/>
+    <rect x="11" y="12" width="1" height="3"/>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="action-body">
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <!-- Left Arm -->
+    <g class="arm-l">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Right Arm -->
+    <g class="arm-r">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Eyes (lids close from the top) -->
+    <g class="eyes-lid" fill="#000000">
+      <rect x="4" y="8" width="1" height="2"/>
+      <rect x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg>

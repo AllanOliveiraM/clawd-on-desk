@@ -123,18 +123,26 @@ describe("theme companionAnimations block", () => {
     assert.ok(warn.mock.calls.length >= 1);
   });
 
-  it("built-in clawd declares petting and content", () => {
+  it("built-in clawd declares all seven", () => {
     const theme = themeLoader.loadTheme("clawd", { strict: true });
     assert.deepStrictEqual(theme.companionAnimations, {
       petting: { files: ["clawd-alive-petting.svg"], duration: null },
       content: { files: ["clawd-alive-content.svg"], duration: 3500 },
+      tired: { files: ["clawd-alive-tired.svg"], duration: 4000 },
+      shy: { files: ["clawd-alive-shy.svg"], duration: 3000 },
+      grumpy: { files: ["clawd-alive-grumpy.svg"], duration: 3500 },
+      curious: { files: ["clawd-alive-curious.svg"], duration: 4000 },
+      greet: { files: ["clawd-alive-greet.svg"], duration: 2500 },
     });
+    assert.deepStrictEqual(Object.keys(theme.companionAnimations), [...schema.COMPANION_ANIMATION_KEYS]);
     const required = schema.collectRequiredAssetFiles(theme);
-    assert.ok(required.includes("clawd-alive-petting.svg"));
-    assert.ok(required.includes("clawd-alive-content.svg"));
-    for (const file of ["clawd-alive-petting.svg", "clawd-alive-content.svg"]) {
+    for (const key of schema.COMPANION_ANIMATION_KEYS) {
+      const file = `clawd-alive-${key}.svg`;
+      assert.ok(required.includes(file), `${file} required`);
       assert.ok(theme.rendering.objectChannelFiles.includes(file), `${file} objectChannel`);
       assert.strictEqual(theme.rendering.discreteSampling[file], 24, `${file} discreteSampling`);
+      assert.ok(theme.customization.accessories.files[file], `${file} accessories`);
+      assert.ok(theme.customization.mouthAccessories.files[file], `${file} mouthAccessories`);
     }
   });
 

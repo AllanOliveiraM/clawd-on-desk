@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 4-Second Loop — Curious: leans in to the right and looks down, three
+         little "sniff" bobs, straightens, leans the other way with a head tilt
+         and looks around, then settles. */
+      .action-body {
+        transform-origin: 7.5px 15px;
+        animation: curious-lean 4s infinite ease-in-out;
+      }
+
+      .sniff-anim {
+        transform-origin: 7.5px 13px;
+        animation: curious-sniff 4s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: curious-shadow 4s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: curious-arm-r 4s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: curious-look 4s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: curious-blink 4s infinite linear;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Lean right (towards something), back, lean left with a tilt, back */
+      @keyframes curious-lean {
+        0%, 6%, 46%, 52%, 90%, 100% { transform: translate(0, 0) rotate(0deg); }
+        14%, 38% { transform: translate(1.5px, 0) rotate(3deg); }
+        60%, 82% { transform: translate(-1px, 0) rotate(-3deg); }
+      }
+
+      /* Three quick sniff bobs while leaned in */
+      @keyframes curious-sniff {
+        0%, 16%, 21%, 26%, 31%, 36%, 100% { transform: translate(0, 0) scale(1, 1); }
+        18.5%, 23.5%, 28.5% { transform: translate(0, 0.5px) scale(1.02, 0.97); }
+      }
+
+      @keyframes curious-shadow {
+        0%, 6%, 46%, 52%, 90%, 100% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+        14%, 38% { transform: scaleX(1.05) translate(1px, 0); opacity: 0.5; }
+        60%, 82% { transform: scaleX(1.05) translate(-0.5px, 0); opacity: 0.5; }
+      }
+
+      /* Front arm lifts a bit while investigating */
+      @keyframes curious-arm-r {
+        0%, 8%, 42%, 100% { transform: translate(0, 0) rotate(0deg); }
+        14%, 36% { transform: translate(0, -1px) rotate(-15deg); }
+      }
+
+      /* Look down-right, then up-left, then a quick look right, then home */
+      @keyframes curious-look {
+        0%, 6%, 46%, 100% { transform: translate(0, 0); }
+        14%, 38% { transform: translate(2px, 1px); }
+        58%, 70% { transform: translate(-2px, -1px); }
+        74%, 82% { transform: translate(1px, -1px); }
+        90% { transform: translate(0, 0); }
+      }
+
+      @keyframes curious-blink {
+        0%, 47%, 51%, 93%, 97%, 100% { transform: scaleY(1); }
+        49%, 95% { transform: scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Legs -->
+  <g id="legs" fill="#DE886D">
+    <rect x="3" y="12" width="1" height="3"/>
+    <rect x="5" y="12" width="1" height="3"/>
+    <rect x="9" y="12" width="1" height="3"/>
+    <rect x="11" y="12" width="1" height="3"/>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="action-body">
+    <g class="sniff-anim">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm -->
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      <!-- Right Arm -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Eyes -->
+      <g class="eyes-look">
+        <g class="eyes-blink" fill="#000000">
+          <rect x="4" y="8" width="1" height="2"/>
+          <rect x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

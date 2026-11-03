@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 3.5-Second Loop — Grumpy: arms crossed, narrowed eyes with low brows,
+         turns away with a huff (small grey puff), impatient foot tap, a side
+         glance back. Deliberately no red tint, no "!" or alert icons, nothing
+         like clawd-error / notification. */
+      .action-body {
+        transform-origin: 7.5px 13px;
+        animation: grumpy-body 3.5s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: grumpy-shadow 3.5s infinite ease-in-out;
+      }
+
+      .arm-l {
+        animation: grumpy-arm-l 3.5s infinite ease-in-out;
+      }
+
+      .arm-r {
+        animation: grumpy-arm-r 3.5s infinite ease-in-out;
+      }
+
+      .arms-crossed,
+      .brows {
+        opacity: 0;
+        animation: grumpy-pose 3.5s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: grumpy-look 3.5s infinite ease-in-out;
+      }
+
+      .eyes-narrow {
+        transform-origin: 7.5px 10px;
+        animation: grumpy-narrow 3.5s infinite ease-in-out;
+      }
+
+      .huff {
+        transform-origin: 15px 7px;
+        opacity: 0;
+        animation: grumpy-huff 3.5s infinite ease-out;
+      }
+
+      .leg-tap {
+        animation: grumpy-tap 3.5s infinite linear;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Turn away a little; inhale (puff up) and huff out */
+      @keyframes grumpy-body {
+        0%, 100% { transform: translate(0, 0) scale(1, 1); }
+        12%, 22% { transform: translate(0.5px, 0) scale(1, 1); }
+        30% { transform: translate(0.5px, -0.3px) scale(1.04, 1.04); }
+        36%, 84% { transform: translate(0.5px, 0) scale(1.01, 0.97); }
+        92% { transform: translate(0, 0) scale(1, 1); }
+      }
+
+      @keyframes grumpy-shadow {
+        0%, 92%, 100% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+        12%, 84% { transform: scaleX(1) translate(0.5px, 0); opacity: 0.5; }
+        30% { transform: scaleX(1.04) translate(0.5px, 0); opacity: 0.5; }
+      }
+
+      /* Side arms fold in; the crossed arms are drawn in front of the torso */
+      @keyframes grumpy-arm-l {
+        0%, 100% { transform: translate(0, 0); }
+        10%, 90% { transform: translate(2px, 0); }
+      }
+
+      @keyframes grumpy-arm-r {
+        0%, 100% { transform: translate(0, 0); }
+        10%, 90% { transform: translate(-2px, 0); }
+      }
+
+      @keyframes grumpy-pose {
+        0%, 4%, 96%, 100% { opacity: 0; }
+        12%, 88% { opacity: 1; }
+      }
+
+      /* Look away (towards the huff side), glance back, look away again */
+      @keyframes grumpy-look {
+        0%, 100% { transform: translate(0, 0); }
+        12%, 60% { transform: translate(1px, 0); }
+        66%, 74% { transform: translate(-1px, 0); }
+        80%, 88% { transform: translate(1px, 0); }
+      }
+
+      /* Narrowed, unimpressed eyes (lids come down from the top) */
+      @keyframes grumpy-narrow {
+        0%, 100% { transform: scaleY(1); }
+        12%, 88% { transform: scaleY(0.5); }
+      }
+
+      /* One small grey puff drifting out to the side and fading */
+      @keyframes grumpy-huff {
+        0%, 34% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+        36%, 42% { opacity: 1; transform: translate(0, 0) scale(1); }
+        48% { opacity: 0.8; transform: translate(1px, -0.5px) scale(1.1); }
+        58% { opacity: 0; transform: translate(2.5px, -1.5px) scale(1.2); }
+        100% { opacity: 0; transform: translate(2.5px, -1.5px) scale(1.2); }
+      }
+
+      /* Impatient foot tap, three times */
+      @keyframes grumpy-tap {
+        0%, 48%, 52%, 56%, 60%, 64%, 68%, 100% { transform: translate(0, 0); }
+        50%, 58%, 66% { transform: translate(0, -1px); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (front-right foot taps) -->
+  <g id="legs" fill="#DE886D">
+    <rect x="3" y="12" width="1" height="3"/>
+    <rect x="5" y="12" width="1" height="3"/>
+    <rect x="9" y="12" width="1" height="3"/>
+    <g class="leg-tap"><rect x="11" y="12" width="1" height="3"/></g>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="action-body">
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <!-- Left Arm -->
+    <g class="arm-l">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Right Arm -->
+    <g class="arm-r">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Crossed arms in front of the torso -->
+    <g class="arms-crossed" fill="#A85A3A">
+      <rect x="3" y="10" width="9" height="1"/>
+      <rect x="3" y="11" width="2" height="1"/>
+      <rect x="10" y="11" width="2" height="1"/>
+    </g>
+    <!-- Low, inward brows -->
+    <g class="eyes-look">
+      <g class="brows" fill="#000000">
+        <rect x="3" y="6.5" width="1" height="1"/>
+        <rect x="4" y="7" width="1" height="1"/>
+        <rect x="11" y="6.5" width="1" height="1"/>
+        <rect x="10" y="7" width="1" height="1"/>
+      </g>
+      <!-- Eyes -->
+      <g class="eyes-narrow" fill="#000000">
+        <rect x="4" y="8" width="1" height="2"/>
+        <rect x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+    <!-- Huff puff (to the side the face turns to) -->
+    <g class="huff" fill="#D7D7DC">
+      <rect x="14" y="8" width="2" height="1"/>
+      <rect x="15" y="7" width="2" height="1"/>
+      <rect x="16" y="6" width="1" height="1"/>
+    </g>
+  </g>
+</svg>
