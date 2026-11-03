@@ -331,7 +331,7 @@ Mini 状态映射：
 ### Clawd Alive（陪伴系统，默认关闭）
 
 - 主进程里的 `companion-runtime`（arbiter）是唯一决定「陪伴意图」的地方：由现有 tick 在 idle 块里调用，没有新的 timer / 轮询；`companionEnabled=false` 时所有钩子直接回到原路径，不计算、不读写文件
-- 它复用 idle-activity / roam 的同一个 gate，只选择 `observe` / `rest` / `content` / `curious` / `shy` / `grumpy` / `greet` / `explore` / `returnToRest` 等意图；逻辑状态始终保持 `idle`，从不调用 `setState` / `applyState` 播放操作类状态，agent 状态、权限、DND、mini、拖拽都优先
+- 它复用 idle-activity / roam 的同一个 gate，意图集合与 `src/companion-intent.js` 的 `INTENTS` 一致：`observe` / `content` / `tired` / `grumpy` / `curious` / `shy` / `greet` / `themeActivity`（`observe` 只是等待下一拍，`themeActivity` 把选择交还给主题自己的 idle activity）。`explore`（走向访问最少的格子）和 `returnToRest`（精力低时回到拖放留下的休息点，连续三次后让出一次普通行走）不是意图，而是 Free Roam 选择行走目标时的两种方式；逻辑状态始终保持 `idle`，从不调用 `setState` / `applyState` 播放操作类状态，agent 状态、权限、DND、mini、拖拽都优先
 - 主题可选 `companionAnimations` 块（`petting`、`content`、`tired`、`shy`、`grumpy`、`curious`、`greet`）；缺失的键直接跳过，无该块的主题行为不变。`clawd-happy.svg`（attention）永远不会被心情选中
 - 状态存放在 userData 的 `companion-state.json`（tmp + rename 原子写入，30 s debounce，`before-quit` 时 flush）；只保存心情、熟悉度和休息点，不保存鼠标历史、代码、提示词、窗口标题或项目名
 

@@ -443,9 +443,9 @@ Visuals for the opt-in "Clawd Alive" companion (petting, moods). The whole block
 }
 ```
 
-- Known keys, and when they play: `petting` (loops while the user strokes the pet, no duration), `content` (calm happy moment after petting or on its own), `tired`, `shy`, `grumpy`, `curious` (short mood beats while idle) and `greet` (a light hello to a social personality). The built-in Clawd theme uses 3500 / 4000 / 3000 / 3500 / 4000 / 2500 ms for `content` / `tired` / `shy` / `grumpy` / `curious` / `greet`. Unknown keys and entries without a file are ignored.
+- Known keys, and when they play: `petting` (loops while the user strokes the pet; each loop lasts the entry's `duration`, or 2000 ms when none is given, and the petting session ends 3 s after the last stroke), `content` (calm happy moment after petting or on its own), `tired`, `shy`, `grumpy`, `curious` (short mood beats while idle) and `greet` (a light hello to a social personality). The built-in Clawd theme uses 3500 / 4000 / 3000 / 3500 / 4000 / 2500 ms for `content` / `tired` / `shy` / `grumpy` / `curious` / `greet`. Unknown keys and entries without a file are ignored.
 - Each entry takes `file` or `files` (a pool) and an optional `duration` in ms.
-- Every listed file is a required asset, like reaction files.
+- Every listed file is a required asset, like reaction files: a misspelled or missing file fails theme validation with a `missing asset` error.
 - A key you leave out has no visual, and the companion simply skips that moment. Themes without the block work unchanged.
 - Variants cannot override this block.
 
