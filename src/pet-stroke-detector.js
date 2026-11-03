@@ -17,6 +17,7 @@
     let lastX = null;
     let dir = 0;            // current leg direction: -1, 0 (none), 1
     let legStart = 0;       // x where the current leg began
+    let prevLeg = null;     // last counted leg, kept to absorb backsteps
     let legCounted = false; // current leg already reached minAmplitudePx
     let reversals = [];     // timestamps within windowMs (bounded)
     let active = false;
@@ -29,6 +30,7 @@
       dir = 0;
       legStart = 0;
       legCounted = false;
+      prevLeg = null;
       reversals = [];
       active = false;
       lastEmitAt = 0;
@@ -46,9 +48,24 @@
       if (Math.abs(dx) >= PET_STROKE.jitterPx) {
         const s = dx > 0 ? 1 : -1;
         if (dir !== 0 && s !== dir) {
-          // Direction flip: the new leg starts at the previous extreme.
-          legStart = lastX;
-          legCounted = false;
+          if (legCounted) {
+            // Remember the finished counted leg: a short backstep must not
+            // end it for good. legStart uses the last accepted sample (the
+            // extreme of the leg that just ended), not the jittery raw x.
+            prevLeg = { dir, start: legStart };
+            legStart = lastX;
+            legCounted = false;
+          } else if (prevLeg && s === prevLeg.dir) {
+            // Sub-amplitude wobble against a counted leg: resume that leg
+            // from its true start so it is not recounted.
+            legStart = prevLeg.start;
+            legCounted = true;
+            prevLeg = null;
+          } else {
+            prevLeg = null;
+            legStart = lastX;
+            legCounted = false;
+          }
         } else if (dir === 0) {
           legStart = lastX;
         }

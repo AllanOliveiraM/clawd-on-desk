@@ -41,7 +41,7 @@ test("three back-and-forth strokes start petting", () => {
 
 test("jitter is rejected", () => {
   const { d, clock } = make();
-  const xs = Array.from({ length: 50 }, (_, i) => (i % 2 ? 2 : -2));
+  const xs = Array.from({ length: 50 }, (_, i) => (i % 2 ? 1 : -1));
   assert.ok(run(d, clock, xs, 50).every((r) => r === null));
   assert.equal(d.isActive(), false);
 });
@@ -107,4 +107,11 @@ test("reset clears an active session", () => {
   assert.equal(d.isActive(), false);
   clock.t += 5000;
   assert.equal(d.poll(), null);
+});
+
+test("one-way pass with small backsteps never pets", () => {
+  const { d, clock } = make();
+  const xs = [0, 6, 12, 18, 24, 20, 26, 32, 38, 44, 40, 46, 52, 58, 64];
+  assert.ok(run(d, clock, xs, 40).every((r) => r === null));
+  assert.equal(d.isActive(), false);
 });
