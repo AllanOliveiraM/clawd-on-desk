@@ -427,6 +427,23 @@ Click and drag response animations:
 
 Omit the entire `reactions` block to disable all click and drag reactions.
 
+### Companion Animations (Optional)
+
+Visuals for the opt-in "Clawd Alive" companion (petting, moods). The whole block and every key are optional:
+
+```json
+"companionAnimations": {
+  "petting": { "file": "alive-petting.svg" },
+  "content": { "files": ["alive-content.svg"], "duration": 3500 }
+}
+```
+
+- Known keys: `petting`, `content`, `tired`, `shy`, `grumpy`, `curious`, `greet`. Unknown keys and entries without a file are ignored.
+- Each entry takes `file` or `files` (a pool) and an optional `duration` in ms.
+- Every listed file is a required asset, like reaction files.
+- A key you leave out has no visual, and the companion simply skips that moment. Themes without the block work unchanged.
+- Variants cannot override this block.
+
 ### Idle Animations
 
 Random animations played during idle periods:

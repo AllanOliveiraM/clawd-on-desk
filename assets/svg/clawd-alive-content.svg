@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 3.5-Second Loop — Content: calm sway, one small hop, soft squint.
+         Deliberately quiet: no sparkles or confetti (that is clawd-happy). */
+      .hop-anim {
+        transform-origin: 7.5px 15px;
+        animation: content-hop 3.5s infinite ease-in-out;
+      }
+
+      .action-body {
+        transform-origin: 7.5px 13px;
+        animation: content-sway 3.5s infinite ease-in-out;
+      }
+
+      .breathe-anim {
+        transform-origin: 7.5px 13px;
+        animation: content-breathe 3.5s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: content-shadow 3.5s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 10px;
+        animation: content-eyes 3.5s infinite linear;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Gentle lean right, back, (hop), lean left, back */
+      @keyframes content-sway {
+        0%, 8%, 40%, 66%, 96%, 100% { transform: translate(0, 0) rotate(0deg); }
+        18%, 30% { transform: translate(0.5px, 0) rotate(2deg); }
+        76%, 86% { transform: translate(-0.5px, 0) rotate(-2deg); }
+      }
+
+      /* Small crouch, a 1px hop, soft landing */
+      @keyframes content-hop {
+        0%, 42%, 64%, 100% { transform: translate(0, 0) scale(1, 1); }
+        47% { transform: translate(0, 0) scale(1.04, 0.94); }
+        53% { transform: translate(0, -1.5px) scale(0.98, 1.03); }
+        59% { transform: translate(0, 0) scale(1.04, 0.95); }
+      }
+
+      @keyframes content-breathe {
+        0%, 40%, 66%, 100% { transform: scale(1, 1); }
+        20%, 80% { transform: scale(1.02, 0.98); }
+      }
+
+      @keyframes content-shadow {
+        0%, 8%, 42%, 64%, 96%, 100% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+        18%, 30% { transform: scaleX(1) translate(0.5px, 0); opacity: 0.5; }
+        53% { transform: scaleX(0.8) translate(0, 0); opacity: 0.35; }
+        76%, 86% { transform: scaleX(1) translate(-0.5px, 0); opacity: 0.5; }
+      }
+
+      /* One normal blink, then a slow contented squint during the left lean */
+      @keyframes content-eyes {
+        0%, 10%, 14%, 70%, 92%, 100% { transform: scaleY(1); }
+        12% { transform: scaleY(0.1); }
+        74%, 88% { transform: scaleY(0.5); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g class="hop-anim">
+    <!-- Legs -->
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+
+    <!-- Animated Upper Body -->
+    <g class="action-body">
+      <g class="breathe-anim">
+        <!-- Torso -->
+        <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+        <!-- Arms -->
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+        <!-- Eyes -->
+        <g class="eyes-blink" fill="#000000">
+          <rect x="4" y="8" width="1" height="2"/>
+          <rect x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

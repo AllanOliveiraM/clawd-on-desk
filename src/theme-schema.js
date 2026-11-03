@@ -616,6 +616,31 @@ function derivePowerProfile(cfg, options = {}) {
   return hasScriptedSvgRuntime(cfg, options) ? "scripted" : "standard";
 }
 
+// Optional Clawd Alive visuals. Each known key maps to { files, duration };
+// unknown keys and entries without a usable file are dropped. Accepts both the
+// authored shape ({ file } / { files }) and the already-normalized shape.
+const COMPANION_ANIMATION_KEYS = Object.freeze([
+  "petting", "content", "tired", "shy", "grumpy", "curious", "greet",
+]);
+
+function normalizeCompanionAnimations(value) {
+  const out = {};
+  if (!isPlainObject(value)) return out;
+  for (const key of COMPANION_ANIMATION_KEYS) {
+    const entry = value[key];
+    if (!isPlainObject(entry)) continue;
+    const candidates = Array.isArray(entry.files) ? entry.files : [entry.file];
+    const files = candidates
+      .filter((file) => typeof file === "string")
+      .map(basenameOnly)
+      .filter((file) => typeof file === "string" && file.length > 0);
+    if (files.length === 0) continue;
+    const duration = Number.isFinite(entry.duration) && entry.duration > 0 ? entry.duration : null;
+    out[key] = { files, duration };
+  }
+  return out;
+}
+
 function addVisualUsage(out, stateFamily, file, source) {
   const safe = basenameOnly(file);
   if (!safe) return;
@@ -688,6 +713,13 @@ function projectThemeVisualUsages(cfg) {
     }
     for (const file of Array.isArray(entry.files) ? entry.files : []) {
       addVisualUsage(usages, `reaction:${name}`, file, `reactions.${name}.files`);
+    }
+  }
+  for (const [key, entry] of Object.entries(
+    normalizeCompanionAnimations(cfg && cfg.companionAnimations)
+  )) {
+    for (const file of entry.files) {
+      addVisualUsage(usages, `companion:${key}`, file, `companionAnimations.${key}`);
     }
   }
   for (const [hint, file] of Object.entries((cfg && cfg.displayHintMap) || {})) {
@@ -1736,6 +1768,9 @@ function mergeDefaults(raw, themeId, isBuiltin) {
   // reactions
   theme.reactions = raw.reactions || null;
 
+  // companionAnimations (optional; files are basenamed by the normalizer)
+  theme.companionAnimations = normalizeCompanionAnimations(raw.companionAnimations);
+
   // workingTiers / jugglingTiers — auto sort descending by minSessions
   if (theme.workingTiers) {
     theme.workingTiers.sort((a, b) => b.minSessions - a.minSessions);
@@ -1828,6 +1863,8 @@ function mergeDefaults(raw, themeId, isBuiltin) {
 }
 
 module.exports = {
+  COMPANION_ANIMATION_KEYS,
+  normalizeCompanionAnimations,
   DEFAULT_SOUNDS,
   DEFAULT_TIMINGS,
   DEFAULT_HITBOXES,

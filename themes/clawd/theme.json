@@ -29,7 +29,9 @@
       "clawd-mini-crabwalk.svg",
       "clawd-working-typing.svg",
       "clawd-mini-typing.svg",
-      "clawd-working-building.svg"
+      "clawd-working-building.svg",
+      "clawd-alive-petting.svg",
+      "clawd-alive-content.svg"
     ],
     "discreteSampling": {
       "clawd-working-thinking.svg": 24,
@@ -54,7 +56,9 @@
       "clawd-outlaw-bender.svg": 24,
       "clawd-working-typing.svg": 24,
       "clawd-mini-typing.svg": 24,
-      "clawd-working-building.svg": 24
+      "clawd-working-building.svg": 24,
+      "clawd-alive-petting.svg": 24,
+      "clawd-alive-content.svg": 24
     }
   },
   "customization": {
@@ -68,6 +72,36 @@
         }
       },
       "files": {
+        "clawd-alive-petting.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
+        "clawd-alive-content.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
         "clawd-idle-follow.svg": {
           "staticFrame": {
             "cx": 7.5,
@@ -694,6 +728,36 @@
         }
       },
       "files": {
+        "clawd-alive-petting.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
+        "clawd-alive-content.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
         "clawd-idle-follow.svg": {
           "staticFrame": {
             "cx": 14,
@@ -1359,6 +1423,15 @@
     "clawd-sleeping.svg",
     "clawd-collapse-sleep.svg"
   ],
+  "companionAnimations": {
+    "petting": {
+      "file": "clawd-alive-petting.svg"
+    },
+    "content": {
+      "file": "clawd-alive-content.svg",
+      "duration": 3500
+    }
+  },
   "reactions": {
     "drag": {
       "file": "clawd-react-drag.svg"

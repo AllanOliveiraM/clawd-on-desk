@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 2-Second Loop — Being Petted: "^^" eyes, slow squish + sway */
+      .action-body {
+        transform-origin: 7.5px 13px;
+        animation: pet-sway 2s infinite ease-in-out;
+      }
+
+      .squish-anim {
+        transform-origin: 7.5px 13px;
+        animation: pet-squish 2s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: pet-shadow 2s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 10px;
+        animation: pet-arm-l 2s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: pet-arm-r 2s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Lean into the hand: slow side-to-side sway pivoting on the feet */
+      @keyframes pet-sway {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        25% { transform: translate(-1px, 0) rotate(-2deg); }
+        50% { transform: translate(0, 0) rotate(0deg); }
+        75% { transform: translate(1px, 0) rotate(2deg); }
+      }
+
+      /* Squish down under the pat, then spring back up */
+      @keyframes pet-squish {
+        0%, 50%, 100% { transform: scale(1, 1); }
+        20%, 30% { transform: scale(1.08, 0.86); }
+        70%, 80% { transform: scale(1.08, 0.86); }
+      }
+
+      @keyframes pet-shadow {
+        0%, 50%, 100% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+        25% { transform: scaleX(1.1) translate(-1px, 0); opacity: 0.55; }
+        75% { transform: scaleX(1.1) translate(1px, 0); opacity: 0.55; }
+      }
+
+      /* Arms droop a little while squished (stay attached to the torso) */
+      @keyframes pet-arm-l {
+        0%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+        20%, 30%, 70%, 80% { transform: translate(0, 0.5px) rotate(-8deg); }
+      }
+
+      @keyframes pet-arm-r {
+        0%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+        20%, 30%, 70%, 80% { transform: translate(0, 0.5px) rotate(8deg); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Legs -->
+  <g id="legs" fill="#DE886D">
+    <rect x="3" y="12" width="1" height="3"/>
+    <rect x="5" y="12" width="1" height="3"/>
+    <rect x="9" y="12" width="1" height="3"/>
+    <rect x="11" y="12" width="1" height="3"/>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="action-body">
+    <g class="squish-anim">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm -->
+      <g class="arm-l">
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Right Arm -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Happy closed eyes "^^" -->
+      <g id="eyes-happy" fill="#000000">
+        <rect x="3" y="9" width="1" height="1"/>
+        <rect x="4" y="8" width="1" height="1"/>
+        <rect x="5" y="9" width="1" height="1"/>
+        <rect x="9" y="9" width="1" height="1"/>
+        <rect x="10" y="8" width="1" height="1"/>
+        <rect x="11" y="9" width="1" height="1"/>
+      </g>
+    </g>
+  </g>
+</svg>
