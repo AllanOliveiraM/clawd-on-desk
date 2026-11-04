@@ -12,10 +12,11 @@ const vm = require("node:vm");
 function load(file) {
   const sends = [];
   const listeners = new Map();
+  const ipcListeners = new Map();
   const ipcRenderer = {
     invoke: () => Promise.resolve(null),
     send: (...args) => sends.push(args),
-    on: () => {},
+    on: (channel, fn) => ipcListeners.set(channel, fn),
     removeListener: () => {},
   };
   const context = {
@@ -32,18 +33,37 @@ function load(file) {
   vm.createContext(context);
   const full = path.join(__dirname, "..", "src", file);
   vm.runInContext(fs.readFileSync(full, "utf8"), context, { filename: full });
-  return { sends, listeners };
+  return { sends, listeners, ipcListeners };
 }
 
 for (const file of ["preload-settings.js", "preload-dashboard.js"]) {
   test(`${file} reports a pointer leaving the window, not moves between elements`, () => {
-    const { sends, listeners } = load(file);
+    const { sends, listeners, ipcListeners } = load(file);
     const entry = listeners.get("mouseout");
     assert.ok(entry, "mouseout listener");
     assert.equal(entry.opts && entry.opts.passive, true);
+    ipcListeners.get("companion:pointer-tracking")({}, true);
     entry.fn({ relatedTarget: { tagName: "DIV" } });
     assert.deepEqual(sends, []);
     entry.fn({ relatedTarget: null });
+    assert.deepEqual(sends, [["companion:pointer-left"]]);
+  });
+}
+
+for (const file of ["preload-settings.js", "preload-dashboard.js"]) {
+  test(`${file} stays silent until main says the companion is on`, () => {
+    const { sends, listeners, ipcListeners } = load(file);
+    const leave = listeners.get("mouseout").fn;
+    leave({ relatedTarget: null });
+    assert.deepEqual(sends, [], "default off");
+    const track = ipcListeners.get("companion:pointer-tracking");
+    assert.equal(typeof track, "function");
+    track({}, true);
+    leave({ relatedTarget: null });
+    track({}, false);
+    leave({ relatedTarget: null });
+    track({}, "yes");
+    leave({ relatedTarget: null });
     assert.deepEqual(sends, [["companion:pointer-left"]]);
   });
 }

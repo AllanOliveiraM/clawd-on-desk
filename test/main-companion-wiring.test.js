@@ -88,6 +88,7 @@ function companionHarness(prefs = {}) {
   const configureCalls = [];
   const hitSends = [];
   const nudges = [];
+  const trackingPushes = [];
   let runtimeOptions = null;
   let storeOptions = null;
   const runtime = {
@@ -134,10 +135,11 @@ function companionHarness(prefs = {}) {
     console: { warn() {} },
     process: { platform: process.platform },
     _cursorTrust: { enabled: "xwayland-flag" },
+    pushCompanionPointerTracking: () => { trackingPushes.push(1); },
   };
   vm.runInNewContext(`${companionSource}\nthis._companionOut = _companion;\nthis._isPetGesturesEnabled = isPetGesturesEnabled;`, ctx);
   return {
-    ctx, values, subscriptions, configureCalls, hitSends, nudges, runtime, runtimeOptions, storeOptions,
+    ctx, values, subscriptions, configureCalls, hitSends, nudges, runtime, runtimeOptions, storeOptions, trackingPushes,
     out: ctx._companionOut, isPetGesturesEnabled: ctx._isPetGesturesEnabled,
   };
 }
@@ -290,7 +292,9 @@ it("toggling either gesture pref pushes hit-state-sync, other companion keys do 
     h.subscriptions.get(key)(snapshot[key], snapshot);
   }
   assert.deepEqual(h.hitSends, []);
+  assert.equal(h.trackingPushes.length, 0, "only the Alive toggle pushes pointer tracking");
   h.subscriptions.get("companionEnabled")(true, snapshot);
+  assert.equal(h.trackingPushes.length, 1);
   h.subscriptions.get("companionInteractions")(false, { ...snapshot, companionInteractions: false });
   assert.deepEqual(h.hitSends, [
     ["hit-state-sync", { petGesturesEnabled: true }],
@@ -436,7 +440,8 @@ it("the runtime gets the test-mode gate reasons and the roam interrupt", () => {
 
 it("the tick trusts the cursor only through the XWayland window check", () => {
   const tickCtx = slice("const _tickCtx = {", 'const _tick = require("./tick")');
-  assert.ok(tickCtx.includes("isCursorTrusted: (point) => _cursorTrust.isTrusted(point),"));
+  // Feature off: no trust function at all (tick's trusted path, no window list).
+  assert.ok(tickCtx.includes("get isCursorTrusted() { return getCompanionCursorTrustCheck(); },"));
   const trust = slice("// ── Clawd Alive: XWayland cursor trust", "const _tickCtx = {");
   assert.match(trust, /enabled: require\("\.\/linux-ozone"\)\.isXWaylandSession\(\{/);
   assert.match(trust, /ozonePlatform: app\.commandLine\.getSwitchValue\("ozone-platform"\),/);
@@ -470,9 +475,12 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
     BrowserWindow: { getAllWindows: () => [render, hit, settings, dashboard, hud, hidden] },
     win: render,
     settingsWindowRuntime: { getWindow: () => settings },
-    _dashboard: { getWindow: () => dashboard },
+    // The Dashboard page lives in a view: its window has no webContents.
+    _dashboard: { getWindow: () => dashboard, getWebContents: () => dashboard.webContents },
     ipcMain: { on: (channel, fn) => handlers.set(channel, fn) },
+    _settingsController: { get: (key) => (key === "companionEnabled" ? prefs.companionEnabled : undefined) },
   };
+  const prefs = { companionEnabled: false };
   vm.runInNewContext(trust, ctx);
   const listed = trustOptions.getWindows().map((w) => [w.id, w.bounds.x, w.pinned]);
   assert.deepEqual(JSON.parse(JSON.stringify(listed)),
@@ -485,6 +493,32 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
   onLeft({ sender: settings.webContents });
   onLeft({ sender: dashboard.webContents });
   assert.equal(left, 2);
+
+  // F5: the trust check exists only with the feature on.
+  assert.equal(ctx.getCompanionCursorTrustCheck(), undefined);
+  prefs.companionEnabled = true;
+  assert.equal(typeof ctx.getCompanionCursorTrustCheck(), "function");
+
+  // F5: Settings / Dashboard learn whether to report pointer leave.
+  const sent = [];
+  settings.webContents.send = (...args) => sent.push(["settings", ...args]);
+  dashboard.webContents.send = (...args) => sent.push(["dashboard", ...args]);
+  ctx.pushCompanionPointerTracking();
+  prefs.companionEnabled = false;
+  ctx.pushCompanionPointerTracking();
+  assert.deepEqual(sent, [
+    ["settings", "companion:pointer-tracking", true], ["dashboard", "companion:pointer-tracking", true],
+    ["settings", "companion:pointer-tracking", false], ["dashboard", "companion:pointer-tracking", false],
+  ]);
+});
+
+it("pointer tracking is pushed on Settings / Dashboard load and on the Alive toggle", () => {
+  const settingsOpts = slice("const settingsWindowRuntime = createSettingsWindowRuntime({", "\n});\n");
+  assert.ok(settingsOpts.includes("onRendererLoaded: () => pushCompanionPointerTracking(),"));
+  const dashboardOpts = slice('const _dashboard = require("./dashboard")({', "\n});\n");
+  assert.ok(dashboardOpts.includes("onPageLoaded: () => pushCompanionPointerTracking(),"));
+  const subscribe = slice("for (const key of COMPANION_PREF_KEYS) {", "\n  }\n");
+  assert.match(subscribe, /if \(key === "companionEnabled"\) pushCompanionPointerTracking\(\);/);
 });
 
 // F3 / F4: Alive off re-applies the current state only when a companion file

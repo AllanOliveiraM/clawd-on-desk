@@ -97,9 +97,16 @@ contextBridge.exposeInMainWorld("dashboardAPI", {
 // Clawd Alive (XWayland cursor trust, spec 2026-11-04 §4): tell main when the
 // pointer leaves this window, so a cursor frozen at its last point inside is
 // no longer trusted. relatedTarget is null only when leaving the window.
+// Silent until main says Clawd Alive is on (and the session needs it).
+let companionPointerTracking = false;
+if (ipcRenderer && typeof ipcRenderer.on === "function") {
+  ipcRenderer.on("companion:pointer-tracking", (_event, on) => {
+    companionPointerTracking = on === true;
+  });
+}
 if (typeof window !== "undefined" && window && typeof window.addEventListener === "function") {
   window.addEventListener("mouseout", (event) => {
-    if (!event || event.relatedTarget) return;
+    if (!companionPointerTracking || !event || event.relatedTarget) return;
     ipcRenderer.send("companion:pointer-left");
   }, { passive: true });
 }

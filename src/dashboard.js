@@ -557,6 +557,9 @@ module.exports = function initDashboard(ctx) {
       applyZoomToWebContents(createdHost.webContents, getTextScale());
       sendI18n();
       sendSnapshot();
+      if (typeof ctx.onPageLoaded === "function") {
+        try { ctx.onPageLoaded(); } catch {}
+      }
     });
     // `ready-to-show` never fires on BaseWindow; the host maps the first-paint
     // signal to the real WebContents load on that path.

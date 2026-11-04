@@ -536,6 +536,9 @@ function createSettingsWindowRuntime(options = {}) {
         applyZoomToWindow(createdWindow, getTextScale());
         applyTitleToWindow();
         sendRequestedTab(createdWindow);
+        if (typeof options.onRendererLoaded === "function") {
+          try { options.onRendererLoaded(); } catch {}
+        }
       });
     }
     if (createdWindow.webContents && typeof createdWindow.webContents.on === "function") {

@@ -935,6 +935,7 @@ const settingsWindowRuntime = createSettingsWindowRuntime({
   onBeforeCreate: () => bumpAnimationOverridePreviewPosterGeneration(),
   // A replaced or crashed Settings page cannot send its preview-ending IPC.
   onRendererReset: () => { void settingsSizePreviewSession.cleanup(); },
+  onRendererLoaded: () => pushCompanionPointerTracking(),
   onBeforeClosed: () => {
     if (roamFencePickerRuntime) roamFencePickerRuntime.cancel();
     bumpAnimationOverridePreviewPosterGeneration();
@@ -2755,19 +2756,47 @@ const _cursorTrust = require("./cursor-trust").createCursorTrust({
       .map((w) => ({ id: w.id, bounds: w.getBounds(), pinned: pinned.has(w) }));
   },
 });
+// The renderers of Settings and Dashboard (the Dashboard page lives in a view
+// whose host window may have no webContents of its own).
+function companionPinnedTrustContents() {
+  const out = [];
+  try {
+    const settings = settingsWindowRuntime.getWindow();
+    if (settings && !settings.isDestroyed() && settings.webContents) out.push(settings.webContents);
+  } catch {}
+  try {
+    const contents = _dashboard && typeof _dashboard.getWebContents === "function" ? _dashboard.getWebContents() : null;
+    if (contents) out.push(contents);
+  } catch {}
+  return out;
+}
 // Settings / Dashboard report the pointer leaving their window (no payload);
 // only their own renderers are heard.
 ipcMain.on("companion:pointer-left", (event) => {
   if (!_cursorTrust.enabled || !event || !event.sender) return;
-  for (const w of companionPinnedTrustWindows()) {
-    if (!w.isDestroyed() && w.webContents === event.sender) {
-      _cursorTrust.notePointerLeft();
-      return;
-    }
-  }
+  if (companionPinnedTrustContents().includes(event.sender)) _cursorTrust.notePointerLeft();
 });
+// Feature off: the tick gets no trust check at all (its trusted path), so it
+// never reads the window list.
+function isCompanionCursorTrusted(point) {
+  return _cursorTrust.isTrusted(point);
+}
+function getCompanionCursorTrustCheck() {
+  return _settingsController.get("companionEnabled") === true ? isCompanionCursorTrusted : undefined;
+}
+// Settings / Dashboard report pointer leave only while main says so (default
+// off): pushed when their page loads and when Clawd Alive is toggled.
+function pushCompanionPointerTracking() {
+  const on = _cursorTrust.enabled && _settingsController.get("companionEnabled") === true;
+  for (const contents of companionPinnedTrustContents()) {
+    try {
+      if (typeof contents.isDestroyed === "function" && contents.isDestroyed()) continue;
+      contents.send("companion:pointer-tracking", on);
+    } catch {}
+  }
+}
 const _tickCtx = {
-  isCursorTrusted: (point) => _cursorTrust.isTrusted(point),
+  get isCursorTrusted() { return getCompanionCursorTrustCheck(); },
   get theme() { return getActiveTheme(); },
   get win() { return win; },
   getPetWindowBounds,
@@ -2941,6 +2970,7 @@ const _dashboard = require("./dashboard")({
   getSavedBounds: () => _settingsController.get("dashboardWindowBounds"),
   onSaveBounds: (bounds) => _settingsController.applyUpdate("dashboardWindowBounds", bounds),
   iconPath: settingsWindowRuntime.getIconPath(),
+  onPageLoaded: () => pushCompanionPointerTracking(),
 });
 showDashboard = _dashboard.showDashboard;
 // The keyboard mode is a temporary state of the real Dashboard page, so it is
@@ -6206,6 +6236,7 @@ try {
       if (key === "companionEnabled" && snapshot && snapshot.companionEnabled !== true) {
         dropCompanionVisualsAfterDisable();
       }
+      if (key === "companionEnabled") pushCompanionPointerTracking();
       if (key === "companionEnabled" || key === "companionInteractions") {
         sendToHitWin("hit-state-sync", { petGesturesEnabled: isPetGesturesEnabled(snapshot) });
       }
