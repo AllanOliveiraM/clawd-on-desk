@@ -666,6 +666,10 @@ const COMPANION_ANIMATION_KEYS = Object.freeze([
   ...SEARCH_MOUSE_ANIMATION_KEYS,
 ]);
 
+function isUsableBasename(file) {
+  return typeof file === "string" && file.length > 0 && file !== "." && file !== "..";
+}
+
 function normalizeCompanionAnimations(value) {
   const out = {};
   if (!isPlainObject(value)) return out;
@@ -676,7 +680,7 @@ function normalizeCompanionAnimations(value) {
     const files = candidates
       .filter((file) => typeof file === "string")
       .map(basenameOnly)
-      .filter((file) => typeof file === "string" && file.length > 0);
+      .filter(isUsableBasename);
     if (files.length === 0) continue;
     const duration = Number.isFinite(entry.duration) && entry.duration > 0 ? entry.duration : null;
     out[key] = { files, duration };
@@ -694,7 +698,7 @@ function normalizeTierFileList(value) {
   return (Array.isArray(value) ? value : [])
     .filter((file) => typeof file === "string")
     .map(basenameOnly)
-    .filter((file) => typeof file === "string" && file.length > 0);
+    .filter(isUsableBasename);
 }
 
 function normalizeCompanionWorkTiers(value) {
