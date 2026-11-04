@@ -309,6 +309,8 @@
       ...hitboxKeys,
       ...(map.sounds ? Object.keys(map.sounds) : []),
       ...(map.companionAnimations ? Object.keys(map.companionAnimations) : []),
+      ...(map.companionWorkTiers && map.companionWorkTiers.working ? Object.keys(map.companionWorkTiers.working) : []),
+      ...(map.companionWorkTiers && map.companionWorkTiers.juggling ? Object.keys(map.companionWorkTiers.juggling) : []),
     ];
     return keys.length > 0;
   }

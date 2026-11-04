@@ -10,6 +10,9 @@ const { getTierFiles } = require("./theme-schema");
 const {
   COMPANION_OVERRIDE_SECTIONS,
   COMPANION_NO_DURATION_KEYS,
+  COMPANION_WORK_SECTION_ID,
+  listCompanionWorkTierCards,
+  companionWorkCardLabelKey,
 } = require("./companion-override-slots");
 
 const ANIMATION_OVERRIDE_ASSET_EXTS = new Set([".svg", ".gif", ".apng", ".png", ".webp", ".jpg", ".jpeg"]);
@@ -1017,6 +1020,79 @@ function createSettingsAnimationOverridesMain(options = {}) {
     };
   }
 
+  // Clawd Alive work ladder: one card per file of the theme's
+  // companionWorkTiers (the base, pre-override ladder decides which cards
+  // exist). The effective ladder has the same shape, so the file at the same
+  // tier / position is the one playing now. A loop: no duration, no fades.
+  function findWorkTierCurrentFile(activeTheme, spec) {
+    const base = isPlainObject(activeTheme._baseCompanionWorkTiers)
+      ? activeTheme._baseCompanionWorkTiers[spec.tierGroup]
+      : null;
+    const live = isPlainObject(activeTheme.companionWorkTiers)
+      ? activeTheme.companionWorkTiers[spec.tierGroup]
+      : null;
+    if (!Array.isArray(base) || !Array.isArray(live)) return spec.originalFile;
+    for (let i = 0; i < base.length && i < live.length; i++) {
+      const baseTier = base[i];
+      const liveTier = live[i];
+      if (!isPlainObject(baseTier) || !isPlainObject(liveTier)) continue;
+      const baseList = Array.isArray(baseTier[spec.tierKind]) ? baseTier[spec.tierKind] : [];
+      const liveList = Array.isArray(liveTier[spec.tierKind]) ? liveTier[spec.tierKind] : [];
+      const index = baseList.indexOf(spec.originalFile);
+      if (index >= 0 && typeof liveList[index] === "string" && liveList[index]) return liveList[index];
+    }
+    return spec.originalFile;
+  }
+
+  function buildCompanionWorkTierCard(spec) {
+    const activeTheme = getActiveTheme();
+    const currentFile = findWorkTierCurrentFile(activeTheme, spec);
+    const timingHint = buildTimingHint(currentFile, null);
+    const preview = buildAnimationAssetPreview(currentFile);
+    return {
+      id: `companionWork:${spec.tierGroup}:${spec.originalFile}`,
+      slotType: "companionWorkTier",
+      sectionId: COMPANION_WORK_SECTION_ID,
+      tierGroup: spec.tierGroup,
+      originalFile: spec.originalFile,
+      minSessions: spec.minSessions,
+      tierKind: spec.tierKind,
+      topTier: spec.topTier,
+      labelKey: companionWorkCardLabelKey(spec.originalFile),
+      triggerKind: "companionWorkTier",
+      currentFile,
+      baseFile: spec.originalFile,
+      currentFileUrl: preview.fileUrl,
+      currentFilePreviewUrl: preview.previewImageUrl,
+      needsScriptedPreviewPoster: preview.needsScriptedPreviewPoster,
+      currentFilePreviewPosterCacheKey: preview.previewPosterCacheKey,
+      previewPosterPending: preview.previewPosterPending,
+      bindingLabel: `companionWorkTiers.${spec.tierGroup}`,
+      transition: readResolvedTransition(currentFile),
+      transitionThemeDefault: readThemeDefaultTransition(currentFile),
+      hasTransitionOverride: false,
+      supportsAutoReturn: false,
+      supportsDuration: false,
+      autoReturnMs: null,
+      durationMs: null,
+      hasAutoReturnOverride: false,
+      hasDurationOverride: false,
+      ...timingHint,
+      displayHintWarning: false,
+      displayHintTarget: null,
+    };
+  }
+
+  function buildCompanionWorkTierSection() {
+    const activeTheme = getActiveTheme();
+    if (!activeTheme) return null;
+    const cards = listCompanionWorkTierCards(activeTheme._baseCompanionWorkTiers).map(buildCompanionWorkTierCard);
+    for (const card of cards) {
+      card.aspectRatioWarning = computeAspectRatioWarning(card.baseFile, card.currentFile);
+    }
+    return cards.length > 0 ? { id: COMPANION_WORK_SECTION_ID, mode: null, group: "companion", cards } : null;
+  }
+
   function buildCompanionSections(themeOverrideMap) {
     const activeTheme = getActiveTheme();
     if (!activeTheme || !isPlainObject(activeTheme.companionAnimations)) return [];
@@ -1030,6 +1106,8 @@ function createSettingsAnimationOverridesMain(options = {}) {
       }
       if (cards.length > 0) sections.push({ id: spec.id, mode: null, group: "companion", cards });
     }
+    const work = buildCompanionWorkTierSection();
+    if (work) sections.push(work);
     return sections;
   }
 

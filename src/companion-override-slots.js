@@ -75,8 +75,87 @@ function companionSectionLabelKey(sectionId) {
   return `animOverridesSection${capitalize(sectionId)}`;
 }
 
+// ---- Work escalation ladder (theme.companionWorkTiers) ----
+// One "Work" card per ladder file. Overrides are keyed by group and by the
+// file the theme declares: themeOverrides[themeId].companionWorkTiers
+// [working | juggling][originalFile] = { file }. They are loops played for as
+// long as the state lasts, so a card has no duration (and no fades).
+const COMPANION_WORK_SECTION_ID = "companionWork";
+const COMPANION_WORK_TIER_GROUPS = Object.freeze(["working", "juggling"]);
+const COMPANION_WORK_GROUP_SET = new Set(COMPANION_WORK_TIER_GROUPS);
+
+function isCompanionWorkTierGroup(group) {
+  return typeof group === "string" && COMPANION_WORK_GROUP_SET.has(group);
+}
+
+// A bare file name a theme could declare (no path, no dot segments, no
+// prototype keys), the same rule the prefs normalizer applies to the keys.
+function isCompanionWorkFileName(file) {
+  return typeof file === "string"
+    && file.length > 0
+    && file !== "__proto__"
+    && file !== "constructor"
+    && file !== "prototype"
+    && !/[\\/]/.test(file)
+    && file !== "."
+    && file !== "..";
+}
+
+// Cards for a normalized companionWorkTiers block: working first, then
+// juggling, each by ascending tier; a file listed twice in a group (files and
+// variants, or two tiers) gets one card at its lowest tier, since one override
+// replaces it everywhere in that group.
+function listCompanionWorkTierCards(block) {
+  const out = [];
+  if (!block || typeof block !== "object") return out;
+  for (const tierGroup of COMPANION_WORK_TIER_GROUPS) {
+    const tiers = Array.isArray(block[tierGroup])
+      ? block[tierGroup].filter((tier) => tier && typeof tier === "object" && Number.isFinite(tier.minSessions))
+      : [];
+    if (tiers.length === 0) continue;
+    const top = Math.max(...tiers.map((tier) => tier.minSessions));
+    const seen = new Set();
+    const ascending = [...tiers].sort((a, b) => a.minSessions - b.minSessions);
+    for (const tier of ascending) {
+      for (const tierKind of ["files", "variants"]) {
+        for (const file of Array.isArray(tier[tierKind]) ? tier[tierKind] : []) {
+          if (!isCompanionWorkFileName(file) || seen.has(file)) continue;
+          seen.add(file);
+          out.push({
+            tierGroup,
+            originalFile: file,
+            minSessions: tier.minSessions,
+            tierKind,
+            topTier: tier.minSessions === top,
+          });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+// animCompanion + the file stem without the "clawd-alive-" prefix, camel
+// cased: clawd-alive-work-control-room.svg -> animCompanionWorkControlRoom.
+// The renderer falls back to a generic tier label when a theme's file has no
+// translation.
+function companionWorkCardLabelKey(file) {
+  const stem = String(file || "")
+    .replace(/^.*[\\/]/, "")
+    .replace(/\.[^.]*$/, "")
+    .replace(/^clawd-alive-/, "");
+  const words = stem.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  return `animCompanion${words.map(capitalize).join("")}`;
+}
+
 module.exports = {
   COMPANION_OVERRIDE_SECTIONS,
+  COMPANION_WORK_SECTION_ID,
+  COMPANION_WORK_TIER_GROUPS,
+  isCompanionWorkTierGroup,
+  isCompanionWorkFileName,
+  listCompanionWorkTierCards,
+  companionWorkCardLabelKey,
   COMPANION_NO_DURATION_KEYS,
   COMPANION_DURATION_MIN_MS,
   COMPANION_DURATION_MAX_MS,

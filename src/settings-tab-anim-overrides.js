@@ -38,6 +38,26 @@
     return !!(card && card.slotType === "companion");
   }
 
+  // Clawd Alive work ladder cards (slotType "companionWorkTier"): one per file
+  // of theme.companionWorkTiers, keyed by tierGroup + originalFile. Like the
+  // companion cards they have no fades and no wide hitbox; unlike them, no
+  // duration either (the ladder files are loops held for the whole state).
+  function isCompanionWorkCard(card) {
+    return !!(card && card.slotType === "companionWorkTier");
+  }
+
+  function isCompanionLikeCard(card) {
+    return isCompanionCard(card) || isCompanionWorkCard(card);
+  }
+
+  function companionWorkCardLabel(card) {
+    const label = card.labelKey ? t(card.labelKey) : "";
+    if (label && label !== card.labelKey) return label;
+    const tierKey = card.tierGroup === "juggling" ? "animCompanionWorkTierJuggling" : "animCompanionWorkTierWorking";
+    const count = `${Number.isFinite(card.minSessions) ? card.minSessions : 1}${card.topTier ? "+" : ""}`;
+    return `${t(tierKey).replace("{n}", count)} — ${card.originalFile || ""}`;
+  }
+
   // Mirrors COMPANION_DURATION_MIN_MS / MAX_MS (the intros run 250-600 ms).
   const COMPANION_DURATION_MIN_MS = 100;
   const COMPANION_DURATION_MAX_MS = 8000;
@@ -441,6 +461,11 @@
     pruneEmptyObject(themeMap, "idleAnimations");
     pruneEmptyObject(themeMap, "reactions");
     pruneEmptyObject(themeMap, "companionAnimations");
+    if (themeMap.companionWorkTiers && typeof themeMap.companionWorkTiers === "object") {
+      pruneEmptyObject(themeMap.companionWorkTiers, "working");
+      pruneEmptyObject(themeMap.companionWorkTiers, "juggling");
+      pruneEmptyObject(themeMap, "companionWorkTiers");
+    }
     if (themeMap.hitbox && typeof themeMap.hitbox === "object") {
       pruneEmptyObject(themeMap.hitbox, "wide");
       pruneEmptyObject(themeMap, "hitbox");
@@ -725,6 +750,9 @@
       base.reactionKey = card.reactionKey;
     } else if (isCompanionCard(card)) {
       base.companionKey = card.companionKey;
+    } else if (isCompanionWorkCard(card)) {
+      base.tierGroup = card.tierGroup;
+      base.originalFile = card.originalFile;
     } else {
       base.stateKey = card.stateKey;
     }
@@ -957,6 +985,7 @@
       case "annoyedReaction": return t("animReactionAnnoyed");
       case "doubleReaction": return t("animReactionDouble");
       case "companion": return t(`animCompanion${capitalizeKey(card.companionKey)}`);
+      case "companionWorkTier": return companionWorkCardLabel(card);
       default: return card.triggerKind || card.stateKey || card.id;
     }
   }
@@ -1518,7 +1547,7 @@
   }
 
   function triggerPreviewOnce(card) {
-    if (card.slotType === "reaction" || isCompanionCard(card)) {
+    if (card.slotType === "reaction" || isCompanionLikeCard(card)) {
       window.settingsAPI.previewReaction({
         file: card.currentFile,
         durationMs: getAnimationPreviewDuration(null, card),
@@ -1569,6 +1598,10 @@
       return !!(hasMaterialEntryOverride(entry)
         || (hasTransitionFlag ? card.hasTransitionOverride : hasTransitionOverride(entry))
         || (hasDurationFlag ? card.hasDurationOverride : (entry && Object.prototype.hasOwnProperty.call(entry, "durationMs"))));
+    }
+    if (isCompanionWorkCard(card)) {
+      const group = map.companionWorkTiers && map.companionWorkTiers[card.tierGroup];
+      return hasMaterialEntryOverride(group && group[card.originalFile]);
     }
     if (isCompanionCard(card)) {
       const entry = map.companionAnimations && map.companionAnimations[card.companionKey];
@@ -1780,7 +1813,7 @@
       ...(card.supportsAutoReturn ? { autoReturnMs: null } : {}),
       ...(card.supportsDuration ? { durationMs: null } : {}),
     };
-    const resetHitboxFile = card.slotType !== "reaction" && !isCompanionCard(card)
+    const resetHitboxFile = card.slotType !== "reaction" && !isCompanionLikeCard(card)
       && card.currentFile && card.wideHitboxOverridden
       ? card.currentFile
       : null;
@@ -1788,7 +1821,7 @@
     return runAnimationOverrideCommand(card, patch).then((result) => {
       if (result && result.status === "error") return result;
       const currentCard = applyPendingWideHitboxOverrideEdit(getAnimOverrideCardById(card.id) || card);
-      if (currentCard.slotType === "reaction" || isCompanionCard(currentCard) || !resetHitboxFile) return result;
+      if (currentCard.slotType === "reaction" || isCompanionLikeCard(currentCard) || !resetHitboxFile) return result;
       return runWideHitboxCommand(
         {
           ...currentCard,
@@ -1928,7 +1961,7 @@
     const sliders = document.createElement("div");
     sliders.className = "anim-override-sliders";
     // Companion visuals have no fades to tune (the card shows only a duration).
-    if (!isCompanionCard(card)) {
+    if (!isCompanionLikeCard(card)) {
       sliders.appendChild(buildAnimOverrideSliderRow({
         cardId: card.id,
         field: "transition.in",
@@ -2007,7 +2040,7 @@
     }
     drawer.appendChild(sliders);
 
-    if (card.slotType !== "reaction" && !isCompanionCard(card)) {
+    if (card.slotType !== "reaction" && !isCompanionLikeCard(card)) {
       drawer.appendChild(buildAnimWideHitboxToggle(card));
     }
 
@@ -2312,7 +2345,7 @@
     helpers.attachActivation(previewBtn, () => {
       const currentSelected = getSelectedAnimationAsset();
       if (!currentSelected) return { status: "error", message: "no asset selected" };
-      if (isCompanionCard(card)) {
+      if (isCompanionLikeCard(card)) {
         return window.settingsAPI.previewReaction({
           file: currentSelected.name,
           durationMs: getAnimationPreviewDuration(currentSelected, card),
@@ -2346,7 +2379,7 @@
           ops.closeAssetPicker();
           const changed = !result.noop;
           if (changed) {
-            const previewPromise = (card.slotType === "reaction" || isCompanionCard(card))
+            const previewPromise = (card.slotType === "reaction" || isCompanionLikeCard(card))
               ? (window.settingsAPI && typeof window.settingsAPI.previewReaction === "function"
                   ? window.settingsAPI.previewReaction({
                       file: currentSelected.name,

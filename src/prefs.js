@@ -30,6 +30,8 @@ const {
   COMPANION_NO_DURATION_KEYS,
   COMPANION_DURATION_MIN_MS,
   COMPANION_DURATION_MAX_MS,
+  COMPANION_WORK_TIER_GROUPS,
+  isCompanionWorkFileName,
 } = require("./companion-override-slots");
 const { normalizeShortcuts, getDefaultShortcuts } = require("./shortcut-actions");
 const {
@@ -1450,6 +1452,33 @@ function normalizeCompanionOverridesMap(value) {
   return Object.keys(out).length > 0 ? out : null;
 }
 
+// Clawd Alive work ladder overrides:
+// { working | juggling: { [originalFile]: { file, sourceThemeId? } } }.
+// Only the two groups survive, keys must be bare file names, the replacement
+// is reduced to a basename and anything else (timing, fades, disabled) is
+// dropped: a work card only swaps the file of a loop.
+function normalizeCompanionWorkTierOverridesMap(value) {
+  if (!isPlainObject(value)) return null;
+  const out = {};
+  for (const group of COMPANION_WORK_TIER_GROUPS) {
+    const groupMap = value[group];
+    if (!isPlainObject(groupMap)) continue;
+    const cleanGroup = {};
+    for (const [originalFile, entry] of Object.entries(groupMap)) {
+      if (!isCompanionWorkFileName(originalFile) || !isPlainObject(entry)) continue;
+      const safeFile = _safeBasename(entry.file);
+      if (!safeFile) continue;
+      const cleanEntry = { file: safeFile };
+      if (typeof entry.sourceThemeId === "string" && entry.sourceThemeId) {
+        cleanEntry.sourceThemeId = entry.sourceThemeId;
+      }
+      cleanGroup[originalFile] = cleanEntry;
+    }
+    if (Object.keys(cleanGroup).length > 0) out[group] = cleanGroup;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 function normalizeFileKeyedOverrideMap(value) {
   if (!isPlainObject(value)) return null;
   const out = {};
@@ -1483,7 +1512,7 @@ function normalizeThemeOverrides(value, defaultsValue) {
     // Back-compat: older prefs wrote state entries directly under themeId.
     const legacyStates = {};
     for (const [key, entry] of Object.entries(themeMap)) {
-      if (key === "states" || key === "tiers" || key === "timings" || key === "idleAnimations" || key === "reactions" || key === "hitbox" || key === "sounds" || key === "companionAnimations") continue;
+      if (key === "states" || key === "tiers" || key === "timings" || key === "idleAnimations" || key === "reactions" || key === "hitbox" || key === "sounds" || key === "companionAnimations" || key === "companionWorkTiers") continue;
       const cleanEntry = normalizeSlotOverride(entry, { allowDisabled: true });
       if (cleanEntry) legacyStates[key] = cleanEntry;
     }
@@ -1524,6 +1553,9 @@ function normalizeThemeOverrides(value, defaultsValue) {
 
     const companionAnimations = normalizeCompanionOverridesMap(themeMap.companionAnimations);
     if (companionAnimations) cleanThemeMap.companionAnimations = companionAnimations;
+
+    const companionWorkTiers = normalizeCompanionWorkTierOverridesMap(themeMap.companionWorkTiers);
+    if (companionWorkTiers) cleanThemeMap.companionWorkTiers = companionWorkTiers;
 
     if (Object.keys(cleanThemeMap).length > 0) {
       out[themeId] = cleanThemeMap;

@@ -8,6 +8,9 @@ const {
   COMPANION_DURATION_MIN_MS,
   COMPANION_DURATION_MAX_MS,
   isCompanionAnimationKey,
+  COMPANION_WORK_TIER_GROUPS,
+  isCompanionWorkTierGroup,
+  isCompanionWorkFileName,
 } = require("./companion-override-slots");
 
 const ANIMATION_OVERRIDES_EXPORT_VERSION = 1;
@@ -21,6 +24,7 @@ const THEME_OVERRIDE_RESERVED_KEYS = new Set([
   "hitbox",
   "sounds",
   "companionAnimations",
+  "companionWorkTiers",
 ]);
 const TIER_OVERRIDE_GROUPS = new Set(["workingTiers", "jugglingTiers"]);
 const REACTION_KEYS = new Set(["drag", "clickLeft", "clickRight", "annoyed", "double"]);
@@ -114,6 +118,21 @@ function cloneCompanionOverrides(themeMap) {
   return out;
 }
 
+function cloneCompanionWorkTierOverrides(themeMap) {
+  const out = {};
+  if (!isPlainObject(themeMap) || !isPlainObject(themeMap.companionWorkTiers)) return out;
+  for (const group of COMPANION_WORK_TIER_GROUPS) {
+    const groupMap = themeMap.companionWorkTiers[group];
+    if (!isPlainObject(groupMap)) continue;
+    const cloned = {};
+    for (const [file, entry] of Object.entries(groupMap)) {
+      if (isPlainObject(entry)) cloned[file] = { ...entry };
+    }
+    if (Object.keys(cloned).length > 0) out[group] = cloned;
+  }
+  return out;
+}
+
 function buildThemeOverrideMap({
   states,
   workingTiers,
@@ -124,6 +143,7 @@ function buildThemeOverrideMap({
   hitbox,
   sounds,
   companionAnimations,
+  companionWorkTiers,
 }) {
   const out = {};
   if (states && Object.keys(states).length > 0) out.states = states;
@@ -138,6 +158,9 @@ function buildThemeOverrideMap({
   if (sounds && Object.keys(sounds).length > 0) out.sounds = sounds;
   if (companionAnimations && Object.keys(companionAnimations).length > 0) {
     out.companionAnimations = companionAnimations;
+  }
+  if (companionWorkTiers && Object.keys(companionWorkTiers).length > 0) {
+    out.companionWorkTiers = companionWorkTiers;
   }
   return out;
 }
@@ -203,6 +226,7 @@ function setThemeOverrideDisabled(payload, deps) {
     hitbox: cloneHitboxOverrides(currentThemeMap),
     sounds: cloneSoundOverrides(currentThemeMap),
     companionAnimations: cloneCompanionOverrides(currentThemeMap),
+    companionWorkTiers: cloneCompanionWorkTierOverrides(currentThemeMap),
   });
   const nextOverrides = { ...currentOverrides };
   if (Object.keys(nextThemeMap).length > 0) {
@@ -227,10 +251,11 @@ function setAnimationOverride(payload, deps) {
     && slotType !== "idleAnimation"
     && slotType !== "reaction"
     && slotType !== "companion"
+    && slotType !== "companionWorkTier"
   ) {
     return {
       status: "error",
-      message: "setAnimationOverride.slotType must be 'state', 'tier', 'idleAnimation', 'reaction', or 'companion'",
+      message: "setAnimationOverride.slotType must be 'state', 'tier', 'idleAnimation', 'reaction', 'companion', or 'companionWorkTier'",
     };
   }
 
@@ -289,6 +314,7 @@ function setAnimationOverride(payload, deps) {
   const nextHitbox = cloneHitboxOverrides(currentThemeMap);
   const nextSounds = cloneSoundOverrides(currentThemeMap);
   const nextCompanionAnimations = cloneCompanionOverrides(currentThemeMap);
+  const nextCompanionWorkTiers = cloneCompanionWorkTierOverrides(currentThemeMap);
 
   if (slotType === "state") {
     if (typeof payload.stateKey !== "string" || !payload.stateKey) {
@@ -406,6 +432,36 @@ function setAnimationOverride(payload, deps) {
     }
     if (Object.keys(nextEntry).length > 0) nextCompanionAnimations[companionKey] = nextEntry;
     else delete nextCompanionAnimations[companionKey];
+  } else if (slotType === "companionWorkTier") {
+    // A Clawd Alive work ladder file: only the file can change (the ladder
+    // files are loops held for the whole state, so no duration or fades).
+    const { tierGroup, originalFile } = payload;
+    if (!isCompanionWorkTierGroup(tierGroup)) {
+      return { status: "error", message: "setAnimationOverride.tierGroup must be working or juggling for companionWorkTier slots" };
+    }
+    if (!isCompanionWorkFileName(originalFile)) {
+      return { status: "error", message: "setAnimationOverride.originalFile must be a bare file name for companionWorkTier slots" };
+    }
+    if (touchesAutoReturn || touchesDuration) {
+      return { status: "error", message: "setAnimationOverride timing is not supported for companionWorkTier slots" };
+    }
+    if (touchesTransition && payload.transition !== null) {
+      return { status: "error", message: "setAnimationOverride.transition is not supported for companionWorkTier slots" };
+    }
+    const groupMap = { ...(nextCompanionWorkTiers[tierGroup] || {}) };
+    const nextEntry = { ...(groupMap[originalFile] || {}) };
+    if (touchesFile) {
+      if (payload.file === null) {
+        delete nextEntry.file;
+        delete nextEntry.sourceThemeId;
+      } else {
+        nextEntry.file = payload.file;
+      }
+    }
+    if (nextEntry.file) groupMap[originalFile] = nextEntry;
+    else delete groupMap[originalFile];
+    if (Object.keys(groupMap).length > 0) nextCompanionWorkTiers[tierGroup] = groupMap;
+    else delete nextCompanionWorkTiers[tierGroup];
   } else {
     const { reactionKey } = payload;
     if (!REACTION_KEYS.has(reactionKey)) {
@@ -448,6 +504,7 @@ function setAnimationOverride(payload, deps) {
     hitbox: nextHitbox,
     sounds: nextSounds,
     companionAnimations: nextCompanionAnimations,
+    companionWorkTiers: nextCompanionWorkTiers,
   });
   const nextOverrides = { ...currentOverrides };
   if (Object.keys(nextThemeMap).length > 0) nextOverrides[themeId] = nextThemeMap;
@@ -510,6 +567,7 @@ function setSoundOverride(payload, deps) {
     hitbox: cloneHitboxOverrides(currentThemeMap),
     sounds: nextSounds,
     companionAnimations: cloneCompanionOverrides(currentThemeMap),
+    companionWorkTiers: cloneCompanionWorkTierOverrides(currentThemeMap),
   });
   const nextOverrides = { ...currentOverrides };
   if (Object.keys(nextThemeMap).length > 0) nextOverrides[themeId] = nextThemeMap;

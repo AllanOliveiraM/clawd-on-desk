@@ -234,6 +234,40 @@ describe("i18n locales", () => {
     assert.strictEqual(strings["pt-BR"].animOverridesSectionCompanionCatch, "Pegar o mouse");
   });
 
+  it("labels the Clawd Alive Work cards for every clawd ladder file in every Settings locale", () => {
+    const strings = loadSettingsI18nStrings();
+    const path = require("node:path");
+    const themeLoader = require("../src/theme-loader");
+    themeLoader.init(path.join(__dirname, "..", "src"));
+    const { listCompanionWorkTierCards, companionWorkCardLabelKey } = require("../src/companion-override-slots");
+    const clawd = themeLoader.loadTheme("clawd", { strict: true });
+    const fileKeys = listCompanionWorkTierCards(clawd.companionWorkTiers)
+      .map((card) => companionWorkCardLabelKey(card.originalFile));
+    assert.strictEqual(fileKeys.length, 8);
+    const keys = [
+      "animOverridesSectionCompanionWork", "animCompanionWorkTierWorking", "animCompanionWorkTierJuggling",
+      ...fileKeys,
+    ];
+    assert.strictEqual(new Set(keys).size, keys.length);
+    for (const lang of SUPPORTED_LANGS) {
+      const ordered = Object.keys(strings[lang]).filter((key) => keys.includes(key));
+      assert.deepStrictEqual(ordered, keys, `${lang} Clawd Alive Work key order`);
+      for (const key of keys) {
+        assert.strictEqual(typeof strings[lang][key], "string", `${lang}.${key}`);
+        assert.ok(strings[lang][key].trim(), `${lang}.${key}`);
+      }
+      assert.ok(strings[lang].animCompanionWorkTierWorking.includes("{n}"), lang);
+      assert.ok(strings[lang].animCompanionWorkTierJuggling.includes("{n}"), lang);
+      if (lang !== "en") {
+        assert.notStrictEqual(strings[lang].animCompanionWorkControlRoom, strings.en.animCompanionWorkControlRoom, lang);
+      }
+    }
+    assert.strictEqual(strings["pt-BR"].animOverridesSectionCompanionWork, "Trabalho");
+    assert.strictEqual(strings["pt-BR"].animCompanionWorkControlRoom, "4 sessões — sala de controle");
+    assert.strictEqual(strings["pt-BR"].animCompanionWorkCoffee, "1 sessão — variação café");
+    assert.strictEqual(strings["pt-BR"].animCompanionJuggleLaptops, "Subagentes 3 — notebooks");
+  });
+
   it("keeps Settings locale keysets aligned with English", () => {
     assertLocaleObjectParity(loadSettingsI18nStrings(), "settings");
   });

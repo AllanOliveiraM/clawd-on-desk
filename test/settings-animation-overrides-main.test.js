@@ -1172,3 +1172,89 @@ test("original animation cards are unchanged by companion animations", () => {
     withCompanion.cleanup();
   }
 });
+
+// ── Clawd Alive work ladder cards ("Work" sub-section) ──
+
+test("the Work sub-section lists one card per ladder file, after the other companion sections", () => {
+  const ladder = {
+    working: [
+      { minSessions: 4, files: ["sleep.svg"], variants: [] },
+      { minSessions: 1, files: [], variants: ["idle.svg"] },
+    ],
+    juggling: [{ minSessions: 3, files: ["scripted.svg"], variants: [] }],
+  };
+  const harness = createRuntimeHarness({
+    snapshot: { themeOverrides: { cloudling: { companionWorkTiers: { working: { "sleep.svg": { file: "idle.svg" } } } } } },
+    activeThemeFactory: (root) => companionTheme(root, {
+      companionWorkTiers: {
+        working: [
+          { minSessions: 4, files: ["idle.svg"], variants: [] },
+          { minSessions: 1, files: [], variants: ["idle.svg"] },
+        ],
+        juggling: ladder.juggling,
+      },
+      _baseCompanionWorkTiers: ladder,
+    }),
+  });
+  try {
+    const sections = harness.runtime.buildAnimationOverrideSections();
+    const companion = sections.filter((section) => section.group === "companion");
+    assert.strictEqual(companion[companion.length - 1].id, "companionWork");
+    const work = companion[companion.length - 1].cards;
+    assert.deepStrictEqual(work.map((card) => card.id), [
+      "companionWork:working:idle.svg",
+      "companionWork:working:sleep.svg",
+      "companionWork:juggling:scripted.svg",
+    ]);
+    const control = work[1];
+    assert.strictEqual(control.slotType, "companionWorkTier");
+    assert.strictEqual(control.sectionId, "companionWork");
+    assert.strictEqual(control.tierGroup, "working");
+    assert.strictEqual(control.originalFile, "sleep.svg");
+    assert.strictEqual(control.minSessions, 4);
+    assert.strictEqual(control.tierKind, "files");
+    assert.strictEqual(control.topTier, true);
+    assert.strictEqual(control.labelKey, "animCompanionSleep");
+    assert.strictEqual(control.baseFile, "sleep.svg");
+    assert.strictEqual(control.currentFile, "idle.svg", "the overridden file is what the card shows");
+    assert.strictEqual(control.bindingLabel, "companionWorkTiers.working");
+    assert.strictEqual(control.supportsDuration, false);
+    assert.strictEqual(control.supportsAutoReturn, false);
+    assert.strictEqual(control.durationMs, null);
+    assert.strictEqual(work[0].tierKind, "variants");
+    assert.strictEqual(work[0].currentFile, "idle.svg");
+    assert.strictEqual(work[2].tierGroup, "juggling");
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test("every Clawd Alive animation the clawd theme declares has a Settings card", () => {
+  const clawd = themeLoader.loadTheme("clawd", { strict: true });
+  const harness = createRuntimeHarness({ activeTheme: clawd });
+  try {
+    const cards = harness.runtime.buildAnimationOverrideSections()
+      .filter((section) => section.group === "companion")
+      .flatMap((section) => section.cards);
+    const companionKeys = new Set(cards.filter((card) => card.slotType === "companion").map((card) => card.companionKey));
+    for (const key of Object.keys(clawd.companionAnimations)) {
+      assert.ok(companionKeys.has(key), `companionAnimations.${key} needs a card`);
+    }
+    const workCards = new Set(cards
+      .filter((card) => card.slotType === "companionWorkTier")
+      .map((card) => `${card.tierGroup}:${card.originalFile}`));
+    let declared = 0;
+    for (const group of ["working", "juggling"]) {
+      for (const tier of clawd.companionWorkTiers[group]) {
+        for (const file of [...tier.files, ...tier.variants]) {
+          declared += 1;
+          assert.ok(workCards.has(`${group}:${file}`), `companionWorkTiers.${group} ${file} needs a card`);
+        }
+      }
+    }
+    assert.strictEqual(declared, 8);
+    assert.strictEqual(workCards.size, 8);
+  } finally {
+    harness.cleanup();
+  }
+});

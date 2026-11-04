@@ -22718,3 +22718,143 @@ describe("settings animation overrides: Clawd Alive companion cards", () => {
     }]);
   });
 });
+
+describe("settings animation overrides: Clawd Alive work ladder cards", () => {
+  function workCard(group, file, extra = {}) {
+    return createAnimOverrideCard({
+      id: `companionWork:${group}:${file}`,
+      slotType: "companionWorkTier",
+      sectionId: "companionWork",
+      tierGroup: group,
+      originalFile: file,
+      minSessions: 4,
+      tierKind: "files",
+      topTier: false,
+      labelKey: "animCompanionWorkControlRoom",
+      triggerKind: "companionWorkTier",
+      stateKey: undefined,
+      currentFile: file,
+      baseFile: file,
+      bindingLabel: `companionWorkTiers.${group}`,
+      supportsDuration: false,
+      supportsAutoReturn: false,
+      durationMs: null,
+      hasDurationOverride: false,
+      hasTransitionOverride: false,
+      wideHitboxEnabled: undefined,
+      wideHitboxOverridden: undefined,
+      wideHitboxThemeDefault: undefined,
+      ...extra,
+    });
+  }
+
+  function workRuntime() {
+    const control = workCard("working", "clawd-alive-work-control-room.svg");
+    const laptops = workCard("juggling", "my-laptops.svg", { labelKey: "animCompanionMyLaptops", minSessions: 3, topTier: true });
+    const runtime = createAnimOverridesRuntime(control, {
+      expandedOverrideRowIds: new Set([control.id, laptops.id]),
+    });
+    runtime.animationOverridesData = {
+      theme: { id: "clawd", name: "Clawd" },
+      assets: [{ name: "mine.svg", fileUrl: "file:///mine.svg", previewImageUrl: "file:///mine.svg", cycleMs: 1200 }],
+      sections: [{ id: "companionWork", group: "companion", cards: [control, laptops] }],
+      cards: [control, laptops],
+      sounds: [],
+    };
+    return { runtime, control, laptops };
+  }
+
+  it("renders the Work sub-section with tier labels and no sliders or hitbox toggle", () => {
+    const { runtime, control, laptops } = workRuntime();
+    const { core } = loadAnimOverridesTabForTest({ runtime, modalRoot: new FakeElement("div") });
+    const parent = new FakeElement("main");
+    core.tabs.animOverrides.render(parent, core);
+    assert.strictEqual(parent.querySelectorAll(".anim-override-group-head").length, 1);
+    const titles = parent.querySelectorAll(".anim-override-section .section-title").map((node) => node.textContent);
+    assert.deepStrictEqual(titles, ["animOverridesSectionCompanionWork"]);
+    const triggers = parent.querySelectorAll(".anim-override-trigger").map((node) => node.textContent);
+    // The test translator echoes keys, so the untranslated generic label shows.
+    assert.deepStrictEqual(triggers, [
+      "animCompanionWorkTierWorking — clawd-alive-work-control-room.svg",
+      "animCompanionWorkTierJuggling — my-laptops.svg",
+    ]);
+    const rows = parent.querySelectorAll(".anim-override-row");
+    for (const card of [control, laptops]) {
+      const row = rows.find((node) => node.dataset.rowId === card.id);
+      assert.strictEqual(row.querySelectorAll(".anim-override-slider-label").length, 0, card.id);
+      assert.strictEqual(row.querySelectorAll(".anim-override-toggle-row").length, 0, card.id);
+    }
+  });
+
+  it("replacing a ladder file sends the work tier slot and previews it as a reaction", async () => {
+    const { runtime, control } = workRuntime();
+    const modalRoot = new FakeElement("div");
+    const calls = [];
+    const previews = [];
+    const { core } = loadAnimOverridesTabForTest({
+      runtime,
+      modalRoot,
+      settingsAPI: {
+        command: (name, payload) => { calls.push({ name, payload }); return Promise.resolve({ status: "ok" }); },
+        previewReaction: (payload) => { previews.push(["reaction", payload]); return Promise.resolve({ status: "ok" }); },
+        previewAnimationOverride: (payload) => { previews.push(["state", payload]); return Promise.resolve({ status: "ok" }); },
+      },
+    });
+    runtime.assetPicker.state = { cardId: control.id, selectedFile: "mine.svg" };
+    core.renderHooks.modal();
+    modalRoot.querySelector(".asset-picker-use-btn").click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(calls)), [{
+      name: "setAnimationOverride",
+      payload: {
+        themeId: "clawd",
+        slotType: "companionWorkTier",
+        tierGroup: "working",
+        originalFile: "clawd-alive-work-control-room.svg",
+        file: "mine.svg",
+      },
+    }]);
+    assert.strictEqual(previews.length, 1);
+    assert.strictEqual(previews[0][0], "reaction");
+    assert.strictEqual(previews[0][1].file, "mine.svg");
+  });
+
+  it("restoring a ladder card clears only its file", async () => {
+    const { runtime, control } = workRuntime();
+    const calls = [];
+    const { core } = loadAnimOverridesTabForTest({
+      runtime,
+      modalRoot: new FakeElement("div"),
+      settingsAPI: {
+        command: (name, payload) => { calls.push({ name, payload }); return Promise.resolve({ status: "ok" }); },
+      },
+      readersOverrides: {
+        readThemeOverrideMap: () => ({
+          companionWorkTiers: { working: { "clawd-alive-work-control-room.svg": { file: "mine.svg" } } },
+        }),
+      },
+    });
+    const parent = new FakeElement("main");
+    core.tabs.animOverrides.render(parent, core);
+    const rows = parent.querySelectorAll(".anim-override-row");
+    const laptopsReset = rows.find((row) => row.dataset.rowId === "companionWork:juggling:my-laptops.svg")
+      .querySelectorAll("button").find((button) => button.textContent === "animOverridesReset");
+    assert.strictEqual(laptopsReset.disabled, true, "an untouched card has nothing to restore");
+    const reset = rows.find((row) => row.dataset.rowId === control.id)
+      .querySelectorAll("button").find((button) => button.textContent === "animOverridesReset");
+    assert.strictEqual(reset.disabled, false);
+    reset.click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(calls)), [{
+      name: "setAnimationOverride",
+      payload: {
+        themeId: "clawd",
+        slotType: "companionWorkTier",
+        tierGroup: "working",
+        originalFile: "clawd-alive-work-control-room.svg",
+        file: null,
+        transition: null,
+      },
+    }]);
+  });
+});

@@ -41,6 +41,7 @@ const {
   filterIdleVisualOptionsByAsset: _filterIdleVisualOptionsByAsset,
   basenameOnly: _basenameOnly,
   normalizeCompanionAnimations: _normalizeCompanionAnimations,
+  normalizeCompanionWorkTiers: _normalizeCompanionWorkTiers,
 } = require("./theme-schema");
 const {
   resolveVariant: _resolveVariant,
@@ -238,6 +239,8 @@ function loadTheme(themeId, opts = {}) {
   }
   // Pre-override companion visuals, so Settings can show each card's theme file.
   theme._baseCompanionAnimations = _normalizeCompanionAnimations(afterVariant.companionAnimations);
+  // Pre-override work escalation ladder, for the Settings "Work" cards.
+  theme._baseCompanionWorkTiers = _normalizeCompanionWorkTiers(afterVariant.companionWorkTiers);
   theme._baseWideHitboxFiles = Array.isArray(afterVariant.wideHitboxFiles)
     ? [...new Set(afterVariant.wideHitboxFiles.map((file) => _basenameOnly(file)).filter(Boolean))]
     : [];

@@ -15,6 +15,7 @@ const {
   COMPANION_NO_DURATION_KEYS,
   COMPANION_DURATION_MIN_MS,
   COMPANION_DURATION_MAX_MS,
+  COMPANION_WORK_TIER_GROUPS,
 } = require("./companion-override-slots");
 
 // Allow-list of fields a variant may override. Anything else is ignored with a
@@ -342,6 +343,35 @@ function applyUserOverridesPatch(raw, overrides) {
       nextCompanion[key] = nextEntry;
     }
     patched.companionAnimations = nextCompanion;
+  }
+
+  // Clawd Alive work escalation ladder: an override names a file the theme
+  // declares in that group (working / juggling) and replaces it in every tier
+  // of the group, in files and variants alike. Unknown groups or files are
+  // ignored; the theme's own workingTiers / jugglingTiers are separate
+  // ("tiers" overrides above) and still win at runtime when overridden.
+  const workOverrides = isPlainObject(overrides.companionWorkTiers) ? overrides.companionWorkTiers : null;
+  if (workOverrides && isPlainObject(raw.companionWorkTiers)) {
+    const nextWork = { ...raw.companionWorkTiers };
+    for (const group of COMPANION_WORK_TIER_GROUPS) {
+      const groupOverrides = isPlainObject(workOverrides[group]) ? workOverrides[group] : null;
+      if (!groupOverrides || !Array.isArray(raw.companionWorkTiers[group])) continue;
+      const replacementFor = (file) => {
+        const clean = typeof file === "string" ? basenameOnly(file) : null;
+        if (!clean || !Object.prototype.hasOwnProperty.call(groupOverrides, clean)) return file;
+        const entry = groupOverrides[clean];
+        return isPlainObject(entry) && typeof entry.file === "string" && entry.file ? entry.file : file;
+      };
+      nextWork[group] = raw.companionWorkTiers[group].map((tier) => {
+        if (!isPlainObject(tier)) return tier;
+        const nextTier = { ...tier };
+        if (typeof tier.file === "string") nextTier.file = replacementFor(tier.file);
+        if (Array.isArray(tier.files)) nextTier.files = tier.files.map(replacementFor);
+        if (Array.isArray(tier.variants)) nextTier.variants = tier.variants.map(replacementFor);
+        return nextTier;
+      });
+    }
+    patched.companionWorkTiers = nextWork;
   }
 
   return patched;
