@@ -82,7 +82,8 @@
       "clawd-alive-fake-nap-in.svg",
       "clawd-alive-fake-nap-out.svg",
       "clawd-alive-petting-in.svg",
-      "clawd-alive-petting-out.svg"
+      "clawd-alive-petting-out.svg",
+      "clawd-alive-sleep-twitch.svg"
     ],
     "discreteSampling": {
       "clawd-working-thinking.svg": 24,
@@ -160,7 +161,8 @@
       "clawd-alive-fake-nap-in.svg": 24,
       "clawd-alive-fake-nap-out.svg": 24,
       "clawd-alive-petting-in.svg": 24,
-      "clawd-alive-petting-out.svg": 24
+      "clawd-alive-petting-out.svg": 24,
+      "clawd-alive-sleep-twitch.svg": 24
     }
   },
   "customization": {
@@ -1472,6 +1474,21 @@
             }
           }
         },
+        "clawd-alive-sleep-twitch.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 10,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso-sploot",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 10,
+              "width": 16
+            }
+          }
+        },
         "clawd-wake.svg": {
           "visibility": "hidden"
         },
@@ -1585,6 +1602,9 @@
               "visibility": "hidden"
             },
             "clawd-sleeping.svg": {
+              "visibility": "hidden"
+            },
+            "clawd-alive-sleep-twitch.svg": {
               "visibility": "hidden"
             },
             "clawd-working-building.svg": {
@@ -2692,6 +2712,9 @@
         "clawd-sleeping.svg": {
           "visibility": "hidden"
         },
+        "clawd-alive-sleep-twitch.svg": {
+          "visibility": "hidden"
+        },
         "clawd-wake.svg": {
           "staticFrame": {
             "cx": 14,
@@ -3039,6 +3062,7 @@
   ],
   "sleepingHitboxFiles": [
     "clawd-sleeping.svg",
+    "clawd-alive-sleep-twitch.svg",
     "clawd-collapse-sleep.svg"
   ],
   "companionAnimations": {
@@ -3249,6 +3273,10 @@
     "pettingOut": {
       "file": "clawd-alive-petting-out.svg",
       "duration": 300
+    },
+    "sleepTwitch": {
+      "file": "clawd-alive-sleep-twitch.svg",
+      "duration": 18000
     }
   },
   "reactions": {

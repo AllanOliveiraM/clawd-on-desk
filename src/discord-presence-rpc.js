@@ -66,6 +66,7 @@ const SVG_GIF = Object.freeze({
   "clawd-idle-doze.svg": "clawd-sleeping.gif",
   "clawd-collapse-sleep.svg": "clawd-sleeping.gif",
   "clawd-sleeping.svg": "clawd-sleeping.gif",
+  "clawd-alive-sleep-twitch.svg": "clawd-sleeping.gif",
   "clawd-wake.svg": "clawd-idle.gif",
   "clawd-dizzy.svg": "clawd-idle.gif",
   "clawd-working-thinking.svg": "clawd-thinking.gif",

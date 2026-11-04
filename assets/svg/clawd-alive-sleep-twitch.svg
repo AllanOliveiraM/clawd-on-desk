@@ -1,0 +1,388 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* Slow, rhythmic deep breathing animation */
+      .breathe {
+        transform-origin: 7.5px 15px; /* Pivot at the floor to expand upwards */
+        animation: breathe-squash 4.5s infinite ease-in-out;
+      }
+
+      /* Shadow expands slightly as the body inflates */
+      .shadow-breathe {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-pulse 4.5s infinite ease-in-out;
+      }
+
+      /* Zzz Particle Base Styles */
+      .z-particle {
+        opacity: 0;
+      }
+      .z1 { animation: float-1 6s infinite ease-in-out; animation-delay: 0s; }
+      .z2 { animation: float-2 6s infinite ease-in-out; animation-delay: 2s; }
+      .z3 { animation: float-3 6s infinite ease-in-out; animation-delay: 4s; }
+
+      /* Breathing Keyframes (Slow inhale, hold, exhale, pause) */
+      @keyframes breathe-squash {
+        0%, 80%, 100% { transform: scale(1, 1); }
+        30%, 40% { transform: scale(1.02, 1.25); } /* Chest expands/inflates */
+      }
+
+      @keyframes shadow-pulse {
+        0%, 80%, 100% { transform: scaleX(1); opacity: 0.4; }
+        30%, 40% { transform: scaleX(1.05); opacity: 0.5; }
+      }
+
+      /* Swaying and fading floating Z keyframes (Adjusted for lowered head) */
+      @keyframes float-1 {
+        0%   { transform: translate(5px, 8px) scale(0.4); opacity: 0; }
+        10%  { opacity: 1; }
+        30%  { transform: translate(9px, 4px) scale(0.6); }
+        50%  { transform: translate(4px, 0px) scale(0.8); }
+        70%  { transform: translate(8px, -4px) scale(1.0); }
+        90%  { opacity: 0.8; }
+        100% { transform: translate(6px, -8px) scale(1.1); opacity: 0; }
+      }
+
+      @keyframes float-2 {
+        0%   { transform: translate(8px, 9px) scale(0.3); opacity: 0; }
+        10%  { opacity: 1; }
+        30%  { transform: translate(5px, 5px) scale(0.5); }
+        50%  { transform: translate(9px, 1px) scale(0.7); }
+        70%  { transform: translate(6px, -3px) scale(0.9); }
+        90%  { opacity: 0.8; }
+        100% { transform: translate(8px, -7px) scale(1.0); opacity: 0; }
+      }
+
+      @keyframes float-3 {
+        0%   { transform: translate(6px, 7px) scale(0.5); opacity: 0; }
+        10%  { opacity: 1; }
+        30%  { transform: translate(9px, 3px) scale(0.7); }
+        50%  { transform: translate(4px, -1px) scale(0.9); }
+        70%  { transform: translate(8px, -5px) scale(1.1); }
+        90%  { opacity: 0.8; }
+        100% { transform: translate(5px, -9px) scale(1.2); opacity: 0; }
+      }
+
+      /* ===== Clawd Alive: dream twitches =====
+         18s = 4 breaths = 3 Zzz cycles, so everything above repeats unchanged.
+         The original legs are never animated: little pose rects pop on top of them
+         (opacity steps only), so t=0 and t=end are exactly clawd-sleeping.svg t=0. */
+      .dream-pose { opacity: 0; animation-duration: 18s; animation-iteration-count: infinite; animation-timing-function: step-end; }
+      .jolt { animation: dream-jolt 18s infinite ease-in-out; }
+      .p-outer-left-tremble { animation-name: outer-left-tremble; }
+      @keyframes outer-left-tremble {
+        0% { opacity: 0; }
+        64.778% { opacity: 1; }
+        65.056% { opacity: 0; }
+        81.111% { opacity: 1; }
+        81.444% { opacity: 0; }
+        86.667% { opacity: 1; }
+        87.000% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-outer-left-lift { animation-name: outer-left-lift; }
+      @keyframes outer-left-lift {
+        0% { opacity: 0; }
+        63.056% { opacity: 1; }
+        63.389% { opacity: 0; }
+        82.222% { opacity: 1; }
+        82.556% { opacity: 0; }
+        85.556% { opacity: 1; }
+        85.889% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-outer-left-kick { animation-name: outer-left-kick; }
+      @keyframes outer-left-kick {
+        0% { opacity: 0; }
+        63.667% { opacity: 1; }
+        64.000% { opacity: 0; }
+        84.444% { opacity: 1; }
+        84.778% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-outer-left-flick { animation-name: outer-left-flick; }
+      @keyframes outer-left-flick {
+        0% { opacity: 0; }
+        64.278% { opacity: 1; }
+        64.778% { opacity: 0; }
+        83.333% { opacity: 1; }
+        83.667% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-outer-left-back { animation-name: outer-left-back; }
+      @keyframes outer-left-back {
+        0% { opacity: 0; }
+        82.556% { opacity: 1; }
+        82.756% { opacity: 0; }
+        83.667% { opacity: 1; }
+        83.867% { opacity: 0; }
+        84.778% { opacity: 1; }
+        84.978% { opacity: 0; }
+        85.889% { opacity: 1; }
+        86.089% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-left-tremble { animation-name: inner-left-tremble; }
+      @keyframes inner-left-tremble {
+        0% { opacity: 0; }
+        47.500% { opacity: 1; }
+        47.833% { opacity: 0; }
+        64.944% { opacity: 1; }
+        65.444% { opacity: 0; }
+        65.444% { opacity: 1; }
+        65.722% { opacity: 0; }
+        81.667% { opacity: 1; }
+        82.000% { opacity: 0; }
+        87.222% { opacity: 1; }
+        87.556% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-left-lift { animation-name: inner-left-lift; }
+      @keyframes inner-left-lift {
+        0% { opacity: 0; }
+        48.167% { opacity: 1; }
+        48.556% { opacity: 0; }
+        63.722% { opacity: 1; }
+        64.056% { opacity: 0; }
+        64.333% { opacity: 1; }
+        64.667% { opacity: 0; }
+        82.778% { opacity: 1; }
+        83.111% { opacity: 0; }
+        86.111% { opacity: 1; }
+        86.444% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-left-kick { animation-name: inner-left-kick; }
+      @keyframes inner-left-kick {
+        0% { opacity: 0; }
+        85.000% { opacity: 1; }
+        85.333% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-left-flick { animation-name: inner-left-flick; }
+      @keyframes inner-left-flick {
+        0% { opacity: 0; }
+        83.889% { opacity: 1; }
+        84.222% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-left-back { animation-name: inner-left-back; }
+      @keyframes inner-left-back {
+        0% { opacity: 0; }
+        83.111% { opacity: 1; }
+        83.311% { opacity: 0; }
+        84.222% { opacity: 1; }
+        84.422% { opacity: 0; }
+        85.333% { opacity: 1; }
+        85.533% { opacity: 0; }
+        86.444% { opacity: 1; }
+        86.644% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-right-tremble { animation-name: inner-right-tremble; }
+      @keyframes inner-right-tremble {
+        0% { opacity: 0; }
+        81.111% { opacity: 1; }
+        81.444% { opacity: 0; }
+        86.667% { opacity: 1; }
+        87.000% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-right-lift { animation-name: inner-right-lift; }
+      @keyframes inner-right-lift {
+        0% { opacity: 0; }
+        82.222% { opacity: 1; }
+        82.556% { opacity: 0; }
+        85.556% { opacity: 1; }
+        85.889% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-right-kick { animation-name: inner-right-kick; }
+      @keyframes inner-right-kick {
+        0% { opacity: 0; }
+        84.444% { opacity: 1; }
+        84.778% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-right-flick { animation-name: inner-right-flick; }
+      @keyframes inner-right-flick {
+        0% { opacity: 0; }
+        83.333% { opacity: 1; }
+        83.667% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-inner-right-back { animation-name: inner-right-back; }
+      @keyframes inner-right-back {
+        0% { opacity: 0; }
+        82.556% { opacity: 1; }
+        82.756% { opacity: 0; }
+        83.667% { opacity: 1; }
+        83.867% { opacity: 0; }
+        84.778% { opacity: 1; }
+        84.978% { opacity: 0; }
+        85.889% { opacity: 1; }
+        86.089% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-outer-right-tremble { animation-name: outer-right-tremble; }
+      @keyframes outer-right-tremble {
+        0% { opacity: 0; }
+        19.500% { opacity: 1; }
+        19.778% { opacity: 0; }
+        81.667% { opacity: 1; }
+        82.000% { opacity: 0; }
+        87.222% { opacity: 1; }
+        87.556% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-outer-right-lift { animation-name: outer-right-lift; }
+      @keyframes outer-right-lift {
+        0% { opacity: 0; }
+        17.778% { opacity: 1; }
+        18.111% { opacity: 0; }
+        82.778% { opacity: 1; }
+        83.111% { opacity: 0; }
+        86.111% { opacity: 1; }
+        86.444% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-outer-right-kick { animation-name: outer-right-kick; }
+      @keyframes outer-right-kick {
+        0% { opacity: 0; }
+        18.389% { opacity: 1; }
+        18.722% { opacity: 0; }
+        85.000% { opacity: 1; }
+        85.333% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-outer-right-flick { animation-name: outer-right-flick; }
+      @keyframes outer-right-flick {
+        0% { opacity: 0; }
+        19.000% { opacity: 1; }
+        19.500% { opacity: 0; }
+        83.889% { opacity: 1; }
+        84.222% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      .p-outer-right-back { animation-name: outer-right-back; }
+      @keyframes outer-right-back {
+        0% { opacity: 0; }
+        83.111% { opacity: 1; }
+        83.311% { opacity: 0; }
+        84.222% { opacity: 1; }
+        84.422% { opacity: 0; }
+        85.333% { opacity: 1; }
+        85.533% { opacity: 0; }
+        86.444% { opacity: 1; }
+        86.644% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      @keyframes dream-jolt {
+        0% { transform: translate(0px, 0px); }
+        18.889% { transform: translate(0px, 0px); }
+        19.167% { transform: translate(0px, -0.21px); }
+        19.667% { transform: translate(0px, 0.048px); }
+        20.222% { transform: translate(0px, 0px); }
+        64.167% { transform: translate(0px, 0px); }
+        64.444% { transform: translate(0px, -0.21px); }
+        64.944% { transform: translate(0px, 0.048px); }
+        65.500% { transform: translate(0px, 0px); }
+        80.667% { transform: translate(0px, 0px); }
+        80.944% { transform: translate(0px, -0.42px); }
+        81.444% { transform: translate(0px, 0.096px); }
+        82.000% { transform: translate(0px, 0px); }
+        83.889% { transform: translate(0px, 0px); }
+        84.167% { transform: translate(0px, -0.1575px); }
+        84.667% { transform: translate(0px, 0.036px); }
+        85.222% { transform: translate(0px, 0px); }
+        86.111% { transform: translate(0px, 0px); }
+        86.389% { transform: translate(0px, -0.1575px); }
+        86.889% { transform: translate(0px, 0.036px); }
+        87.444% { transform: translate(0px, 0px); }
+        100% { transform: translate(0px, 0px); }
+      }
+    </style>
+
+    <!-- Pixel Art "Z" Definitions -->
+    <g id="pixel-z">
+      <rect x="0" y="0" width="4" height="1" />
+      <rect x="2" y="1" width="1" height="1" />
+      <rect x="1" y="2" width="1" height="1" />
+      <rect x="0" y="3" width="4" height="1" />
+    </g>
+    
+    <g id="pixel-z-small">
+      <rect x="0" y="0" width="3" height="1" />
+      <rect x="1" y="1" width="1" height="1" />
+      <rect x="0" y="2" width="3" height="1" />
+    </g>
+  </defs>
+
+  <!-- Ground Shadow (Widened for the splooted posture) -->
+  <rect id="ground-shadow" class="shadow-breathe" x="-1" y="15" width="17" height="1" fill="#000000" />
+
+  <!-- Floating Zzz Bubbles -->
+  <g class="zzz-particles">
+    <use href="#pixel-z" class="z-particle z1" fill="#90A4AE" />
+    <use href="#pixel-z-small" class="z-particle z2" fill="#B0BEC5" />
+    <use href="#pixel-z" class="z-particle z3" fill="#CFD8DC" />
+  </g>
+
+  <!-- Splooted / Melted Sleeping Pose -->
+  <g class="jolt">
+  <g class="breathe">
+    <!-- Legs pointing up from behind (Relaxed Sploot) -->
+    <g fill="#DE886D">
+      <rect id="outer-left-leg-up" x="3" y="9" width="1" height="1"/>
+      <rect id="inner-left-leg-up" x="5" y="9" width="1" height="1"/>
+      <rect id="inner-right-leg-up" x="9" y="9" width="1" height="1"/>
+      <rect id="outer-right-leg-up" x="11" y="9" width="1" height="1"/>
+      <!-- Dream twitch poses (hidden at rest) -->
+      <rect id="outer-left-leg-tremble" class="dream-pose p-outer-left-tremble" x="3" y="8.5" width="1" height="0.5"/>
+      <rect id="outer-left-leg-lift" class="dream-pose p-outer-left-lift" x="3" y="8" width="1" height="1"/>
+      <rect id="outer-left-leg-kick" class="dream-pose p-outer-left-kick" x="3" y="7" width="1" height="2"/>
+      <rect id="outer-left-leg-flick-0" class="dream-pose p-outer-left-flick" x="3" y="7" width="1" height="2"/>
+      <rect id="outer-left-leg-flick-1" class="dream-pose p-outer-left-flick" x="2" y="7" width="1" height="1"/>
+      <rect id="outer-left-leg-back-0" class="dream-pose p-outer-left-back" x="3" y="8" width="1" height="1"/>
+      <rect id="outer-left-leg-back-1" class="dream-pose p-outer-left-back" x="4" y="8" width="1" height="1"/>
+      <rect id="inner-left-leg-tremble" class="dream-pose p-inner-left-tremble" x="5" y="8.5" width="1" height="0.5"/>
+      <rect id="inner-left-leg-lift" class="dream-pose p-inner-left-lift" x="5" y="8" width="1" height="1"/>
+      <rect id="inner-left-leg-kick" class="dream-pose p-inner-left-kick" x="5" y="7" width="1" height="2"/>
+      <rect id="inner-left-leg-flick-0" class="dream-pose p-inner-left-flick" x="5" y="7" width="1" height="2"/>
+      <rect id="inner-left-leg-flick-1" class="dream-pose p-inner-left-flick" x="4" y="7" width="1" height="1"/>
+      <rect id="inner-left-leg-back-0" class="dream-pose p-inner-left-back" x="5" y="8" width="1" height="1"/>
+      <rect id="inner-left-leg-back-1" class="dream-pose p-inner-left-back" x="6" y="8" width="1" height="1"/>
+      <rect id="inner-right-leg-tremble" class="dream-pose p-inner-right-tremble" x="9" y="8.5" width="1" height="0.5"/>
+      <rect id="inner-right-leg-lift" class="dream-pose p-inner-right-lift" x="9" y="8" width="1" height="1"/>
+      <rect id="inner-right-leg-kick" class="dream-pose p-inner-right-kick" x="9" y="7" width="1" height="2"/>
+      <rect id="inner-right-leg-flick-0" class="dream-pose p-inner-right-flick" x="9" y="7" width="1" height="2"/>
+      <rect id="inner-right-leg-flick-1" class="dream-pose p-inner-right-flick" x="10" y="7" width="1" height="1"/>
+      <rect id="inner-right-leg-back-0" class="dream-pose p-inner-right-back" x="9" y="8" width="1" height="1"/>
+      <rect id="inner-right-leg-back-1" class="dream-pose p-inner-right-back" x="8" y="8" width="1" height="1"/>
+      <rect id="outer-right-leg-tremble" class="dream-pose p-outer-right-tremble" x="11" y="8.5" width="1" height="0.5"/>
+      <rect id="outer-right-leg-lift" class="dream-pose p-outer-right-lift" x="11" y="8" width="1" height="1"/>
+      <rect id="outer-right-leg-kick" class="dream-pose p-outer-right-kick" x="11" y="7" width="1" height="2"/>
+      <rect id="outer-right-leg-flick-0" class="dream-pose p-outer-right-flick" x="11" y="7" width="1" height="2"/>
+      <rect id="outer-right-leg-flick-1" class="dream-pose p-outer-right-flick" x="12" y="7" width="1" height="1"/>
+      <rect id="outer-right-leg-back-0" class="dream-pose p-outer-right-back" x="11" y="8" width="1" height="1"/>
+      <rect id="outer-right-leg-back-1" class="dream-pose p-outer-right-back" x="10" y="8" width="1" height="1"/>
+    </g>
+
+    <!-- Squashed Body Resting on the Floor -->
+    <g fill="#DE886D">
+      <!-- Main flattened torso -->
+      <rect id="torso-sploot" x="1" y="10" width="13" height="5"/>
+      
+      <!-- Arms spread flat on the ground -->
+      <rect id="left-arm-sploot" x="-1" y="13" width="2" height="2"/>
+      <rect id="right-arm-sploot" x="14" y="13" width="2" height="2"/>
+    </g>
+    
+    <!-- Ultra-Thin Shut Eyes (Dashes) -->
+    <g fill="#000000">
+      <rect id="left-eye-shut" x="3.5" y="12.5" width="2" height="0.4"/>
+      <rect id="right-eye-shut" x="9.5" y="12.5" width="2" height="0.4"/>
+    </g>
+  </g>
+  </g>
+</svg>

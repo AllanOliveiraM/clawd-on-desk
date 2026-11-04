@@ -625,15 +625,17 @@ const MISCHIEF_ANIMATION_KEYS = Object.freeze([
 ]);
 
 // Clawd Alive polish visuals (directional catches, long-reach pounce strikes,
-// mirrored greet / shy / reach-close, roam walk variants). All optional: the
-// companion falls back to the plain key (catch, catchMiss, pounce<Side>,
-// greet, shy, reachClose) or to the theme's roam visual when one is missing.
+// mirrored greet / shy / reach-close, roam walk variants, the dreamy sleep).
+// All optional: the companion falls back to the plain key (catch, catchMiss,
+// pounce<Side>, greet, shy, reachClose) or to the theme's roam / sleeping
+// visual when one is missing.
 const POLISH_ANIMATION_KEYS = Object.freeze([
   "catchHigh", "catchBody", "catchLow", "catchLeft", "catchRight",
   "catchMissHigh", "catchMissBody", "catchMissLow", "catchMissLeft", "catchMissRight",
   "pounceStrikeLeft", "pounceStrikeRight",
   "greetLeft", "shyRight", "reachCloseLeft",
   "walkBouncy", "walkTired", "walkCurious",
+  "sleepTwitch",
 ]);
 
 // Clawd Alive one-shot intro / outro parts of the held scenes (sit on the edge,

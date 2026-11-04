@@ -71,8 +71,8 @@ describe("built-in accessory capability contracts", () => {
     const usages = projectThemeVisualUsages(raw);
     const files = collectRequiredAssetFiles(raw);
 
-    assert.strictEqual(usages.length, 105);
-    assert.strictEqual(files.length, 103);
+    assert.strictEqual(usages.length, 106);
+    assert.strictEqual(files.length, 104);
     assert.deepStrictEqual(
       new Set(files),
       new Set(fs.readdirSync(path.join(ROOT, "assets", "svg")).filter((file) => file.endsWith(".svg"))),
@@ -151,6 +151,8 @@ describe("built-in accessory capability contracts", () => {
     assert.deepStrictEqual(sleeping.staticFrame, { cx: 7.5, baseY: 10, width: 16 });
     assert.strictEqual(sleeping.followTarget.id, "torso-sploot");
     assert.deepStrictEqual(sleeping.followTarget.frame, sleeping.staticFrame);
+    // The dreamy sleep variant keeps the exact sleeping anchor.
+    assert.deepStrictEqual(raw.customization.accessories.files["clawd-alive-sleep-twitch.svg"], sleeping);
   });
 
   it("anchors Clawd idle accessories inside the breathing transform", () => {

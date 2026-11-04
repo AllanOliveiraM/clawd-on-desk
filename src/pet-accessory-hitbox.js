@@ -105,6 +105,8 @@ const BUILTIN_ACCESSORY_MOTION_PADDING = Object.freeze({
     "clawd-working-carrying.svg": Object.freeze({ left: 0.9, top: 0.3, bottom: 1.3 }),
     "clawd-working-debugger.svg": Object.freeze({ left: 1.8, right: 4, bottom: 2 }),
     "clawd-sleeping.svg": Object.freeze({ left: 0.2, top: 5.3, right: 0.2 }),
+    // Sleeping plus the leg-twitch jolt (measured +0.05 below, rounded out).
+    "clawd-alive-sleep-twitch.svg": Object.freeze({ left: 0.2, top: 5.3, right: 0.2, bottom: 0.1 }),
   }),
   cloudling: Object.freeze({
     // Idle is script-driven, so this one is derived rather than sampled: the

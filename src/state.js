@@ -893,6 +893,27 @@ function normalizeApplyStateOptions(state, options = {}) {
   };
 }
 
+// Clawd Alive dreamy sleep: on each entry into the real (non-DND) "sleeping"
+// state the companion may name a file that replaces the theme's sleeping
+// visual for that whole sleep. The logical state, timers, hit box family and
+// wake path stay exactly the sleeping ones. Must run after previousState and
+// currentState are updated.
+let sleepVariantSvg = null;
+function resolveSleepVariant(state, svgOverride, options) {
+  if (state !== "sleeping" || svgOverride || options.settingsPreview === true || ctx.doNotDisturb) {
+    sleepVariantSvg = null;
+    return null;
+  }
+  if (previousState === "sleeping") return sleepVariantSvg;
+  sleepVariantSvg = null;
+  if (typeof ctx.pickSleepVisual !== "function") return null;
+  try {
+    const file = ctx.pickSleepVisual();
+    if (typeof file === "string" && file) sleepVariantSvg = file;
+  } catch {}
+  return sleepVariantSvg;
+}
+
 function applyState(state, svgOverride, options = {}) {
   const applyOptions = normalizeApplyStateOptions(state, options);
   // Phase 3b: user-disabled oneshot state — skip visual + sound, fall back to
@@ -960,7 +981,8 @@ function applyState(state, svgOverride, options = {}) {
   const userIdle = (state === "idle" && !svgOverride && typeof ctx.getIdleVisualChoice === "function")
     ? ctx.getIdleVisualChoice()
     : null;
-  const svg = svgOverride || userIdle || resolveVisualBinding(state);
+  const svg = svgOverride || userIdle || resolveSleepVariant(state, svgOverride, applyOptions)
+    || resolveVisualBinding(state);
   currentSvg = svg;
 
   // Force eye resend after SVG load completes (~300ms)

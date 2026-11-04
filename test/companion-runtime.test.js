@@ -1717,6 +1717,65 @@ test("walk variants never consume randomness without their art or with the featu
   }
 });
 
+// ---- polish: dreamy sleep (twitching legs) ----
+
+test("sleep uses the twitch variant ~35% when companion enabled", () => {
+  for (const [roll, file] of [[0, "sleepTwitch.svg"], [0.34, "sleepTwitch.svg"], [0.35, null], [0.9, null]]) {
+    const env = setup();
+    env.theme = themeWith([...ALL_KEYS, "sleepTwitch"]);
+    env.runtime.configure({ ...ON });
+    env.randomValue = roll;
+    assert.equal(env.runtime.pickSleepVisual(), file, `roll ${roll}`);
+  }
+  // Mood and personality do not change the chance.
+  for (const personality of ["calm", "playful", "curious"]) {
+    const env = walkEnv({ personality, energy: 10, contentment: 90, keys: ["sleepTwitch"] });
+    env.randomValue = 0.34;
+    assert.equal(env.runtime.pickSleepVisual(), "sleepTwitch.svg", personality);
+  }
+  // Over many sleeps the injected random decides about 35% of them.
+  let seed = 12345;
+  const rt = createCompanionRuntime({
+    getTheme: () => themeWith([...ALL_KEYS, "sleepTwitch"]),
+    random: () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; },
+    store: fakeStore(),
+  });
+  rt.configure({ ...ON, memory: false });
+  let twitches = 0;
+  for (let n = 0; n < 1000; n += 1) if (rt.pickSleepVisual()) twitches += 1;
+  assert.ok(twitches > 300 && twitches < 400, `twitches ${twitches}`);
+});
+
+test("feature off never overrides sleep", () => {
+  let rolls = 0;
+  const rt = createCompanionRuntime({
+    getTheme: () => themeWith([...ALL_KEYS, "sleepTwitch"]),
+    random: () => { rolls += 1; return 0; },
+    store: fakeStore(),
+  });
+  assert.equal(rt.pickSleepVisual(), null, "never configured");
+  rt.configure({ ...ON, memory: false, enabled: false });
+  assert.equal(rt.pickSleepVisual(), null, "disabled");
+  rt.configure({ ...ON, memory: false });
+  rt.dispose();
+  assert.equal(rt.pickSleepVisual(), null, "disposed");
+  assert.equal(rolls, 0);
+});
+
+test("missing theme key falls back to original", () => {
+  let rolls = 0;
+  for (const theme of [themeWith(ALL_KEYS), null, { states: {} }]) {
+    const rt = createCompanionRuntime({
+      getTheme: () => theme,
+      random: () => { rolls += 1; return 0; },
+      store: fakeStore(),
+    });
+    rt.configure({ ...ON, memory: false });
+    assert.equal(rt.pickSleepVisual(), null);
+  }
+  assert.equal(rolls, 0, "no roll without the art");
+});
+
 // ---- polish: roam waits for companion visuals (item 10) ----
 
 test("holdsRoam covers the send, the playback and a 1.5 s breather afterwards", () => {

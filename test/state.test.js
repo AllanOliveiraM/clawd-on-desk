@@ -1422,6 +1422,107 @@ describe("sleep sequence", () => {
   });
 });
 
+describe("Clawd Alive dreamy sleep (pickSleepVisual)", () => {
+  let api, ctx, fakeCursor, changes, asked, answer;
+
+  function build(overrides = {}) {
+    if (api) api.cleanup();
+    changes = [];
+    asked = 0;
+    ctx = makeCtx({
+      getCursorScreenPoint: () => ({ ...fakeCursor }),
+      sendToRenderer: (ev, ...args) => { if (ev === "state-change") changes.push(args); },
+      pickSleepVisual: () => { asked += 1; return answer; },
+      ...overrides,
+    });
+    api = require("../src/state")(ctx);
+  }
+
+  beforeEach(() => {
+    mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
+    fakeCursor = { x: 100, y: 100 };
+    answer = "clawd-alive-sleep-twitch.svg";
+    api = null;
+    build();
+  });
+  afterEach(() => {
+    api.cleanup();
+    api = null;
+    mock.timers.reset();
+  });
+
+  it("a real sleep shows the variant file while the logical state stays sleeping", () => {
+    api.applyState("idle");
+    api.applyState("sleeping");
+    assert.strictEqual(asked, 1);
+    assert.strictEqual(api.getCurrentState(), "sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-sleep-twitch.svg");
+    assert.deepStrictEqual(changes[changes.length - 1], ["sleeping", "clawd-alive-sleep-twitch.svg"]);
+    // Same hit box as the theme's sleeping visual.
+    const twitchBox = api.getCurrentHitBox();
+    build({ pickSleepVisual: () => null });
+    api.applyState("sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
+    assert.deepStrictEqual(twitchBox, api.getCurrentHitBox());
+  });
+
+  it("no hook, a null answer or a throwing hook keep the original sleeping visual", () => {
+    for (const pickSleepVisual of [undefined, () => null, () => { throw new Error("boom"); }, () => 42]) {
+      build({ pickSleepVisual });
+      api.applyState("sleeping");
+      assert.strictEqual(api.getCurrentState(), "sleeping");
+      assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
+    }
+  });
+
+  it("the variant holds for the whole sleep and the next sleep rolls again", () => {
+    api.applyState("sleeping");
+    api.applyState("sleeping"); // re-applied mid-sleep (e.g. renderer reload)
+    assert.strictEqual(asked, 1);
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-sleep-twitch.svg");
+    api.applyState("idle");
+    answer = null;
+    api.applyState("sleeping");
+    assert.strictEqual(asked, 2);
+    assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
+  });
+
+  it("a session-resolved sleep goes through the hook too", () => {
+    api.applyState("idle");
+    api.setState("sleeping");
+    assert.strictEqual(asked, 1);
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-sleep-twitch.svg");
+  });
+
+  it("waking from a twitch sleep goes through the normal wake visual", () => {
+    api.applyState("sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-sleep-twitch.svg");
+    mock.timers.tick(500);
+    fakeCursor.x = 200;
+    mock.timers.tick(200);
+    assert.strictEqual(api.getCurrentState(), "waking");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-wake.svg");
+    mock.timers.tick(1500);
+    assert.strictEqual(api.getCurrentState(), "idle");
+    assert.strictEqual(asked, 1);
+  });
+
+  it("DND sleep, mini sleep, explicit overrides and the rest of the sequence never ask", () => {
+    ctx.doNotDisturb = true;
+    api.applyState("sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg", "DND");
+    ctx.doNotDisturb = false;
+    api.applyState("idle");
+    for (const state of ["yawning", "dozing", "collapsing", "waking"]) api.applyState(state);
+    api.applyState("sleeping", "clawd-sleeping.svg");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg", "explicit override");
+    build({ miniMode: true, pickSleepVisual: () => { asked += 1; return answer; } });
+    api.applyState("mini-sleep");
+    api.applyState("sleeping");
+    assert.strictEqual(asked, 0);
+  });
+});
+
 describe("wake poll behavior", () => {
   let api, ctx, fakeCursor;
 

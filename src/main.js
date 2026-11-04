@@ -2552,6 +2552,9 @@ const _stateCtx = {
     if (sessionAutomationCoordinator) sessionAutomationCoordinator.onSessionLifecycleEnd(payload);
   },
   getIdleVisualChoice,
+  // Clawd Alive dreamy sleep: may swap the sleeping visual for one sleep
+  // (null = original; state.js guards the call, _companion is created later).
+  pickSleepVisual: () => _companion.pickSleepVisual(),
   isAgentEnabled: (agentId) => _runtimeAgentGate.isAgentEnabled(agentId),
   hasAnyEnabledAgent: () => _runtimeAgentGate.hasAnyEnabledAgent(),
 };

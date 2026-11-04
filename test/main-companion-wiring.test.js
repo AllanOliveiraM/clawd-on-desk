@@ -220,6 +220,11 @@ it("roam ctx isIdleActivityPlaying includes companion", () => {
   assert.ok(roamCtx.includes("pickWalkVisual: () => _companion.pickWalkVisual(),"));
 });
 
+it("state ctx asks the companion for the dreamy sleep visual", () => {
+  const stateCtx = slice("const _stateCtx = {", 'const _state = require("./state")');
+  assert.ok(stateCtx.includes("pickSleepVisual: () => _companion.pickSleepVisual(),"));
+});
+
 it("idle activities, tick and settings IPC reach the companion", () => {
   const controller = slice('const _idleActivity = require("./idle-activity")', "\n});");
   assert.ok(controller.includes("chooser: (args) => _companion.chooseIdleActivity(args),"));

@@ -99,6 +99,8 @@ const HIDDEN_MOUTH_FILES = Object.freeze([
   "clawd-working-debugger.svg",
   "clawd-react-drag.svg",
   "clawd-sleeping.svg",
+  // The dreamy sleep follows the sleeping sprite it replaces.
+  "clawd-alive-sleep-twitch.svg",
   "clawd-mini-idle.svg",
   "clawd-mini-alert.svg",
   "clawd-mini-happy.svg",
@@ -123,7 +125,7 @@ const OPTIONAL_LIBRARY_FILES = Object.freeze([
   "clawd-working-wizard.svg",
 ]);
 
-test("mouth policy covers the approved 91 stock sprites exactly", () => {
+test("mouth policy covers the approved 92 stock sprites exactly", () => {
   const theme = themeLoader.loadTheme("clawd", { strict: true });
   const files = theme.customization.mouthAccessories.files;
   const stockFiles = Object.fromEntries(
@@ -137,7 +139,7 @@ test("mouth policy covers the approved 91 stock sprites exactly", () => {
     new Set(Object.keys(stockFiles)),
     new Set([...VISIBLE_MOUTH_FILES, ...HIDDEN_MOUTH_FILES])
   );
-  assert.strictEqual(Object.keys(stockFiles).length, 91);
+  assert.strictEqual(Object.keys(stockFiles).length, 92);
   assert.deepStrictEqual(files["clawd-outlaw-bender.svg"], { visibility: "hidden" });
   assert.deepStrictEqual(
     files["clawd-working-typing-boss.svg"],
@@ -250,6 +252,7 @@ test("head pose policy keeps headphones hatless and limits western-hat-only over
     "clawd-collapse-sleep.svg",
     "clawd-working-carrying.svg",
     "clawd-sleeping.svg",
+    "clawd-alive-sleep-twitch.svg",
     "clawd-working-building.svg",
   ]) {
     assert.deepStrictEqual(western[file], { visibility: "hidden" }, file);
@@ -403,6 +406,7 @@ test("Clawd lists its long-lived animations as object-channel SVGs", () => {
     "clawd-alive-fake-nap-out.svg",
     "clawd-alive-petting-in.svg",
     "clawd-alive-petting-out.svg",
+    "clawd-alive-sleep-twitch.svg",
   ]);
 });
 
@@ -485,6 +489,7 @@ test("Clawd caps its long-lived object-channel animations to 24 discrete steps p
     "clawd-alive-fake-nap-out.svg": 24,
     "clawd-alive-petting-in.svg": 24,
     "clawd-alive-petting-out.svg": 24,
+    "clawd-alive-sleep-twitch.svg": 24,
   });
 });
 
