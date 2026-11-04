@@ -24,10 +24,10 @@
 
 ### Mischief
 
-Part of Clawd Alive, with its own switch: `Settings…` → `Pet` → `Personality & behavior` → `Mischief` (on by default once Clawd Alive is on). Off, none of the moments below happen. Each one needs matching theme art and has its own cooldown; personality weights how often each shows up, and a low-energy Clawd skips the jumpy and walking ones.
+Part of Clawd Alive, with its own switch: `Settings…` → `Pet` → `Personality & behavior` → `Mischief` (on by default once Clawd Alive is on). Off, none of the moments below happen. Each one needs matching theme art and has its own cooldown; personality weights how often each shows up, and a low-energy Clawd skips pounce, poke, reach close and wall (catch, sit on the edge and the rest still play).
 
 - **Catch** — hover over Clawd and it grabs for the cursor; move the cursor and it misses (not for very shy pets)
-- **Pounce** — lurk near Clawd (40–220 px away) for a couple of seconds and it pounces toward you
+- **Pounce** — lurk near Clawd (40–220 px away) for a couple of seconds and it pounces toward you (at most once every 10 minutes)
 - **Fake nap** — pretends to doze; sneak the cursor close and it jumps up with a "boo"
 - **Poke** — park the cursor far away for 20 s and Clawd walks over to poke it
 - **Reach close** — walks to the top corner where the window close button lives (top right, top left on macOS) and reaches for it
@@ -38,7 +38,7 @@ Part of Clawd Alive, with its own switch: `Settings…` → `Pet` → `Personali
 - **Welcome back** — celebrates when you return after a sleep of 10 minutes or more
 - **Stretch back** — stretches after a long work stretch of 10 minutes or more ends
 
-How `When idle` decides where: with `Stay put`, Clawd never walks, so only the in-place moments happen (catch, pounce, fake nap, day rhythm, toy, welcome, stretch). With `Free Roam`, the walking ones (poke, reach close, wall, sit on the edge) ride Free Roam's normal walks, and the corner/edge ones may go all the way to the screen edge, past the usual margin. They still respect the Roam Fence and keep the pet fully on screen. With `Activities`, only single-visual moments (day rhythm and toy) are picked. Agent work, DND, mini mode, and dragging always win.
+How `When idle` decides what: with `Stay put`, only the cursor reactions catch and pounce happen. With `Activities`, day rhythm, toy, welcome back and stretch back join them, plus catch and pounce. With `Free Roam`, everything can happen, including fake nap and the walking moments (poke, reach close, wall, sit on the edge); those ride Free Roam's normal walks, and the corner/edge ones may go past the usual margin toward the screen edge. Reach close stops a little short of the corner so the pet does not sit on real window buttons, and after any edge moment Clawd soon walks back into the usual area. They still respect the Roam Fence and keep the pet fully on screen. Agent work, DND, mini mode, and dragging always win.
 
 ## Permission Bubble
 

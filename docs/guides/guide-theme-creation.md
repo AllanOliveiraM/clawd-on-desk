@@ -450,7 +450,7 @@ Visuals for the opt-in "Clawd Alive" companion (petting, moods). The whole block
   - Edges: `reachClose` 3000; `wallPushLeft` / `wallPushRight` 2500; `wallPeekLeft` / `wallPeekRight` 2500; `sitEdge` 2000 (loops)
   - Day and returns: `morningStretch` 2800, `coffee` 3000, `nightSleepy` 3000, `welcome` 2000, `stretchBack` 2600
   - Toys: `toyBall`, `toyYoyo`, `toyPlane`, 3000 each
-  - Left/right pairs: `pounce`, `poke`, `wallPush`, `wallPeek`. The side is the direction the pet faces or leans. If only one side exists, that scene is skipped on the other side; `wall` needs at least one `wallPush*` or `wallPeek*` key, `toy` and day rhythm need at least one of their variants. Scenes whose main art is missing are skipped, and missing `boo`/`catchMiss` just ends the scene.
+  - Left/right pairs: `pounce`, `poke`, `wallPush`, `wallPeek`. The side is the direction the pet faces or leans. If only one side exists, that scene is skipped on the other side; `wall` needs at least one `wallPush*` or `wallPeek*` key, `toy` and day rhythm need at least one of their variants. Scenes whose main art is missing are skipped. A missing `boo` or `catchMiss` drops that event and the main part plays on: `fakeNap` keeps looping until its time limit, `catch` plays to its end.
 - Every listed file is a required asset, like reaction files: a misspelled or missing file fails theme validation with a `missing asset` error.
 - A key you leave out has no visual, and the companion simply skips that moment. Themes without the block work unchanged.
 - Variants cannot override this block.
