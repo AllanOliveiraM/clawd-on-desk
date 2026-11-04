@@ -2187,4 +2187,267 @@ describe("tick companion coordination", () => {
     advance(900);
     assert.deepStrictEqual(idleFiles(), ["clawd-idle-look.svg", ctx.theme.states.idle[0]]);
   });
+  // ── gap-hunting: hook isolation, rect freshness, origin classification ──
+  function sampleState(state) {
+    ctx.currentState = state;
+    tickApi.scheduleSoon(0);
+    mock.timers.tick(1);
+  }
+
+  function kick() {
+    tickApi.scheduleSoon(0);
+    mock.timers.tick(1);
+  }
+
+  it("a throwing companion.tick does not stop the main tick loop", () => {
+    let throws = true;
+    let later = 0;
+    ctx.companion.tick = () => { later++; if (throws) throw new Error("boom"); };
+    start();
+    const before = later;
+    throws = false;
+    advance(2000);
+    assert.ok(later > before + 1, `loop kept running (later=${later}, before=${before})`);
+  });
+
+  it("a throwing companion.noteIdleEntered neither fires twice nor starves the companion", () => {
+    let entries = 0;
+    let ticks = 0;
+    ctx.companion.noteIdleEntered = () => { entries++; throw new Error("boom"); };
+    ctx.companion.tick = () => { ticks++; };
+    start();
+    advance(2000);
+    assert.equal(entries, 1, "one idle entry, not one per tick");
+    assert.ok(ticks > 1, `companion kept ticking (ticks=${ticks})`);
+  });
+
+  it("a throwing idleActivity.noteIdleEntered does not skip the companion entry", () => {
+    const entries = [];
+    ctx.idleActivity = {
+      noteIdleEntered() { throw new Error("boom"); },
+      tick() {},
+      isAnimating: () => false,
+      cancel() {},
+    };
+    ctx.companion.noteIdleEntered = (info) => entries.push(info);
+    start();
+    advance(500);
+    assert.deepStrictEqual(entries, [{ from: "other", awayMs: 0 }]);
+  });
+
+  it("throwing isCursorTrusted counts as trusted; throwing isAnimating counts as not animating", () => {
+    const seen = [];
+    ctx.isCursorTrusted = () => { throw new Error("boom"); };
+    ctx.companion.tick = (sample, info) => seen.push([sample, info]);
+    ctx.companion.isAnimating = () => { throw new Error("boom"); };
+    ctx.forceEyeResend = true;
+    start();
+    advance(1000);
+    assert.ok(seen.length > 0);
+    assert.ok(seen.every(([, info]) => info.cursorTrusted === true));
+    // isAnimating failing reads as "no beat": the idle-look is not blocked.
+    advance(500);
+    assert.ok(idleFiles().includes("clawd-idle-look.svg"));
+  });
+
+  it("isCursorTrusted result mapping: only false is untrusted", () => {
+    for (const [value, expected] of [[undefined, true], [null, true], [0, true], [true, true], [false, false]]) {
+      const seen = [];
+      const local = loadTickWithScreen(() => ({ x: 300, y: 260 }));
+      const c = makeCtx(cloneTheme(ctx.theme), []);
+      c.sendToRenderer = () => null;
+      c.forceEyeResend = true;
+      c.isCursorTrusted = () => value;
+      c.companion = { tick: (s, info) => seen.push([s, info]), isAnimating: () => false };
+      const api = local.initTick(c);
+      api.startMainTick();
+      advance(300);
+      api.cleanup();
+      local.restore();
+      assert.ok(seen.length > 0);
+      const [s, info] = seen[seen.length - 1];
+      assert.deepStrictEqual(info, { cursorTrusted: expected }, String(value));
+      assert.equal(s === null, !expected, `sample null only when untrusted (${value})`);
+    }
+  });
+
+  it("drag lock gives the companion a null sample and resume reads a fresh rect", () => {
+    const seen = [];
+    ctx.companion.tick = (sample) => seen.push(sample);
+    ctx.forceEyeResend = true;
+    start();
+    kick();
+    assert.ok(seen.length > 0 && seen[seen.length - 1] !== null);
+
+    ctx.dragLocked = true;
+    const at = seen.length;
+    kick();
+    assert.ok(seen.length > at);
+    assert.ok(seen.slice(at).every((s) => s === null), "no stale rect while dragging");
+
+    // Released: never the pre-drag rect; either no sample yet or a fresh read.
+    ctx.dragLocked = false;
+    ctx.getHitRectScreen = () => ({ left: 200, top: 200, right: 400, bottom: 400 });
+    const at2 = seen.length;
+    kick();
+    assert.ok(seen.length > at2);
+    for (const s of seen.slice(at2)) {
+      assert.ok(s === null || s.petRect.x === 200, JSON.stringify(s));
+    }
+
+    ctx.forceEyeResend = true;
+    kick();
+    const last = seen[seen.length - 1];
+    assert.deepStrictEqual(last.petRect, { x: 200, y: 200, width: 200, height: 200 });
+    assert.equal(last.overPet, true);
+  });
+
+  it("an idle pause drops the rect; resuming re-reads it", () => {
+    const seen = [];
+    ctx.companion.tick = (sample) => seen.push(sample);
+    ctx.forceEyeResend = true;
+    start();
+    kick();
+    ctx.idlePaused = true;
+    const at = seen.length;
+    kick();
+    assert.equal(seen.length, at, "no companion tick while paused");
+    ctx.idlePaused = false;
+    ctx.getHitRectScreen = () => ({ left: 10, top: 10, right: 50, bottom: 50 });
+    ctx.forceEyeResend = true;
+    kick();
+    const fresh = seen.slice(at).filter((s) => s !== null);
+    assert.ok(fresh.length > 0);
+    assert.deepStrictEqual(fresh[fresh.length - 1].petRect, { x: 10, y: 10, width: 40, height: 40 });
+  });
+
+  it("a size change with a still cursor refreshes the rect and bounds when forceEyeResend is set", () => {
+    const seen = [];
+    ctx.companion.tick = (sample) => seen.push(sample);
+    ctx.forceEyeResend = true;
+    start();
+    kick();
+    assert.deepStrictEqual(seen[seen.length - 1].petRect, { x: 0, y: 0, width: 120, height: 120 });
+    ctx.win.getBounds = () => ({ x: 0, y: 0, width: 240, height: 240 });
+    ctx.getHitRectScreen = () => ({ left: 0, top: 0, right: 240, bottom: 240 });
+    ctx.forceEyeResend = true;
+    kick();
+    const last = seen[seen.length - 1];
+    assert.deepStrictEqual(last.petRect, { x: 0, y: 0, width: 240, height: 240 });
+    assert.deepStrictEqual(last.petBounds, { x: 0, y: 0, width: 240, height: 240 });
+  });
+
+  it("overPet is inclusive on every edge, including negative multi-display coordinates", () => {
+    const cases = [
+      [{ x: 120, y: 120 }, true],
+      [{ x: 0, y: 0 }, true],
+      [{ x: 121, y: 60 }, false],
+      [{ x: 60, y: 121 }, false],
+      [{ x: -1, y: 60 }, false],
+    ];
+    for (const [cursor, expected] of cases) {
+      const seen = [];
+      const local = loadTickWithScreen(() => ({ ...cursor }));
+      const c = makeCtx(cloneTheme(ctx.theme), []);
+      c.sendToRenderer = () => null;
+      c.forceEyeResend = true;
+      c.companion = { tick: (s) => seen.push(s), isAnimating: () => false };
+      const api = local.initTick(c);
+      api.startMainTick();
+      advance(200);
+      api.cleanup();
+      local.restore();
+      assert.equal(seen[seen.length - 1].overPet, expected, JSON.stringify(cursor));
+    }
+    // Pet on a display left of the primary one.
+    const seen = [];
+    const local = loadTickWithScreen(() => ({ x: -1920, y: -50 }));
+    const c = makeCtx(cloneTheme(ctx.theme), []);
+    c.sendToRenderer = () => null;
+    c.forceEyeResend = true;
+    c.getHitRectScreen = () => ({ left: -1920, top: -50, right: -1800, bottom: 70 });
+    c.companion = { tick: (s) => seen.push(s), isAnimating: () => false };
+    const api = local.initTick(c);
+    api.startMainTick();
+    advance(200);
+    api.cleanup();
+    local.restore();
+    assert.equal(seen[seen.length - 1].overPet, true);
+    assert.deepStrictEqual(seen[seen.length - 1].petRect, { x: -1920, y: -50, width: 120, height: 120 });
+  });
+
+  describe("idle origin classification with an injected clock", () => {
+    let clock;
+    let entries;
+
+    function originCtx() {
+      clock = { t: 1_000_000 };
+      entries = [];
+      ctx.now = () => clock.t;
+      ctx.companion.noteIdleEntered = (info) => entries.push(info);
+      ctx.currentState = "working";
+      start();
+    }
+
+    it("a clock that went back 10 minutes reports awayMs 0 and origin other", () => {
+      originCtx();
+      clock.t -= 600_000;
+      sampleState("idle");
+      assert.deepStrictEqual(entries, [{ from: "other", awayMs: 0 }]);
+    });
+
+    it("a clock that jumped 8 hours forward is a work stretch", () => {
+      originCtx();
+      clock.t += 8 * 3600_000;
+      sampleState("idle");
+      assert.equal(entries[0].from, "work");
+      assert.equal(entries[0].awayMs, 8 * 3600_000);
+    });
+
+    it("an idle pause is not work", () => {
+      originCtx();
+      ctx.currentState = "idle";
+      ctx.idlePaused = true;
+      clock.t += 60_000;
+      tickApi.scheduleSoon(0);
+      mock.timers.tick(1);
+      ctx.idlePaused = false;
+      tickApi.scheduleSoon(0);
+      mock.timers.tick(1);
+      assert.equal(entries.length, 1);
+      assert.equal(entries[0].from, "work", "the preceding working stretch still counts");
+      entries.length = 0;
+      sampleState("working");
+      clock.t += 60_000;
+      ctx.currentState = "idle";
+      ctx.idlePaused = true;
+      tickApi.scheduleSoon(0);
+      mock.timers.tick(1);
+      assert.deepStrictEqual(entries, []);
+    });
+
+    it("MIN_WORK_AWAY_MS is inclusive at 2000 and excluded at 1999", () => {
+      originCtx();
+      clock.t += 1999;
+      sampleState("idle");
+      assert.equal(entries[0].from, "other");
+      assert.equal(entries[0].awayMs, 1999);
+      sampleState("working");
+      clock.t += 2000;
+      sampleState("idle");
+      assert.equal(entries[1].from, "work");
+      assert.equal(entries[1].awayMs, 2000);
+    });
+
+    it("sleep wins over work regardless of duration", () => {
+      originCtx();
+      clock.t += 10_000;
+      sampleState("sleeping");
+      clock.t += 10;
+      sampleState("working");
+      clock.t += 100_000;
+      sampleState("idle");
+      assert.equal(entries[0].from, "sleep");
+    });
+  });
 });

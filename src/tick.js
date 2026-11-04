@@ -323,6 +323,12 @@ function companionCursorSample(cursor) {
   return sample;
 }
 
+// One bad companion / idle-activity hook must never kill the pet loop: a throw
+// falls back to the feature-off behaviour for that call only.
+function guarded(fn, fallback) {
+  try { return fn(); } catch { return fallback; }
+}
+
 function shouldSuppressPassiveIpc() {
   return !!ctx.lowPowerIdlePaused && LOW_POWER_PAUSE_STATES.has(ctx.currentState);
 }
@@ -382,9 +388,11 @@ function runMainTickOnce() {
         lastCursorX = null;
         lastCursorY = null;
         mouseStillSince = Date.now();
-        if (ctx.idleActivity) ctx.idleActivity.noteIdleEntered();
         const origin = takeIdleOrigin();
-        if (ctx.companion && typeof ctx.companion.noteIdleEntered === "function") ctx.companion.noteIdleEntered(origin);
+        if (ctx.idleActivity) guarded(() => ctx.idleActivity.noteIdleEntered());
+        if (ctx.companion && typeof ctx.companion.noteIdleEntered === "function") {
+          guarded(() => ctx.companion.noteIdleEntered(origin));
+        }
       } else {
         // The walk is part of the same idle period.
         resetAway();
@@ -516,9 +524,9 @@ function runMainTickOnce() {
         && !idleLookPlayed
         // #1252: an idle activity owns the visual for its beat — do not start
         // the idle-look playback on top of it.
-        && !(ctx.idleActivity && ctx.idleActivity.isAnimating())
+        && !(ctx.idleActivity && guarded(() => ctx.idleActivity.isAnimating(), false))
         // Clawd Alive: a companion beat owns the visual the same way.
-        && !(ctx.companion && ctx.companion.isAnimating())
+        && !(ctx.companion && guarded(() => ctx.companion.isAnimating(), false))
         && elapsed >= MOUSE_IDLE_TIMEOUT
       ) {
         const choice = typeof ctx.getIdleVisualChoice === "function" ? ctx.getIdleVisualChoice() : null;
@@ -593,22 +601,24 @@ function runMainTickOnce() {
       // #1252: decorative idle activities. tick() is a no-op unless the user
       // opted in and the pet is still idle; skip it while the idle-look
       // playback owns the visual so the two passive animations never overlap.
-      if (ctx.idleActivity && !isMouseIdle) ctx.idleActivity.tick();
+      if (ctx.idleActivity && !isMouseIdle) guarded(() => ctx.idleActivity.tick());
       // Clawd Alive: the companion arbiter rides the same idle tick (no loop of
       // its own) and, like idle activities, stays out while idle-look plays.
       // It gets the cursor sample this tick already read (Clawd Mischief);
       // an untrusted read (XWayland outside the app's windows, spec
       // 2026-11-04 §4) reaches it as null, flagged for searchMouse.
       if (ctx.companion && !isMouseIdle) {
-        const cursorTrusted = typeof ctx.isCursorTrusted === "function" ? ctx.isCursorTrusted(cursor) !== false : true;
-        ctx.companion.tick(cursorTrusted ? companionCursorSample(cursor) : null, { cursorTrusted });
+        const cursorTrusted = typeof ctx.isCursorTrusted === "function"
+          ? guarded(() => ctx.isCursorTrusted(cursor) !== false, true)
+          : true;
+        guarded(() => ctx.companion.tick(cursorTrusted ? companionCursorSample(cursor) : null, { cursorTrusted }));
       }
 
       if (ctx.roam) ctx.roam.tick();
     }
 
-    const idleActivityActive = !!(ctx.idleActivity && ctx.idleActivity.isAnimating())
-      || !!(ctx.companion && ctx.companion.isAnimating());
+    const idleActivityActive = !!(ctx.idleActivity && guarded(() => ctx.idleActivity.isAnimating(), false))
+      || !!(ctx.companion && guarded(() => ctx.companion.isAnimating(), false));
     const trackEyesNow = (idleNow && ctx.currentSvg === SVG_IDLE_FOLLOW
       && !isMouseIdle && !idleActivityActive) || miniIdleNow;
     if (!trackEyesNow || (!eyeTrackingEnabled && !THEME_SUPPORTS_DIZZY)) {
