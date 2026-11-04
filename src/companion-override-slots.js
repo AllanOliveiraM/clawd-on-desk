@@ -5,7 +5,7 @@
 // of them have a duration the user may tune. Shared by the main-process card
 // builder and the override command so both agree on the slot surface.
 
-const { COMPANION_ANIMATION_KEYS } = require("./theme-schema");
+const { COMPANION_ANIMATION_KEYS, FETCH_ANIMATION_KEYS } = require("./theme-schema");
 
 const COMPANION_OVERRIDE_SECTIONS = Object.freeze([
   Object.freeze({
@@ -28,8 +28,13 @@ const COMPANION_OVERRIDE_SECTIONS = Object.freeze([
       "fakeNap", "boo", "pokeLeft", "pokeRight", "reachClose", "reachCloseLeft",
       "wallPushLeft", "wallPushRight", "wallPeekLeft", "wallPeekRight",
       "sitEdge", "morningStretch", "coffee", "nightSleepy", "welcome", "stretchBack",
-      "toyBall", "toyYoyo", "toyPlane",
+      "toyBall", "toyYoyo", "toyPlane", "searchMouse",
     ]),
+  }),
+  Object.freeze({
+    // "Vai buscar": the exit through the side edge and every hauled object.
+    id: "companionFetch",
+    keys: FETCH_ANIMATION_KEYS,
   }),
   Object.freeze({
     id: "companionWalks",

@@ -39,15 +39,19 @@ const RAW = {
 
 test("companion override slots cover every companion key exactly once, in the Settings order", () => {
   const keys = COMPANION_OVERRIDE_SECTIONS.flatMap((section) => section.keys);
-  // Fetch / searchMouse cards (and their labels) arrive with the art
-  // integration step, which drops this exclusion.
-  const cardsPending = new Set([...FETCH_ANIMATION_KEYS, ...SEARCH_MOUSE_ANIMATION_KEYS]);
-  assert.deepStrictEqual([...keys].sort(), COMPANION_ANIMATION_KEYS.filter((key) => !cardsPending.has(key)).sort());
+  assert.deepStrictEqual([...keys].sort(), [...COMPANION_ANIMATION_KEYS].sort());
   assert.strictEqual(new Set(keys).size, keys.length);
   assert.deepStrictEqual(COMPANION_OVERRIDE_SECTIONS.map((section) => section.id), [
-    "companionMoods", "companionCatch", "companionMischief",
+    "companionMoods", "companionCatch", "companionMischief", "companionFetch",
     "companionWalks", "companionSleep", "companionTransitions",
   ]);
+  // "Fetch" holds every fetch part in schema order; searchMouse is mischief.
+  const byId = Object.fromEntries(COMPANION_OVERRIDE_SECTIONS.map((section) => [section.id, section.keys]));
+  assert.deepStrictEqual([...byId.companionFetch], [...FETCH_ANIMATION_KEYS]);
+  for (const key of SEARCH_MOUSE_ANIMATION_KEYS) assert.ok(byId.companionMischief.includes(key), key);
+  for (const key of [...FETCH_ANIMATION_KEYS, ...SEARCH_MOUSE_ANIMATION_KEYS]) {
+    assert.strictEqual(COMPANION_NO_DURATION_KEYS.has(key), false, `${key} keeps its duration`);
+  }
   for (const key of ["walkBouncy", "walkTired", "walkCurious", "sleepTwitch", "collapseSleepTwitch", "petting"]) {
     assert.ok(COMPANION_NO_DURATION_KEYS.has(key), key);
   }

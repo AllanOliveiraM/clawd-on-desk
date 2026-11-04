@@ -232,6 +232,9 @@ describe("i18n locales", () => {
     assert.strictEqual(strings["pt-BR"].animCompanionPetting, "Recebendo carinho");
     assert.strictEqual(strings["pt-BR"].animCompanionCatchHigh, "Pegar o mouse — em cima");
     assert.strictEqual(strings["pt-BR"].animOverridesSectionCompanionCatch, "Pegar o mouse");
+    assert.strictEqual(strings["pt-BR"].animOverridesSectionCompanionFetch, "Vai buscar");
+    assert.strictEqual(strings["pt-BR"].animCompanionSearchMouse, "Procurando o mouse");
+    assert.strictEqual(strings["pt-BR"].animCompanionFetchDuckLeft, "Vai buscar: pato de borracha — esquerda");
   });
 
   it("labels the Clawd Alive Work cards for every clawd ladder file in every Settings locale", () => {
