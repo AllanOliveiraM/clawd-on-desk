@@ -146,4 +146,83 @@ describe("companion test submenu", () => {
     assert.strictEqual(warnings.length, 1);
     assert.match(warnings[0], /missing art/);
   });
+
+  // ── gap-hunting ──
+  it("variant only travels when it is a non-empty string", () => {
+    const calls = [];
+    const item = buildCompanionTestMenuItem({
+      catalog: [
+        { group: "G", id: "a", label: "A", variant: "" },
+        { group: "G", id: "b", label: "B", variant: 3 },
+        { group: "G", id: "c", label: "C", variant: "ball" },
+      ],
+      play: (id, opts) => { calls.push([id, opts]); return { ok: true }; },
+    });
+    for (const entry of item.submenu[0].submenu) entry.click();
+    assert.deepStrictEqual(calls, [["a", {}], ["b", {}], ["c", { variant: "ball" }]]);
+  });
+
+  it("rows sharing an id and group stay separate items", () => {
+    const item = buildCompanionTestMenuItem({
+      catalog: [
+        { group: "G", id: "fetch", label: "Ball", variant: "ball" },
+        { group: "G", id: "fetch", label: "Sock", variant: "sock" },
+      ],
+      play: () => ({ ok: true }),
+    });
+    assert.deepStrictEqual(item.submenu[0].submenu.map((e) => e.label), ["Ball", "Sock"]);
+  });
+
+  it("empty strings and non-string fields drop the row; an all-bad catalog shows the placeholder", () => {
+    const item = buildCompanionTestMenuItem({
+      catalog: [
+        { group: "", id: "a", label: "A" },
+        { group: "G", id: "", label: "B" },
+        { group: "G", id: "c", label: "" },
+        { group: 1, id: "d", label: "D" },
+        [],
+        "row",
+      ],
+    });
+    assert.strictEqual(item.submenu.length, 1);
+    assert.strictEqual(item.submenu[0].enabled, false);
+    assert.strictEqual(item.submenu[0].label, "No test animations available");
+  });
+
+  it("an unknown gate reason or a refusal without a reason reads as unavailable", () => {
+    const gated = buildCompanionTestMenuItem({ catalog: CATALOG, gateReason: "weird", play: () => {} });
+    assert.match(gated.submenu[0].submenu[0].label, / \(unavailable\)$/);
+    const warnings = [];
+    const item = buildCompanionTestMenuItem({
+      catalog: CATALOG,
+      play: () => ({ ok: false }),
+      logWarn: (m) => warnings.push(m),
+    });
+    item.submenu[0].submenu[0].click();
+    assert.strictEqual(warnings.length, 1);
+    assert.match(warnings[0], /unavailable/);
+  });
+
+  it("a missing play and an ok result stay silent", () => {
+    const warnings = [];
+    const bare = buildCompanionTestMenuItem({ catalog: CATALOG, logWarn: (m) => warnings.push(m) });
+    assert.doesNotThrow(() => bare.submenu[0].submenu[0].click());
+    const ok = buildCompanionTestMenuItem({ catalog: CATALOG, play: () => ({ ok: true }), logWarn: (m) => warnings.push(m) });
+    ok.submenu[0].submenu[0].click();
+    assert.deepStrictEqual(warnings, []);
+  });
+
+  it("the runner decides when play happens", () => {
+    const queued = [];
+    const calls = [];
+    const item = buildCompanionTestMenuItem({
+      catalog: CATALOG,
+      play: (id) => { calls.push(id); return { ok: true }; },
+      runAfterMenuClose: (fn) => queued.push(fn),
+    });
+    item.submenu[0].submenu[0].click();
+    assert.deepStrictEqual(calls, []);
+    queued[0]();
+    assert.deepStrictEqual(calls, ["mood.content"]);
+  });
 });

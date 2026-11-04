@@ -180,4 +180,80 @@ describe("context menu test mode (spec §2)", () => {
     h.menu.showPetContextMenu({ shiftKey: true });
     assert.equal(h.json(), plainJson({ isPackaged: false }));
   });
+
+  // ── gap-hunting ──
+  it("unknown packaging counts as packaged: no submenu without Shift, submenu with Shift", () => {
+    // isAppPackaged answering undefined, or absent with no app.isPackaged.
+    const undef = createHarness({ isPackaged: true });
+    undef.ctx.isAppPackaged = () => undefined;
+    undef.menu.showPetContextMenu({ shiftKey: false });
+    assert.equal(findTestItem(undef), undefined);
+
+    const absent = createHarness({ isPackaged: true });
+    delete absent.ctx.isAppPackaged;
+    absent.menu.showPetContextMenu({ shiftKey: false });
+    assert.equal(findTestItem(absent), undefined);
+    const shifted = createHarness({ isPackaged: true });
+    delete shifted.ctx.isAppPackaged;
+    shifted.menu.showPetContextMenu({ shiftKey: true });
+    assert.ok(findTestItem(shifted));
+  });
+
+  it("a throwing isAppPackaged falls back to the plain menu", () => {
+    const h = createHarness({ isPackaged: false });
+    h.ctx.isAppPackaged = () => { throw new Error("boom"); };
+    h.menu.showPetContextMenu({ shiftKey: true });
+    assert.equal(h.json(), plainJson({ isPackaged: false }));
+  });
+
+  it("only a strict boolean Shift opens the packaged gate", () => {
+    for (const shiftKey of ["true", 1, {}, null, undefined]) {
+      const h = createHarness({ isPackaged: true });
+      h.menu.showPetContextMenu({ shiftKey });
+      assert.equal(findTestItem(h), undefined, String(shiftKey));
+    }
+  });
+
+  it("quick clicks while the menu is open run only the last one", () => {
+    const h = createHarness({ isPackaged: false });
+    h.menu.showPetContextMenu();
+    const entries = findTestItem(h).submenu[0].submenu.concat(findTestItem(h).submenu[1].submenu);
+    entries[0].click();
+    entries[1].click();
+    assert.deepStrictEqual(h.plays, []);
+    h.close();
+    assert.deepStrictEqual(h.plays, [["fetch", { variant: "ball" }]]);
+  });
+
+  it("a pending play is dropped by the next popup", () => {
+    const h = createHarness({ isPackaged: false });
+    h.menu.showPetContextMenu();
+    findTestItem(h).submenu[0].submenu[0].click();
+    h.ctx.menuOpen = false; // the menu went away without its close callback
+    h.menu.showPetContextMenu();
+    h.close();
+    assert.deepStrictEqual(h.plays, []);
+  });
+
+  it("a pending play runs after the pet window was re-shown, even if it throws", () => {
+    const h = createHarness({ isPackaged: false });
+    const order = [];
+    h.ctx.win.showInactive = () => order.push("showInactive");
+    h.ctx.getCompanionTestMenu = () => ({
+      companionEnabled: true,
+      gateReason: null,
+      catalog: [{ group: "Moods", id: "mood.content", label: "Content" }],
+      play: () => { order.push("play"); throw new Error("boom"); },
+    });
+    h.menu.showPetContextMenu();
+    findTestItem(h).submenu[0].submenu[0].click();
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      assert.doesNotThrow(() => h.close());
+    } finally {
+      console.warn = warn;
+    }
+    assert.deepStrictEqual(order, ["showInactive", "play"]);
+  });
 });
