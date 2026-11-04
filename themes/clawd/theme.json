@@ -83,7 +83,8 @@
       "clawd-alive-fake-nap-out.svg",
       "clawd-alive-petting-in.svg",
       "clawd-alive-petting-out.svg",
-      "clawd-alive-sleep-twitch.svg"
+      "clawd-alive-sleep-twitch.svg",
+      "clawd-alive-collapse-sleep-twitch.svg"
     ],
     "discreteSampling": {
       "clawd-working-thinking.svg": 24,
@@ -162,7 +163,8 @@
       "clawd-alive-fake-nap-out.svg": 24,
       "clawd-alive-petting-in.svg": 24,
       "clawd-alive-petting-out.svg": 24,
-      "clawd-alive-sleep-twitch.svg": 24
+      "clawd-alive-sleep-twitch.svg": 24,
+      "clawd-alive-collapse-sleep-twitch.svg": 24
     }
   },
   "customization": {
@@ -1456,6 +1458,9 @@
         "clawd-collapse-sleep.svg": {
           "visibility": "hidden"
         },
+        "clawd-alive-collapse-sleep-twitch.svg": {
+          "visibility": "hidden"
+        },
         "clawd-outlaw-bender.svg": {
           "visibility": "hidden"
         },
@@ -1554,6 +1559,9 @@
         "western-cowboy-hat": {
           "files": {
             "clawd-collapse-sleep.svg": {
+              "visibility": "hidden"
+            },
+            "clawd-alive-collapse-sleep-twitch.svg": {
               "visibility": "hidden"
             },
             "clawd-error.svg": {
@@ -2706,6 +2714,9 @@
         "clawd-collapse-sleep.svg": {
           "visibility": "hidden"
         },
+        "clawd-alive-collapse-sleep-twitch.svg": {
+          "visibility": "hidden"
+        },
         "clawd-outlaw-bender.svg": {
           "visibility": "hidden"
         },
@@ -3063,7 +3074,8 @@
   "sleepingHitboxFiles": [
     "clawd-sleeping.svg",
     "clawd-alive-sleep-twitch.svg",
-    "clawd-collapse-sleep.svg"
+    "clawd-collapse-sleep.svg",
+    "clawd-alive-collapse-sleep-twitch.svg"
   ],
   "companionAnimations": {
     "petting": {
@@ -3276,6 +3288,10 @@
     },
     "sleepTwitch": {
       "file": "clawd-alive-sleep-twitch.svg",
+      "duration": 18000
+    },
+    "collapseSleepTwitch": {
+      "file": "clawd-alive-collapse-sleep-twitch.svg",
       "duration": 18000
     }
   },

@@ -57,9 +57,9 @@ describe("theme companionAnimations block", () => {
       "pounceStrikeLeft", "pounceStrikeRight",
       "greetLeft", "shyRight", "reachCloseLeft",
       "walkBouncy", "walkTired", "walkCurious",
-      "sleepTwitch",
+      "sleepTwitch", "collapseSleepTwitch",
     ]);
-    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-25, -6), [...schema.POLISH_ANIMATION_KEYS]);
+    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-26, -6), [...schema.POLISH_ANIMATION_KEYS]);
     const block = {};
     for (const key of schema.POLISH_ANIMATION_KEYS) block[key] = { file: `../x/${key}.svg`, duration: 1400 };
     const theme = schema.mergeDefaults(validThemeJson({ companionAnimations: block }), "test", false);
@@ -228,6 +228,8 @@ describe("theme companionAnimations block", () => {
       walkCurious: { files: ["clawd-alive-walk-curious.svg"], duration: null },
       // Replaces the sleeping visual for a whole sleep; one 18 s loop.
       sleepTwitch: { files: ["clawd-alive-sleep-twitch.svg"], duration: 18000 },
+      // Replaces the collapse visual for a whole collapse sleep; one 18 s loop.
+      collapseSleepTwitch: { files: ["clawd-alive-collapse-sleep-twitch.svg"], duration: 18000 },
       // One-shot intro / outro parts: played once for exactly their loop length.
       sitDown: { files: ["clawd-alive-sit-down.svg"], duration: 600 },
       standUp: { files: ["clawd-alive-stand-up.svg"], duration: 600 },

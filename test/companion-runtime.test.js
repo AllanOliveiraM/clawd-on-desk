@@ -1776,6 +1776,101 @@ test("missing theme key falls back to original", () => {
   assert.equal(rolls, 0, "no roll without the art");
 });
 
+// ---- polish: dreamy sleep in the collapse sleep ----
+
+const SLEEP_KEYS = [...ALL_KEYS, "sleepTwitch", "collapseSleepTwitch"];
+
+function countingRuntime(theme, value = () => 0) {
+  const counter = { rolls: 0 };
+  const rt = createCompanionRuntime({
+    getTheme: () => theme,
+    random: () => { counter.rolls += 1; return value(); },
+    store: fakeStore(),
+  });
+  return { rt, counter };
+}
+
+test("collapsing uses the twitch variant ~35% when companion enabled", () => {
+  for (const [roll, file] of [[0, "collapseSleepTwitch.svg"], [0.34, "collapseSleepTwitch.svg"], [0.35, null], [0.9, null]]) {
+    const env = setup();
+    env.theme = themeWith(SLEEP_KEYS);
+    env.runtime.configure({ ...ON });
+    env.randomValue = roll;
+    assert.equal(env.runtime.pickSleepVisual("collapsing"), file, `roll ${roll}`);
+  }
+  let seed = 54321;
+  const rt = createCompanionRuntime({
+    getTheme: () => themeWith(SLEEP_KEYS),
+    random: () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; },
+    store: fakeStore(),
+  });
+  rt.configure({ ...ON, memory: false });
+  let twitches = 0;
+  for (let n = 0; n < 1000; n += 1) if (rt.pickSleepVisual("collapsing")) twitches += 1;
+  assert.ok(twitches > 300 && twitches < 400, `twitches ${twitches}`);
+});
+
+test("one roll per sleep episode across collapsing→sleeping", () => {
+  // Hit: the collapse twitches and the sleep after it keeps twitching, no new roll.
+  let hitNext = 0;
+  const hit = countingRuntime(themeWith(SLEEP_KEYS), () => hitNext);
+  hit.rt.configure({ ...ON, memory: false });
+  assert.equal(hit.rt.pickSleepVisual("collapsing"), "collapseSleepTwitch.svg");
+  hitNext = 0.9; // a fresh roll would miss now
+  assert.equal(hit.rt.pickSleepVisual("sleeping", { fromCollapse: true }), "sleepTwitch.svg", "no second chance roll");
+  // Miss: the sleep after a plain collapse stays plain even with a winning roll.
+  let next = 0.9;
+  const miss = countingRuntime(themeWith(SLEEP_KEYS), () => next);
+  miss.rt.configure({ ...ON, memory: false });
+  assert.equal(miss.rt.pickSleepVisual("collapsing"), null);
+  next = 0;
+  const rollsAfterMiss = miss.counter.rolls;
+  assert.equal(miss.rt.pickSleepVisual("sleeping", { fromCollapse: true }), null);
+  assert.equal(miss.counter.rolls, rollsAfterMiss, "the miss is kept, not re-rolled");
+  // The episode is used once: a later direct sleep rolls on its own.
+  assert.equal(miss.rt.pickSleepVisual("sleeping", { fromCollapse: true }), "sleepTwitch.svg");
+  assert.equal(miss.rt.pickSleepVisual("sleeping"), "sleepTwitch.svg");
+  // A plain sleep (not from a collapse) ignores an earlier collapse decision.
+  next = 0;
+  assert.equal(miss.rt.pickSleepVisual("collapsing"), "collapseSleepTwitch.svg");
+  next = 0.9;
+  assert.equal(miss.rt.pickSleepVisual("sleeping"), null);
+});
+
+test("feature off never overrides collapsing", () => {
+  const { rt, counter } = countingRuntime(themeWith(SLEEP_KEYS));
+  assert.equal(rt.pickSleepVisual("collapsing"), null, "never configured");
+  rt.configure({ ...ON, memory: false, enabled: false });
+  assert.equal(rt.pickSleepVisual("collapsing"), null, "disabled");
+  assert.equal(rt.pickSleepVisual("sleeping", { fromCollapse: true }), null, "disabled sleep after collapse");
+  rt.configure({ ...ON, memory: false });
+  rt.dispose();
+  assert.equal(rt.pickSleepVisual("collapsing"), null, "disposed");
+  assert.equal(counter.rolls, 0);
+});
+
+test("missing key falls back", () => {
+  // No collapse art: the collapse stays original without a roll, and the
+  // sleep after it still gets its own roll.
+  const only = countingRuntime(themeWith([...ALL_KEYS, "sleepTwitch"]));
+  only.rt.configure({ ...ON, memory: false });
+  assert.equal(only.rt.pickSleepVisual("collapsing"), null);
+  assert.equal(only.counter.rolls, 0, "no roll without the collapse art");
+  assert.equal(only.rt.pickSleepVisual("sleeping", { fromCollapse: true }), "sleepTwitch.svg");
+  // Collapse art but no sleeping art: a hit collapse falls back to the
+  // original sleeping visual afterwards.
+  const noSleep = countingRuntime(themeWith([...ALL_KEYS, "collapseSleepTwitch"]));
+  noSleep.rt.configure({ ...ON, memory: false });
+  assert.equal(noSleep.rt.pickSleepVisual("collapsing"), "collapseSleepTwitch.svg");
+  assert.equal(noSleep.rt.pickSleepVisual("sleeping", { fromCollapse: true }), null);
+  for (const theme of [themeWith(ALL_KEYS), null, { states: {} }]) {
+    const none = countingRuntime(theme);
+    none.rt.configure({ ...ON, memory: false });
+    assert.equal(none.rt.pickSleepVisual("collapsing"), null);
+    assert.equal(none.counter.rolls, 0);
+  }
+});
+
 // ---- polish: roam waits for companion visuals (item 10) ----
 
 test("holdsRoam covers the send, the playback and a 1.5 s breather afterwards", () => {

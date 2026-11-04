@@ -1507,6 +1507,82 @@ describe("Clawd Alive dreamy sleep (pickSleepVisual)", () => {
     assert.strictEqual(asked, 1);
   });
 
+  it("collapsing asks once with its phase and shows the collapse twitch file", () => {
+    const calls = [];
+    build({ pickSleepVisual: (...args) => { calls.push(args); return "clawd-alive-collapse-sleep-twitch.svg"; } });
+    api.applyState("dozing");
+    api.applyState("collapsing");
+    assert.strictEqual(api.getCurrentState(), "collapsing");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-collapse-sleep-twitch.svg");
+    api.applyState("collapsing"); // re-applied mid-collapse
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-collapse-sleep-twitch.svg");
+    assert.deepStrictEqual(calls, [["collapsing", { fromCollapse: false }]]);
+    // Same hit box as the theme's collapse visual.
+    const twitchBox = api.getCurrentHitBox();
+    build({ pickSleepVisual: () => null });
+    api.applyState("collapsing");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-collapse-sleep.svg");
+    assert.deepStrictEqual(twitchBox, api.getCurrentHitBox());
+  });
+
+  it("one roll per sleep episode across collapsing→sleeping", () => {
+    const calls = [];
+    build({ pickSleepVisual: (state, opts) => {
+      calls.push([state, opts]);
+      return state === "collapsing" ? "clawd-alive-collapse-sleep-twitch.svg" : "clawd-alive-sleep-twitch.svg";
+    } });
+    api.applyState("collapsing");
+    api.applyState("sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-sleep-twitch.svg");
+    api.applyState("sleeping");
+    // A direct sleep (not after a collapse) is its own episode.
+    api.applyState("idle");
+    api.applyState("sleeping");
+    // An overridden (DND-style) collapse never asked, so the sleep after it is a fresh roll.
+    api.applyState("idle");
+    api.applyState("collapsing", "clawd-collapse-sleep.svg");
+    api.applyState("sleeping");
+    assert.deepStrictEqual(calls, [
+      ["collapsing", { fromCollapse: false }],
+      ["sleeping", { fromCollapse: true }],
+      ["sleeping", { fromCollapse: false }],
+      ["sleeping", { fromCollapse: false }],
+    ]);
+  });
+
+  it("waking from a twitch collapse goes through the normal wake visual", () => {
+    build({ pickSleepVisual: () => "clawd-alive-collapse-sleep-twitch.svg" });
+    api.applyState("collapsing");
+    mock.timers.tick(500);
+    fakeCursor.x = 200;
+    mock.timers.tick(200);
+    assert.strictEqual(api.getCurrentState(), "waking");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-wake.svg");
+  });
+
+  it("feature off never overrides collapsing", () => {
+    for (const pickSleepVisual of [undefined, () => null, () => { throw new Error("boom"); }]) {
+      build({ pickSleepVisual });
+      api.applyState("collapsing");
+      assert.strictEqual(api.getCurrentSvg(), "clawd-collapse-sleep.svg");
+      api.applyState("sleeping");
+      assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
+    }
+  });
+
+  it("DND collapse, previews and mini never ask in the collapse", () => {
+    ctx.doNotDisturb = true;
+    api.applyState("collapsing");
+    ctx.doNotDisturb = false;
+    api.applyState("idle");
+    api.applyState("collapsing", undefined, { settingsPreview: true });
+    assert.strictEqual(api.getCurrentSvg(), "clawd-collapse-sleep.svg", "preview");
+    assert.strictEqual(asked, 0, "DND and preview");
+    build({ miniMode: true, pickSleepVisual: () => { asked += 1; return answer; } });
+    api.applyState("collapsing");
+    assert.strictEqual(asked, 0);
+  });
+
   it("DND sleep, mini sleep, explicit overrides and the rest of the sequence never ask", () => {
     ctx.doNotDisturb = true;
     api.applyState("sleeping");

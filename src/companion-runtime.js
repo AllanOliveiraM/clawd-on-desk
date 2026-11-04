@@ -588,18 +588,36 @@ function createCompanionRuntime(options = {}) {
 
   // ---- dreamy sleep ----
 
-  // Asked by the state machine once per entry into the real "sleeping" state
-  // (not DND, not mini): a companion file that replaces the theme's sleeping
-  // visual for this whole sleep, or null for the original. The logical state
-  // stays "sleeping". Rolls only when the art exists and the feature is on.
-  function pickSleepVisual() {
+  // Asked by the state machine once per entry into the real "collapsing" or
+  // "sleeping" state (not DND, not mini): a companion file that replaces the
+  // theme's visual for that whole phase, or null for the original. The logical
+  // state never changes. One chance roll per sleep episode: a collapse that
+  // rolled keeps its hit or miss for the sleep that follows it (fromCollapse).
+  // Rolls only when the art exists and the feature is on.
+  let collapseTwitchHit = null; // null = no collapse roll pending
+  function hasSleepArt(theme, key) {
+    const entry = companionAnimations(theme)[key];
+    return Boolean(entry && Array.isArray(entry.files) && entry.files.length > 0);
+  }
+  function sleepFile(theme, key) {
+    const anim = animationFor(key, theme);
+    return anim ? anim.file : null;
+  }
+  function pickSleepVisual(state = "sleeping", options = {}) {
+    const pending = collapseTwitchHit;
+    collapseTwitchHit = null;
     if (disposed || !config.enabled) return null;
     const theme = getTheme();
-    const entry = companionAnimations(theme).sleepTwitch;
-    if (!entry || !Array.isArray(entry.files) || entry.files.length === 0) return null;
-    if (!(random() < SLEEP_TWITCH_CHANCE)) return null;
-    const anim = animationFor("sleepTwitch", theme);
-    return anim ? anim.file : null;
+    if (state === "collapsing") {
+      if (!hasSleepArt(theme, "collapseSleepTwitch")) return null;
+      collapseTwitchHit = random() < SLEEP_TWITCH_CHANCE;
+      return collapseTwitchHit ? sleepFile(theme, "collapseSleepTwitch") : null;
+    }
+    if (state !== "sleeping") return null;
+    const decided = options && options.fromCollapse === true ? pending : null;
+    if (!hasSleepArt(theme, "sleepTwitch")) return null;
+    const hit = decided === null ? random() < SLEEP_TWITCH_CHANCE : decided;
+    return hit ? sleepFile(theme, "sleepTwitch") : null;
   }
 
   // ---- roam targets (3x3 visit grid per display, memory only) ----

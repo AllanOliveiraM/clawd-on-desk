@@ -222,7 +222,7 @@ it("roam ctx isIdleActivityPlaying includes companion", () => {
 
 it("state ctx asks the companion for the dreamy sleep visual", () => {
   const stateCtx = slice("const _stateCtx = {", 'const _state = require("./state")');
-  assert.ok(stateCtx.includes("pickSleepVisual: () => _companion.pickSleepVisual(),"));
+  assert.ok(stateCtx.includes("pickSleepVisual: (state, options) => _companion.pickSleepVisual(state, options),"));
 });
 
 it("idle activities, tick and settings IPC reach the companion", () => {

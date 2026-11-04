@@ -893,22 +893,30 @@ function normalizeApplyStateOptions(state, options = {}) {
   };
 }
 
-// Clawd Alive dreamy sleep: on each entry into the real (non-DND) "sleeping"
-// state the companion may name a file that replaces the theme's sleeping
-// visual for that whole sleep. The logical state, timers, hit box family and
-// wake path stay exactly the sleeping ones. Must run after previousState and
-// currentState are updated.
+// Clawd Alive dreamy sleep: on each entry into the real (non-DND) "collapsing"
+// or "sleeping" state the companion may name a file that replaces the theme's
+// visual for that whole phase. One chance roll per sleep episode: a sleep that
+// follows a collapse which asked passes fromCollapse so the companion keeps
+// that decision instead of rolling again. The logical state, timers, hit box
+// family and wake path stay exactly the original ones. Must run after
+// previousState and currentState are updated.
 let sleepVariantSvg = null;
+let collapseAsked = false;
 function resolveSleepVariant(state, svgOverride, options) {
-  if (state !== "sleeping" || svgOverride || options.settingsPreview === true || ctx.doNotDisturb) {
+  const sleepPhase = state === "sleeping" || state === "collapsing";
+  if (!sleepPhase || svgOverride || options.settingsPreview === true || ctx.doNotDisturb) {
     sleepVariantSvg = null;
+    collapseAsked = false;
     return null;
   }
-  if (previousState === "sleeping") return sleepVariantSvg;
+  if (previousState === state) return sleepVariantSvg;
+  const fromCollapse = state === "sleeping" && previousState === "collapsing" && collapseAsked;
   sleepVariantSvg = null;
+  collapseAsked = false;
   if (typeof ctx.pickSleepVisual !== "function") return null;
+  if (state === "collapsing") collapseAsked = true;
   try {
-    const file = ctx.pickSleepVisual();
+    const file = ctx.pickSleepVisual(state, { fromCollapse });
     if (typeof file === "string" && file) sleepVariantSvg = file;
   } catch {}
   return sleepVariantSvg;
@@ -981,8 +989,9 @@ function applyState(state, svgOverride, options = {}) {
   const userIdle = (state === "idle" && !svgOverride && typeof ctx.getIdleVisualChoice === "function")
     ? ctx.getIdleVisualChoice()
     : null;
-  const svg = svgOverride || userIdle || resolveSleepVariant(state, svgOverride, applyOptions)
-    || resolveVisualBinding(state);
+  // Always resolved (even under an override) so the episode memory resets.
+  const sleepVariant = resolveSleepVariant(state, svgOverride, applyOptions);
+  const svg = svgOverride || userIdle || sleepVariant || resolveVisualBinding(state);
   currentSvg = svg;
 
   // Force eye resend after SVG load completes (~300ms)
