@@ -1633,7 +1633,7 @@ function playEdgeScene(keys, kill = false) {
 
 test("after an edge scene the pet walks back into the band once", () => {
   for (const kill of [false, true]) {
-    for (const keys of [["reachClose"], ["wallPushLeft", "wallPushRight"], ["sitEdge"]]) {
+    for (const keys of [["reachClose"], ["wallPushLeft", "wallPushRight"], ["sitEdge"], ["fetchExitLeft", "fetchDuckLeft"]]) {
       const label = `${keys[0]}${kill ? " (killed)" : ""}`;
       const env = playEdgeScene(keys, kill);
       env.randomValue = 0.1; // would explore a grid cell without the return walk
@@ -2312,4 +2312,374 @@ test("art geometry is computed once per theme, size and file", () => {
   } finally {
     hitGeometry.getAssetRectScreen = original;
   }
+});
+
+// ---- fetch ("vai buscar") ----
+
+const FETCH_PAIR = ["fetchExitLeft", "fetchExitRight", "fetchDuckLeft", "fetchDuckRight"];
+
+function fetchWalk(keys, { args = BAND_ARGS, randomAtPick, personality = "playful", geo = true } = {}) {
+  const env = setup();
+  env.theme = geo ? geoTheme(keys) : themeWith(keys);
+  env.runtime.configure({ ...MON, personality });
+  tickUntilBeat(env, 200000);
+  if (randomAtPick !== undefined) env.randomValue = randomAtPick;
+  return { env, target: env.runtime.pickRoamTarget(args) };
+}
+
+test("fetch walks to the nearest side edge with the visible body on the screen edge", () => {
+  const nearLeft = { ...BAND_ARGS, bounds: { x: 300, y: 600, width: 100, height: 100 } };
+  const nearRight = { ...BAND_ARGS, bounds: { x: 1600, y: 200, width: 100, height: 100 } };
+  const left = fetchWalk(FETCH_PAIR, { args: nearLeft });
+  // Body edge u 0: x = -15.25 + 15 * 2.9 = 28.25 px into the window.
+  approx(left.target, { x: -28.25, y: 600 }, "left");
+  assert.equal(left.target.mischief, "fetch");
+  assert.equal(left.target.side, "left");
+  assert.ok(Math.abs(left.target.overhang.left - 28.25) < 0.01);
+  assert.equal(left.env.sends.length, 0, "nothing plays before the arrival");
+
+  const right = fetchWalk(FETCH_PAIR, { args: nearRight });
+  // Mirrored edge u 15: 71.75 px into the window.
+  approx(right.target, { x: 2000 - 71.75, y: 200 }, "right");
+  assert.equal(right.target.side, "right");
+  assert.ok(Math.abs(right.target.overhang.right - 28.25) < 0.01);
+});
+
+test("fetch plays the exit then the object on the walked side and restores idle once", () => {
+  const nearRight = { ...BAND_ARGS, bounds: { x: 1600, y: 200, width: 100, height: 100 } };
+  const { env } = fetchWalk(FETCH_PAIR, { args: nearRight });
+  env.runtime.noteWalkFinished({ preferred: true, mischief: "fetch", reachedEdgeDistancePx: 0 });
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.sends[0].file, "fetchExitRight.svg");
+  runCommitting(env, 20000);
+  assert.deepEqual(env.sends.map((s) => s.file), ["fetchExitRight.svg", "fetchDuckRight.svg"]);
+  assert.equal(env.restores, 1);
+  assert.equal(env.runtime.isAnimating(), false);
+});
+
+test("fetch picks its side and object at planning among the art the theme has", () => {
+  const nearRight = { ...BAND_ARGS, bounds: { x: 1600, y: 200, width: 100, height: 100 } };
+  const leftOnly = ["fetchExitLeft", "fetchBoxLeft", "fetchSockLeft", "fetchDuckRight"];
+  for (const [randomAtPick, file] of [[0.1, "fetchBoxLeft.svg"], [0.99, "fetchSockLeft.svg"]]) {
+    const { env, target } = fetchWalk(leftOnly, { args: nearRight, randomAtPick });
+    assert.equal(target.side, "left", "the only side with an exit and an object");
+    env.randomValue = randomAtPick < 0.5 ? 0.99 : 0.1; // fixed at planning, not at arrival
+    env.runtime.noteWalkFinished({ preferred: true, mischief: "fetch", reachedEdgeDistancePx: 0 });
+    runCommitting(env, 20000);
+    assert.deepEqual(env.sends.map((s) => s.file), ["fetchExitLeft.svg", file]);
+  }
+});
+
+test("fetch needs an exit and an object of the same side, and Free Roam", () => {
+  for (const keys of [["fetchExitLeft"], ["fetchDuckLeft", "fetchDuckRight"], ["fetchExitLeft", "fetchDuckRight"]]) {
+    const env = setup();
+    env.theme = geoTheme(keys);
+    env.runtime.configure({ ...MON, personality: "playful" });
+    tickUntilBeat(env, 200000);
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000) === 4000, false, `${keys}: no pending walk`);
+    const target = env.runtime.pickRoamTarget(BAND_ARGS);
+    assert.ok(!target || !target.mischief, `${keys}: ${JSON.stringify(target)}`);
+  }
+  const act = setup();
+  act.theme = geoTheme(FETCH_PAIR);
+  act.mode = "activities";
+  act.runtime.configure({ ...MON, personality: "playful" });
+  for (let i = 0; i < 40; i += 1) {
+    act.clock.advance(60000);
+    const answer = act.runtime.chooseIdleActivity({ theme: act.theme });
+    assert.ok(!answer || !answer.file || !answer.file.startsWith("fetch"), JSON.stringify(answer));
+  }
+});
+
+test("a real state change during the fetch exit kills the scene without a stale restore", () => {
+  const { env } = fetchWalk(FETCH_PAIR, { geo: false });
+  env.runtime.noteWalkFinished({ preferred: true, mischief: "fetch", reachedEdgeDistancePx: 0 });
+  env.commitLast();
+  env.state = "working";
+  env.sendToRendererExternal = true;
+  env.generation += 1; // the working visual replaced ours
+  env.runtime.tick();
+  runCommitting(env, 20000);
+  assert.deepEqual(env.sends.map((s) => s.file), ["fetchExitLeft.svg"]);
+  assert.equal(env.restores, 0);
+  assert.equal(env.runtime.isAnimating(), false);
+});
+
+// ---- searchMouse (XWayland plan B) ----
+
+function untrustedTicks(env, ms, step = 1000) {
+  for (let t = 0; t < ms && env.sends.length === 0; t += step) {
+    env.clock.advance(step);
+    env.runtime.tick(null, { cursorTrusted: false });
+  }
+}
+
+test("searchMouse plays only after 10 min without a trusted cursor sample", () => {
+  const env = setup();
+  env.theme = themeWith(["searchMouse"]);
+  env.runtime.configure(MON);
+  env.runtime.tick(null, { cursorTrusted: false });
+  untrustedTicks(env, 1200000);
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.sends[0].file, "searchMouse.svg");
+  assert.ok(env.clock.now() >= 600000, `too early: ${env.clock.now()}`);
+});
+
+test("a trusted sample (or a caller without trust info) keeps searchMouse away", () => {
+  for (const info of [{ cursorTrusted: true }, undefined]) {
+    const env = setup();
+    env.theme = themeWith(["searchMouse"]);
+    env.runtime.configure(MON);
+    for (let t = 0; t < 1800000; t += 1000) {
+      env.clock.advance(1000);
+      env.runtime.tick(sample(700, 550), info);
+    }
+    assert.equal(env.sends.length, 0, JSON.stringify(info));
+  }
+  // One trusted sample re-bases the 10 min clock.
+  const env = setup();
+  env.theme = themeWith(["searchMouse"]);
+  env.runtime.configure(MON);
+  untrustedTicks(env, 500000);
+  env.runtime.tick(sample(700, 550), { cursorTrusted: true });
+  const rebased = env.clock.now();
+  untrustedTicks(env, 1200000);
+  assert.equal(env.sends[0].file, "searchMouse.svg");
+  assert.ok(env.clock.now() - rebased >= 600000);
+});
+
+test("searchMouse also plays as a single-part idle activity, never without autonomy", () => {
+  const env = setup();
+  env.theme = themeWith(["searchMouse"]);
+  env.mode = "activities";
+  env.runtime.configure(MON);
+  untrustedTicks(env, 700000);
+  let answer = null;
+  for (let i = 0; i < 20 && !(answer && answer.file); i += 1) answer = env.runtime.chooseIdleActivity({ theme: env.theme });
+  assert.equal(answer.file, "searchMouse.svg");
+
+  const off = setup();
+  off.theme = themeWith(["searchMouse"]);
+  off.runtime.configure({ ...MON, autonomy: false });
+  untrustedTicks(off, 1200000);
+  assert.equal(off.sends.length, 0);
+});
+
+// ---- test mode: debugCatalog / debugPlay / getMoodSnapshot ----
+
+function debugEnv({ keys = [...ALL_KEYS, ...MISCHIEF_KEYS], config = { ...ON }, options } = {}) {
+  const calls = { interrupt: 0 };
+  const env = setup({ options: { interruptRoam: () => { calls.interrupt += 1; }, ...options } });
+  env.calls = calls;
+  env.theme = themeWith(keys);
+  env.runtime.configure(config);
+  return env;
+}
+
+test("debugCatalog lists the playable art by group with English labels", () => {
+  const env = debugEnv({ keys: [
+    "content", "greetLeft", "catchHigh", "catchMiss", "pounceStrikeLeft", "fakeNap", "wallPeekRight",
+    "fetchExitLeft", "fetchDuckLeft", "fetchBoxLeft", "fetchSockRight", "searchMouse", "walkTired",
+    "sleepTwitch", "sitDown",
+  ] });
+  env.theme.companionWorkTiers = {
+    working: [{ minSessions: 3, files: ["w3.svg"], variants: ["w3-coffee.svg"] }],
+    juggling: [{ minSessions: 2, files: ["j2.svg"], variants: [] }],
+  };
+  const rows = env.runtime.debugCatalog();
+  const byId = (id, variant) => rows.find((r) => r.id === id && (variant === undefined || r.variant === variant));
+  for (const row of rows) {
+    assert.ok(typeof row.group === "string" && typeof row.id === "string" && typeof row.label === "string", JSON.stringify(row));
+    assert.ok(/^[\x20-\x7e]+$/.test(row.label), `English label: ${row.label}`);
+  }
+  assert.deepEqual([...new Set(rows.map((r) => r.group))],
+    ["Moods", "Catch", "Mischief", "Walks", "Sleep", "Work", "Transitions"]);
+  assert.ok(byId("mood", "content") && byId("mood", "greetLeft"));
+  assert.ok(!byId("mood", "tired"), "no art, not listed");
+  assert.ok(byId("catch", "catchHigh") && byId("catch", "catchMiss"));
+  assert.ok(byId("pounce", "pounceStrikeLeft") && byId("fakeNap"));
+  assert.equal(byId("wall", "wallPeekRight").walking, true);
+  assert.ok(byId("fetch", "fetchDuckLeft") && byId("fetch", "fetchBoxLeft"));
+  assert.ok(!byId("fetch", "fetchSockRight"), "no right exit");
+  assert.ok(byId("searchMouse") && byId("walk", "walkTired") && byId("sleep", "sleepTwitch"));
+  assert.ok(byId("work", "w3.svg") && byId("work", "w3-coffee.svg") && byId("work", "j2.svg"));
+  assert.ok(byId("transition", "sitDown"));
+  assert.ok(!byId("poke") && !byId("reachClose") && !byId("sitEdge"));
+  assert.ok(byId("fetch", "fetchDuckLeft").label.toLowerCase().includes("duck"));
+
+  const off = debugEnv({ config: { ...ON, enabled: false } });
+  assert.deepEqual(off.runtime.debugCatalog(), []);
+});
+
+test("debugCatalog consumes no randomness", () => {
+  let draws = 0;
+  const env = debugEnv({ options: { random: () => { draws += 1; return 0.5; } } });
+  draws = 0;
+  env.runtime.debugCatalog();
+  assert.equal(draws, 0);
+});
+
+test("debugPlay plays now, again and again, without touching mood, cooldowns or the store", () => {
+  const env = debugEnv({ config: { ...ON, personality: "shy" } });
+  const mood = env.runtime.getMood();
+  const writes = env.store.count("schedule");
+  for (let i = 0; i < 3; i += 1) {
+    assert.deepEqual(env.runtime.debugPlay("pounce", { variant: "pounceLeft" }), { ok: true });
+    assert.equal(env.sends[env.sends.length - 1].file, "pounceLeft.svg");
+    runCommitting(env, 9000);
+  }
+  assert.equal(env.restores, 3);
+  assert.deepEqual(env.runtime.debugPlay("mood", { variant: "content" }), { ok: true });
+  assert.equal(env.sends[env.sends.length - 1].file, "content.svg");
+  runCommitting(env, 9000);
+  assert.deepEqual(env.runtime.getMood(), mood);
+  assert.equal(env.store.count("schedule"), writes);
+});
+
+test("debugPlay does not spend the brain's cooldowns", () => {
+  const env = debugEnv({ keys: ["pounceLeft", "pounceRight"], config: { ...MON, personality: "playful" } });
+  env.mode = "none";
+  env.runtime.debugPlay("pounce", { variant: "pounceRight" });
+  runCommitting(env, 9000);
+  const before = env.sends.length;
+  // A real lurk right after still pounces (no 10 min cooldown from the test play).
+  env.randomValue = 0.1;
+  tickWithCursor(env, sample(400, 550), 3000);
+  assert.equal(env.sends.length, before + 1);
+  assert.equal(env.sends[env.sends.length - 1].file, "pounceLeft.svg");
+});
+
+test("debugPlay takes over a playing companion visual", () => {
+  const env = debugEnv();
+  tickUntilBeat(env);
+  env.commitLast();
+  const beat = env.sends.length;
+  assert.deepEqual(env.runtime.debugPlay("toy", { variant: "toyBall" }), { ok: true });
+  assert.equal(env.sends.length, beat + 1);
+  assert.equal(env.sends[beat].file, "toyBall.svg");
+  assert.equal(env.restores, 0, "no restore in between");
+});
+
+test("debugPlay maps the closed gate, missing art and Free Roam to reasons", () => {
+  const off = debugEnv({ config: { ...ON, enabled: false } });
+  assert.deepEqual(off.runtime.debugPlay("mood", { variant: "content" }), { ok: false, reason: "disabled" });
+
+  for (const reason of ["agent-busy", "permission", "dnd", "mini", "sleeping"]) {
+    const env = debugEnv({ options: { getDebugBlockReason: () => reason } });
+    assert.deepEqual(env.runtime.debugPlay("mood", { variant: "content" }), { ok: false, reason });
+    assert.equal(env.sends.length, 0);
+  }
+  const plain = debugEnv();
+  plain.gate = false;
+  assert.deepEqual(plain.runtime.debugPlay("mood", { variant: "content" }), { ok: false, reason: "agent-busy" });
+  plain.gate = true;
+  plain.state = "sleeping";
+  assert.deepEqual(plain.runtime.debugPlay("mood", { variant: "content" }), { ok: false, reason: "sleeping" });
+  plain.state = "working";
+  assert.deepEqual(plain.runtime.debugPlay("mood", { variant: "content" }), { ok: false, reason: "agent-busy" });
+  plain.state = "idle";
+
+  const bare = debugEnv({ keys: ["content"] });
+  assert.deepEqual(bare.runtime.debugPlay("mood", { variant: "tired" }), { ok: false, reason: "missing-art" });
+  assert.deepEqual(bare.runtime.debugPlay("fetch", { variant: "fetchDuckLeft" }), { ok: false, reason: "missing-art" });
+  assert.deepEqual(bare.runtime.debugPlay("nope"), { ok: false, reason: "missing-art" });
+  assert.deepEqual(bare.runtime.debugPlay("mood", { variant: "fetchDuckLeft" }), { ok: false, reason: "missing-art" });
+
+  const still = debugEnv();
+  still.mode = "none";
+  assert.deepEqual(still.runtime.debugPlay("wall", { variant: "wallPushLeft" }), { ok: false, reason: "no-roam" });
+  assert.deepEqual(still.runtime.debugPlay("walk", { variant: "walkTired" }).ok, false);
+  assert.deepEqual(still.runtime.debugPlay("toy", { variant: "toyBall" }), { ok: true }, "in-place scenes need no roam");
+});
+
+test("a test-mode fetch walks right away to its side and plays its object, even with mischief and autonomy off", () => {
+  const env = debugEnv({ keys: FETCH_PAIR, config: { ...ON, autonomy: false } });
+  env.theme = geoTheme(FETCH_PAIR);
+  const mood = env.runtime.getMood();
+  const nearLeft = { ...BAND_ARGS, bounds: { x: 300, y: 600, width: 100, height: 100 } };
+  assert.deepEqual(env.runtime.debugPlay("fetch", { variant: "fetchDuckRight" }), { ok: true });
+  assert.equal(env.calls.interrupt, 1, "roam re-arms its pause");
+  assert.equal(env.sends.length, 0, "the scene waits for the walk");
+  assert.equal(env.runtime.getRoamDelayMs(false, 4000), 0);
+  const target = env.runtime.pickRoamTarget(nearLeft);
+  assert.equal(target.mischief, "fetch");
+  assert.equal(target.side, "right", "the tested side wins over the nearest");
+  approx(target, { x: 2000 - 71.75, y: 600 }, "right edge");
+  env.runtime.noteWalkFinished({ preferred: true, mischief: "fetch", reachedEdgeDistancePx: 0 });
+  runCommitting(env, 20000);
+  assert.deepEqual(env.sends.map((s) => s.file), ["fetchExitRight.svg", "fetchDuckRight.svg"]);
+  assert.deepEqual(env.runtime.getMood(), mood, "no walk or beat mood event");
+});
+
+test("a test-mode wall walk keeps its variant and plays in place when roam discards it", () => {
+  const env = debugEnv({ config: MON });
+  env.theme = geoTheme(["wallPushLeft", "wallPushRight", "wallPeekLeft", "wallPeekRight"]);
+  const nearRight = { ...BAND_ARGS, bounds: { x: 1600, y: 200, width: 100, height: 100 } };
+  env.runtime.debugPlay("wall", { variant: "wallPeekLeft" });
+  const target = env.runtime.pickRoamTarget(nearRight);
+  assert.equal(target.side, "left");
+  env.runtime.onPreferredTargetDiscarded();
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.sends[0].file, "wallPeekLeft.svg");
+});
+
+test("a test-mode poke walks to the last trusted cursor, else pokes in place", () => {
+  const env = debugEnv({ config: MON });
+  env.runtime.tick(sample(1500, 300), { cursorTrusted: true });
+  env.runtime.tick(sample(100, 100), { cursorTrusted: false });
+  assert.deepEqual(env.runtime.debugPlay("poke"), { ok: true });
+  const target = env.runtime.pickRoamTarget(ROAM_ARGS);
+  assert.equal(target.mischief, "poke");
+  assert.deepEqual(target, { x: 1350, y: 250, preferred: true, mischief: "poke" });
+
+  const cold = debugEnv({ config: MON });
+  assert.deepEqual(cold.runtime.debugPlay("poke"), { ok: true });
+  assert.equal(cold.sends[0].file, "pokeRight.svg");
+});
+
+test("a test-mode walk variant rides the next walk once", () => {
+  const env = debugEnv({ keys: ["walkTired", "walkBouncy"], config: { ...ON, personality: "playful" } });
+  env.randomValue = 0.99;
+  assert.deepEqual(env.runtime.debugPlay("walk", { variant: "walkBouncy" }), { ok: true });
+  assert.equal(env.runtime.getRoamDelayMs(false, 4000), 0);
+  assert.equal(env.runtime.pickWalkVisual(), "walkBouncy.svg");
+  assert.equal(env.runtime.pickWalkVisual(), null, "only once (0.99 misses the bouncy roll)");
+});
+
+test("test-mode sleep, work and transition previews play their file once", () => {
+  const env = debugEnv({ keys: ["sleepTwitch", "sitDown"] });
+  env.theme.companionAnimations.sitDown.duration = 600;
+  env.theme.companionWorkTiers = { working: [{ minSessions: 2, files: ["w2.svg"], variants: [] }], juggling: [] };
+  for (const [id, variant, file, ms] of [
+    ["sleep", "sleepTwitch", "sleepTwitch.svg", 3500],
+    ["transition", "sitDown", "sitDown.svg", 600],
+    ["work", "w2.svg", "w2.svg", 3500],
+  ]) {
+    const before = env.sends.length;
+    assert.deepEqual(env.runtime.debugPlay(id, { variant }), { ok: true }, id);
+    assert.equal(env.sends[before].file, file);
+    env.commitLast();
+    env.clock.advance(ms - 1);
+    assert.equal(env.runtime.isAnimating(), true, id);
+    env.clock.advance(1);
+    assert.equal(env.runtime.isAnimating(), false, id);
+  }
+  assert.deepEqual(env.runtime.debugPlay("work", { variant: "other.svg" }), { ok: false, reason: "missing-art" });
+});
+
+test("getMoodSnapshot reports mood, label, personality and the last interaction without changing state", () => {
+  const env = debugEnv({ config: { ...ON, personality: "curious" } });
+  env.clock.advance(5000);
+  env.runtime.noteEvent("pet");
+  const snap = env.runtime.getMoodSnapshot();
+  assert.deepEqual(Object.keys(snap).sort(), ["label", "lastInteractionAt", "mood", "personality"]);
+  assert.equal(snap.personality, "curious");
+  assert.equal(snap.lastInteractionAt, 5000);
+  assert.ok(["tired", "grumpy", "content", "neutral"].includes(snap.label));
+  assert.deepEqual(snap.mood, env.runtime.getMood());
+  snap.mood.energy = -1;
+  assert.notEqual(env.runtime.getMood().energy, -1);
+  const writes = env.store.count("schedule");
+  env.runtime.getMoodSnapshot();
+  assert.equal(env.store.count("schedule"), writes);
 });

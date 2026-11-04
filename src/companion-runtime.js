@@ -40,6 +40,8 @@ const {
   walkTarget,
   walkEdgeDistance,
   sided,
+  FETCH_OBJECTS,
+  fetchObjectKeys,
   SPOT_TOLERANCE_RATIO,
   SPOT_REACH_TOLERANCE_RATIO,
 } = require("./companion-scenes");
@@ -65,8 +67,10 @@ const GRID_DECAY = 0.9;
 const GESTURES = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell", "hover-move"]);
 // Mischief tuning.
 const MISCHIEF_LOW_ENERGY = 25; // jumpy/walking reactions stay off below this
-const WALKING_MISCHIEF = new Set(["poke", "reachClose", "wall", "sitEdge"]);
-const EDGE_WALKS = new Set(["reachClose", "wall", "sitEdge"]); // skip roam's margin band
+const WALKING_MISCHIEF = new Set(["poke", "reachClose", "wall", "sitEdge", "fetch"]);
+const EDGE_WALKS = new Set(["reachClose", "wall", "sitEdge", "fetch"]); // skip roam's margin band
+// Sides the scene animates, so roam measures the arrival gap on that side.
+const SIDED_WALKS = new Set(["wall", "fetch"]);
 const IDLE_QUEUE_MAX_WAIT_MS = 60000; // welcome / stretch wait this long for the gate
 const PENDING_WALK_MAX_MS = 120000; // a walk the roam never asked for (or cut) is dropped
 const LONG_WORK_MS = 600000;
@@ -83,6 +87,49 @@ const SLEEP_TWITCH_CHANCE = 0.35;
 const WORK_VARIANT_CHANCE = 0.35;
 const LONG_SLEEP_MS = 600000;
 const ART_CACHE_MAX = 8; // (theme, window size) helpers kept for the geometry
+// Test mode (spec 2026-11-04 §2): what the "Test animations" menu lists.
+// Fixed English labels (developer tool). Single-key ids play one theme key
+// (the variant) once; the rest are scenes, walks or previews.
+const SLEEP_FLOW_STATES = new Set(["yawning", "dozing", "collapsing", "sleeping", "waking"]);
+const DEBUG_SINGLE = {
+  mood: [
+    ["content", "Content"], ["tired", "Tired"], ["grumpy", "Grumpy"], ["curious", "Curious"],
+    ["shy", "Shy"], ["shyRight", "Shy (looks right)"], ["greet", "Greet"], ["greetLeft", "Greet (left)"],
+    ["petting", "Petting"],
+  ],
+  catch: [
+    ["catch", "Catch"], ["catchHigh", "Catch: high"], ["catchBody", "Catch: body"], ["catchLow", "Catch: low"],
+    ["catchLeft", "Catch: left"], ["catchRight", "Catch: right"],
+    ["catchMiss", "Catch miss"], ["catchMissHigh", "Catch miss: high"], ["catchMissBody", "Catch miss: body"],
+    ["catchMissLow", "Catch miss: low"], ["catchMissLeft", "Catch miss: left"], ["catchMissRight", "Catch miss: right"],
+  ],
+  pounce: [
+    ["pounceLeft", "Pounce (left)"], ["pounceRight", "Pounce (right)"],
+    ["pounceStrikeLeft", "Pounce strike (left)"], ["pounceStrikeRight", "Pounce strike (right)"],
+  ],
+  boo: [["boo", "Boo!"]],
+  dayRhythm: [["morningStretch", "Morning stretch"], ["coffee", "Coffee"], ["nightSleepy", "Sleepy night"]],
+  toy: [["toyBall", "Toy: ball"], ["toyYoyo", "Toy: yo-yo"], ["toyPlane", "Toy: paper plane"]],
+  welcome: [["welcome", "Welcome back"]],
+  stretchBack: [["stretchBack", "Stretch after work"]],
+  searchMouse: [["searchMouse", "Searching for the mouse"]],
+  sleep: [["sleepTwitch", "Dreamy sleep"], ["collapseSleepTwitch", "Dreamy collapse sleep"]],
+  transition: [
+    ["sitDown", "Sit down"], ["standUp", "Stand up"], ["fakeNapIn", "Fake nap: lie down"],
+    ["fakeNapOut", "Fake nap: get up"], ["pettingIn", "Petting: ease in"], ["pettingOut", "Petting: ease out"],
+  ],
+};
+const DEBUG_GROUP = {
+  mood: "Moods", catch: "Catch", pounce: "Mischief", boo: "Mischief", dayRhythm: "Mischief", toy: "Mischief",
+  welcome: "Mischief", stretchBack: "Mischief", searchMouse: "Mischief", sleep: "Sleep", transition: "Transitions",
+};
+const DEBUG_ONCE = new Set(["transition"]);
+const DEBUG_WALKS = [["walkBouncy", "Bouncy walk"], ["walkTired", "Tired walk"], ["walkCurious", "Curious walk"]];
+const DEBUG_WALL = [
+  ["wallPushLeft", "Wall push (left)"], ["wallPushRight", "Wall push (right)"],
+  ["wallPeekLeft", "Wall peek (left)"], ["wallPeekRight", "Wall peek (right)"],
+];
+const DEBUG_GROUP_ORDER = ["Moods", "Catch", "Mischief", "Walks", "Sleep", "Work", "Transitions"];
 
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -115,6 +162,12 @@ function createCompanionRuntime(options = {}) {
     // Mischief: platform for the "close button" corner, local hour for tests.
     getPlatform = () => process.platform,
     getHour = undefined,
+    // Test mode: why the pet cannot play right now ("dnd", "mini", ...) or
+    // null; without it a closed canPlay() reads as "agent-busy".
+    getDebugBlockReason = null,
+    // Test mode: stop a walk in progress / re-arm roam's pause so a pending
+    // test walk starts at roam's shortest pause.
+    interruptRoam = () => {},
     store = null,
     random = Math.random,
     now = Date.now,
@@ -152,6 +205,13 @@ function createCompanionRuntime(options = {}) {
   let breatherUntil = 0; // roam holds until then after a visual / petting ended
   // Art geometry helpers per (theme id, W, H); each one measures a file once.
   const artCache = new Map();
+  // XWayland cursor trust (searchMouse): when the latest trusted cursor
+  // sample was seen (null until the first tick), and its position (poke
+  // target for a test-mode poke).
+  let lastTrustedCursorAt = null;
+  let lastCursorPoint = null;
+  // Test mode: a walk variant file for the next walk.
+  let debugWalkFile = null;
 
   const memoryOn = () => config.enabled && config.memory;
   const autonomous = () => config.enabled && config.autonomy;
@@ -349,6 +409,7 @@ function createCompanionRuntime(options = {}) {
   }
 
   function sceneAllowed(scene) {
+    if (scene.debug) return config.enabled;
     if (!mischiefOn()) return false;
     return scene.requires === "interactions" ? config.interactions : config.autonomy;
   }
@@ -364,7 +425,7 @@ function createCompanionRuntime(options = {}) {
   // A walking mischief that never reaches its scene still spends its cooldown,
   // so the pet does not keep picking (and walking toward) the same spot.
   function spendWalk(walk) {
-    if (walk) brain.markPlayed(walk.id, now(), traits);
+    if (walk && !walk.debug) brain.markPlayed(walk.id, now(), traits);
   }
 
   function clearMischiefWork() {
@@ -403,8 +464,10 @@ function createCompanionRuntime(options = {}) {
     // A replaced visual or a non-idle state ends the scene right away.
     if (scene && (!isAnimating() || getCurrentState() !== "idle")) stopPlayback(true);
     if (!autonomous() || getIdleMode() !== "roam") {
-      pendingWalk = null;
-      walkingMischief = null;
+      // A test-mode walk only needs Free Roam.
+      const roam = getIdleMode() === "roam";
+      if (!(roam && pendingWalk && pendingWalk.debug)) pendingWalk = null;
+      if (!(roam && walkingMischief && walkingMischief.debug)) walkingMischief = null;
       returnWalk = false;
     }
     if (pendingWalk && t - pendingWalk.at > PENDING_WALK_MAX_MS) {
@@ -476,6 +539,7 @@ function createCompanionRuntime(options = {}) {
     const t = now();
     const pick = brain.pickAutonomous({
       traits, personality: config.personality, state, mode: "roam", available: mischiefAvailable(keys, false), now: t,
+      cursorUnseenMs: cursorUnseenMs(t),
     });
     if (!pick) return false;
     if (WALKING_MISCHIEF.has(pick.id)) {
@@ -493,8 +557,23 @@ function createCompanionRuntime(options = {}) {
     setMood(applyEvent(state, { kind: "beat" }, traits, now()));
   }
 
-  function tick(cursor) {
+  function cursorUnseenMs(t) {
+    return lastTrustedCursorAt === null ? 0 : Math.max(0, t - lastTrustedCursorAt);
+  }
+
+  // info.cursorTrusted === false: this tick's cursor read is not trusted
+  // (XWayland outside the app's windows; the sample is then null). Callers
+  // without the info count as trusted, so searchMouse never plays there.
+  function noteCursorTrust(cursor, info) {
+    const t = now();
+    const trusted = !(info && info.cursorTrusted === false);
+    if (trusted || lastTrustedCursorAt === null) lastTrustedCursorAt = t;
+    if (trusted && cursor && isNum(cursor.x) && isNum(cursor.y)) lastCursorPoint = { x: cursor.x, y: cursor.y };
+  }
+
+  function tick(cursor, info) {
     if (disposed) return;
+    noteCursorTrust(cursor, info);
     if (mischiefOn() && mischiefTick(cursor)) return;
     if (!autonomous() || getIdleMode() !== "roam") return;
     if (playing || petSession || getCurrentState() !== "idle") return;
@@ -535,8 +614,10 @@ function createCompanionRuntime(options = {}) {
       const t = now();
       const pick = brain.pickAutonomous({
         traits, personality: config.personality, state, mode: "activities", available: mischiefAvailable(available, true), now: t,
+        cursorUnseenMs: cursorUnseenMs(t),
       });
-      const anim = pick && pick.variant ? animationFor(pick.variant, theme) : null;
+      const singleKey = pick && (pick.variant || (pick.id === "searchMouse" ? "searchMouse" : null));
+      const anim = singleKey ? animationFor(singleKey, theme) : null;
       if (anim) {
         brain.markPlayed(pick.id, t, traits);
         setMood(applyEvent(state, { kind: "beat" }, traits, t));
@@ -553,6 +634,8 @@ function createCompanionRuntime(options = {}) {
   }
 
   function getRoamDelayMs(isFirst, baseMs) {
+    // A test-mode walk asks for roam's shortest pause, even without autonomy.
+    if (!disposed && config.enabled && ((pendingWalk && pendingWalk.debug) || debugWalkFile)) return 0;
     if (disposed || !autonomous()) return baseMs;
     // A pending mischief walk, or the walk back from an edge scene, asks for
     // the shortest pause roam allows.
@@ -569,6 +652,11 @@ function createCompanionRuntime(options = {}) {
   // theme without it (or the feature off) behaves exactly as before.
   function pickWalkVisual() {
     if (disposed || !config.enabled) return null;
+    if (debugWalkFile) {
+      const file = debugWalkFile;
+      debugWalkFile = null;
+      return file;
+    }
     const theme = getTheme();
     const roll = (key, chance) => {
       const entry = companionAnimations(theme)[key];
@@ -687,7 +775,9 @@ function createCompanionRuntime(options = {}) {
   }
 
   function pickRoamTarget(args) {
-    if (disposed || !autonomous() || !args) return null;
+    if (disposed || !args) return null;
+    const debugWalk = !!(config.enabled && pendingWalk && pendingWalk.debug);
+    if (!autonomous() && !debugWalk) return null;
     const { xMin, xMax, yMin, yMax, bounds, size, displayId } = args;
     if (![xMin, xMax, yMin, yMax].every(isNum)) return null;
     const area = validArea(args.workArea)
@@ -714,10 +804,10 @@ function createCompanionRuntime(options = {}) {
     if (returnWalk) {
       // Leave the edge: roam picks its own target inside the margin band.
       returnWalk = false;
-      if (mischiefOn()) return null;
+      if (mischiefOn() && !debugWalk) return null;
     }
 
-    if (mischiefOn() && pendingWalk) {
+    if ((mischiefOn() || debugWalk) && pendingWalk) {
       const walk = pendingWalk;
       pendingWalk = null;
       const artSize = size && isNum(size.width) && isNum(size.height)
@@ -742,12 +832,13 @@ function createCompanionRuntime(options = {}) {
           spot: { ...spot.spot },
         };
         if (overhang && (ov("left") || ov("right") || ov("top") || ov("bottom"))) target.overhang = { ...overhang };
-        if (spot.side && walk.id === "wall") target.side = spot.side;
+        if (spot.side && SIDED_WALKS.has(walk.id)) target.side = spot.side;
         walkingMischief = {
           id: walk.id,
           at: now(),
+          debug: !!walk.debug,
           side: spot.side,
-          variant: spot.variant || null,
+          variant: spot.variant || walk.variant || null,
           spot: { ...spot.spot },
           petWidth: spot.petWidth,
           area,
@@ -768,11 +859,13 @@ function createCompanionRuntime(options = {}) {
             mischief: walk.id,
           }
           : { ...toTarget(spot.cx, spot.cy, true), mischief: walk.id };
-        // The wall scene animates this side; roam measures the gap on it too.
-        if (spot.side && walk.id === "wall") target.side = spot.side;
+        // The wall / fetch scene animates this side; roam measures the gap on it too.
+        if (spot.side && SIDED_WALKS.has(walk.id)) target.side = spot.side;
         walkingMischief = {
           id: walk.id, at: now(), side: spot.side, petWidth: spot.petWidth, area, bounds, goal: { x: target.x, y: target.y },
         };
+        if (walk.debug) walkingMischief.debug = true;
+        if (spot.variant || walk.variant) walkingMischief.variant = spot.variant || walk.variant;
         return target;
       }
       spendWalk(walk);
@@ -832,6 +925,11 @@ function createCompanionRuntime(options = {}) {
     spendWalk(pendingWalk);
     pendingWalk = null;
     if (!walk) return;
+    if (walk.debug) {
+      // Test mode: already there (or as close as roam gets), play in place.
+      if (getIdleMode() === "roam") startDebugScene(walk.id, { side: walk.side, variant: walk.variant });
+      return;
+    }
     const distance = walkEdgeDistance(walk, { area: walk.area, bounds: walk.bounds, goal: walk.goal, platform: getPlatform() });
     const played = mischiefOn() && autonomous() && getIdleMode() === "roam" && distance <= discardTolerance(walk)
       && startScene(walk.id, { side: walk.side, variant: walk.variant });
@@ -859,6 +957,13 @@ function createCompanionRuntime(options = {}) {
     if (pendingWalkCell) {
       pendingWalkCell.grid[pendingWalkCell.cell] += 1;
       pendingWalkCell = null;
+    }
+    if (walkingMischief && walkingMischief.debug && info && info.mischief === walkingMischief.id) {
+      // Test mode: the scene plays wherever the walk ended; no mood, no cooldown.
+      const walk = walkingMischief;
+      walkingMischief = null;
+      if (getIdleMode() === "roam") startDebugScene(walk.id, { side: walk.side, variant: walk.variant });
+      return;
     }
     setMood(applyEvent(state, { kind: "walk" }, traits, now()));
     let played = false;
@@ -1022,6 +1127,199 @@ function createCompanionRuntime(options = {}) {
     return t < breatherUntil;
   }
 
+  // ---- test mode (spec 2026-11-04 §2) ----
+  // Plays any companion visual now through the same playback protocol and
+  // visual generations, ignoring cooldowns, chances and personality. Never
+  // touches mood, persistence or the brain's cooldowns. Walking scenes ride
+  // the next roam walk at roam's shortest pause.
+
+  // Art presence without drawing a file (the catalog consumes no randomness).
+  function hasArt(theme, key) {
+    const entry = companionAnimations(theme)[key];
+    return Boolean(entry && Array.isArray(entry.files) && entry.files.some((f) => typeof f === "string" && f));
+  }
+
+  function workFiles(theme) {
+    const block = theme && theme.companionWorkTiers;
+    const out = [];
+    const seen = new Set();
+    for (const group of ["working", "juggling"]) {
+      const tiers = block && typeof block === "object" && Array.isArray(block[group]) ? block[group] : [];
+      const sorted = tiers.filter((tier) => tier && typeof tier === "object" && isNum(tier.minSessions))
+        .slice().sort((a, b) => a.minSessions - b.minSessions);
+      for (const tier of sorted) {
+        const unit = group === "working" ? "sessions" : "subagents";
+        const lists = [[tier.files, ""], [tier.variants, " variant"]];
+        for (const [list, kind] of lists) {
+          for (const file of Array.isArray(list) ? list : []) {
+            if (typeof file !== "string" || !file || seen.has(file)) continue;
+            seen.add(file);
+            out.push({ file, label: `${group === "working" ? "Working" : "Juggling"} ${tier.minSessions}+ ${unit}${kind}: ${file}` });
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  function debugCatalog() {
+    if (disposed || !config.enabled) return [];
+    const theme = getTheme();
+    const has = (key) => hasArt(theme, key);
+    const rows = [];
+    const add = (group, id, label, variant, walking) => {
+      const row = { group, id, label };
+      if (variant) row.variant = variant;
+      if (walking) row.walking = true;
+      rows.push(row);
+    };
+    for (const id of ["mood", "catch", "pounce"]) {
+      for (const [key, label] of DEBUG_SINGLE[id]) if (has(key)) add(DEBUG_GROUP[id], id, label, key);
+    }
+    if (has("fakeNap")) add("Mischief", "fakeNap", "Fake nap");
+    if (has("boo")) add("Mischief", "boo", "Boo!", "boo");
+    if (has("pokeLeft") || has("pokeRight")) add("Mischief", "poke", "Poke (walks to the cursor)", null, true);
+    if (has("reachClose")) add("Mischief", "reachClose", "Reach for the close button", null, true);
+    for (const [key, label] of DEBUG_WALL) if (has(key)) add("Mischief", "wall", label, key, true);
+    if (has("sitEdge")) add("Mischief", "sitEdge", "Sit on the edge", null, true);
+    for (const side of ["left", "right"]) {
+      if (!has(sided("fetchExit", side))) continue;
+      for (const key of fetchObjectKeys(side, has)) {
+        const object = FETCH_OBJECTS.find((obj) => key === sided(`fetch${obj}`, side));
+        add("Mischief", "fetch", `Fetch: ${object.toLowerCase()} (${side})`, key, true);
+      }
+    }
+    for (const id of ["dayRhythm", "toy", "welcome", "stretchBack", "searchMouse"]) {
+      for (const [key, label] of DEBUG_SINGLE[id]) if (has(key)) add("Mischief", id, label, key);
+    }
+    for (const [key, label] of DEBUG_WALKS) if (has(key)) add("Walks", "walk", label, key, true);
+    for (const [key, label] of DEBUG_SINGLE.sleep) if (has(key)) add("Sleep", "sleep", label, key);
+    for (const { file, label } of workFiles(theme)) add("Work", "work", label, file);
+    for (const [key, label] of DEBUG_SINGLE.transition) if (has(key)) add("Transitions", "transition", label, key);
+    return DEBUG_GROUP_ORDER.flatMap((group) => rows.filter((row) => row.group === group));
+  }
+
+  // Why the pet cannot play a test visual now, or null.
+  function debugBlockReason() {
+    const reason = typeof getDebugBlockReason === "function" ? getDebugBlockReason() : (canPlay() ? null : "agent-busy");
+    if (reason) return reason;
+    const current = getCurrentState();
+    if (SLEEP_FLOW_STATES.has(current)) return "sleeping";
+    if (current !== "idle" && current !== "roam") return "agent-busy";
+    return null;
+  }
+
+  // The plan of a test id: { scene } (plays now), { walk } (rides the next
+  // roam walk), { walkFile } (walk variant) or null when the art is missing.
+  function debugPlan(id, opts) {
+    const theme = getTheme();
+    const has = (key) => hasArt(theme, key);
+    const resolve = (key) => animationFor(key, theme);
+    const variant = typeof opts.variant === "string" ? opts.variant : null;
+    const sideOf = (key) => (key && key.endsWith("Left") ? "left" : (key && key.endsWith("Right") ? "right" : null));
+    const side = opts.side === "left" || opts.side === "right" ? opts.side : sideOf(variant);
+    if (Object.prototype.hasOwnProperty.call(DEBUG_SINGLE, id)) {
+      const list = DEBUG_SINGLE[id];
+      const key = variant || (list.length === 1 ? list[0][0] : null);
+      if (!key || !list.some(([k]) => k === key) || !has(key)) return null;
+      const scene = buildScene("single", { key, once: DEBUG_ONCE.has(id) }, resolve, random);
+      return scene ? { scene } : null;
+    }
+    switch (id) {
+      case "fakeNap": {
+        const scene = buildScene("fakeNap", {}, resolve, random);
+        return scene ? { scene } : null;
+      }
+      case "work": {
+        if (!variant || !workFiles(theme).some((entry) => entry.file === variant)) return null;
+        const scene = buildScene("single", { key: "work" }, (key) => (key === "work" ? { file: variant, duration: null } : null), random);
+        return scene ? { scene } : null;
+      }
+      case "walk":
+        return variant && DEBUG_WALKS.some(([k]) => k === variant) && has(variant) ? { walkFile: resolve(variant).file } : null;
+      case "poke": {
+        if (!has("pokeLeft") && !has("pokeRight")) return null;
+        if (lastCursorPoint) return { walk: { id: "poke", target: { ...lastCursorPoint } } };
+        // No trusted cursor seen yet: poke in place.
+        const key = has("pokeRight") ? "pokeRight" : "pokeLeft";
+        const scene = buildScene("single", { key }, resolve, random);
+        return scene ? { scene, inPlace: true } : null;
+      }
+      case "reachClose":
+        return has("reachClose") ? { walk: { id } } : null;
+      case "sitEdge":
+        return has("sitEdge") ? { walk: { id } } : null;
+      case "wall":
+        if (variant && !DEBUG_WALL.some(([k]) => k === variant)) return null;
+        if (variant ? !has(variant) : !DEBUG_WALL.some(([k]) => has(k))) return null;
+        return { walk: { id, side, variant } };
+      case "fetch": {
+        if (!side || !has(sided("fetchExit", side))) return null;
+        const objects = fetchObjectKeys(side, has);
+        if (objects.length === 0 || (variant && !objects.includes(variant))) return null;
+        return { walk: { id, side, variant } };
+      }
+      default:
+        return null;
+    }
+  }
+
+  // Drop whatever companion visual or petting session is on screen; the
+  // caller's send takes the visual over (restore only when nothing follows).
+  function debugTakeOver(restore) {
+    clearPetTimer();
+    petSession = false;
+    if (playing) stopPlayback(restore);
+  }
+
+  function startDebugScene(id, opts) {
+    if (disposed || !config.enabled || playing || debugBlockReason()) return false;
+    if (getCurrentState() !== "idle") return false;
+    const scene = buildScene(id, opts, (key) => animationFor(key, getTheme()), random);
+    if (!scene) return false;
+    scene.debug = true;
+    scenes.start(scene);
+    return true;
+  }
+
+  function debugPlay(id, opts) {
+    const fail = (reason) => ({ ok: false, reason });
+    if (disposed || !config.enabled) return fail("disabled");
+    const plan = typeof id === "string" ? debugPlan(id, opts && typeof opts === "object" ? opts : {}) : null;
+    if (!plan) return fail("missing-art");
+    const blocked = debugBlockReason();
+    if (blocked) return fail(blocked);
+    if (plan.walk || plan.walkFile) {
+      if (getIdleMode() !== "roam") return fail("no-roam");
+      debugTakeOver(true);
+      if (plan.walk) {
+        pendingWalk = { ...plan.walk, at: now(), debug: true };
+        walkingMischief = null;
+        returnWalk = false;
+      } else {
+        debugWalkFile = plan.walkFile;
+      }
+      interruptRoam();
+      return { ok: true };
+    }
+    if (isRoamAnimating()) interruptRoam();
+    if (getCurrentState() !== "idle") return fail("agent-busy");
+    debugTakeOver(false);
+    plan.scene.debug = true;
+    scenes.start(plan.scene);
+    return { ok: true };
+  }
+
+  function getMoodSnapshot() {
+    const current = advance(state, now(), traits);
+    return {
+      mood: { ...current.mood },
+      label: current.label,
+      personality: config.personality,
+      lastInteractionAt: isNum(current.lastInteractionAt) ? current.lastInteractionAt : null,
+    };
+  }
+
   // ---- lifecycle ----
 
   function cancel() {
@@ -1130,6 +1428,9 @@ function createCompanionRuntime(options = {}) {
     reset,
     dispose,
     getMood: () => ({ ...state.mood }),
+    getMoodSnapshot,
+    debugCatalog,
+    debugPlay,
     getRestSpot: () => (restSpot ? { ...restSpot } : null),
   };
 }
