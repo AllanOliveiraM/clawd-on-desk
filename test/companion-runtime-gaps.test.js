@@ -191,6 +191,32 @@ test("a test-mode walk variant is spent by the one walk it was armed for", () =>
   assert.equal(env.runtime.pickWalkVisual(), null);
 });
 
+test("the walk that carries a test-mode variant leaves mood, store and explore grid alone", () => {
+  const env = harness(["walkBouncy"]);
+  env.randomValue = 0; // the explore roll always wins
+  env.runtime.configure({ ...ON, memory: true });
+  const args = {
+    xMin: 0, xMax: 1900, yMin: 0, yMax: 700, bounds: { x: 0, y: 0, width: 100, height: 100 },
+    size: { width: 100, height: 100 }, displayId: 1, workArea: { x: 0, y: 0, width: 2000, height: 800 },
+  };
+  env.runtime.debugPlay("walk", { variant: "walkBouncy" });
+  const before = env.runtime.getMood();
+  const stores = env.storeCalls.length;
+  const first = env.runtime.pickRoamTarget(args);
+  assert.equal(env.runtime.pickWalkVisual(), "walkBouncy.svg");
+  env.runtime.noteWalkFinished({ preferred: false });
+  assert.deepEqual(env.runtime.getMood(), before, "no walk mood event");
+  assert.equal(env.storeCalls.length, stores, "nothing persisted");
+  // No explore credit: the same least-visited cell is picked again.
+  env.runtime.onPreferredTargetDiscarded();
+  assert.deepEqual(env.runtime.pickRoamTarget(args), first);
+  // The next normal walk counts again.
+  env.randomValue = 0.99;
+  assert.equal(env.runtime.pickWalkVisual(), null);
+  env.runtime.noteWalkFinished({ preferred: false });
+  assert.notDeepEqual(env.runtime.getMood(), before);
+});
+
 const tierBlock = () => ({ working: [{ minSessions: 1, files: ["f.svg"], variants: ["v1.svg"] }], juggling: [] });
 
 test("a theme reload with an equal ladder keeps the held work pick", () => {

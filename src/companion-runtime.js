@@ -252,6 +252,7 @@ function createCompanionRuntime(options = {}) {
   let lastCursorPoint = null;
   // Test mode: a walk variant file for the next walk.
   let debugWalkFile = null;
+  let debugVisualWalk = false; // the walk in progress carries a test-mode variant
 
   const memoryOn = () => config.enabled && config.memory;
   const autonomous = () => config.enabled && config.autonomy;
@@ -728,9 +729,13 @@ function createCompanionRuntime(options = {}) {
   // theme without it (or the feature off) behaves exactly as before.
   function pickWalkVisual() {
     if (disposed || !config.enabled) return null;
+    // Asked once per walk: only the walk that consumes a test-mode file is a
+    // test walk (noteWalkFinished then skips mood, store and explore credit).
+    debugVisualWalk = false;
     if (debugWalkFile) {
       const file = debugWalkFile;
       debugWalkFile = null;
+      debugVisualWalk = true;
       return file;
     }
     const theme = getTheme();
@@ -1057,6 +1062,12 @@ function createCompanionRuntime(options = {}) {
 
   function noteWalkFinished(info) {
     if (disposed || !config.enabled) return;
+    if (debugVisualWalk) {
+      // Test mode walk variant: no mood event, no persist, no explore credit.
+      debugVisualWalk = false;
+      pendingWalkCell = null;
+      return;
+    }
     if (pendingWalkCell) {
       pendingWalkCell.grid[pendingWalkCell.cell] += 1;
       pendingWalkCell = null;
@@ -1438,6 +1449,7 @@ function createCompanionRuntime(options = {}) {
 
   function stopEverything() {
     debugWalkFile = null;
+    debugVisualWalk = false;
     collapseTwitchHit = null;
     workPicks.clear();
     clearPetTimer();
