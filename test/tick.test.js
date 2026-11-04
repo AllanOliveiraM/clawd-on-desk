@@ -2210,6 +2210,26 @@ describe("tick companion coordination", () => {
     assert.ok(later > before + 1, `loop kept running (later=${later}, before=${before})`);
   });
 
+  it("a throwing hook warns once per label; a throwing roam.tick keeps the loop alive", () => {
+    const warns = [];
+    const realWarn = console.warn;
+    console.warn = (...args) => warns.push(args);
+    try {
+      let roamTicks = 0;
+      let ticks = 0;
+      ctx.companion.tick = () => { ticks++; throw new Error("boom"); };
+      ctx.roam = { tick() { roamTicks++; throw new Error("roam boom"); } };
+      start();
+      advance(2000);
+      assert.ok(ticks > 1 && roamTicks > 1, `loop kept running (ticks=${ticks}, roam=${roamTicks})`);
+    } finally {
+      console.warn = realWarn;
+    }
+    const labels = warns.filter((w) => w[0] === "[tick] companion hook threw:").map((w) => w[1]);
+    assert.deepStrictEqual(labels.sort(), ["companion.tick", "roam.tick"]);
+    assert.ok(warns.every((w) => w[0] !== "[tick] companion hook threw:" || w[2] instanceof Error));
+  });
+
   it("a throwing companion.noteIdleEntered neither fires twice nor starves the companion", () => {
     let entries = 0;
     let ticks = 0;

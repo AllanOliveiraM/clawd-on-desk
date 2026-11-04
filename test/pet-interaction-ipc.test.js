@@ -716,6 +716,20 @@ test("pet hover reports reach notePetHover from the hit window only, in any mode
   assert.deepStrictEqual(hovers, [true, false, true]);
 });
 
+test("throwing companion getters are logged once per getter", () => {
+  const boom = () => { throw new Error("boom"); };
+  const logs = [];
+  const h = companionHarness({ extra: { isCompanionEnabled: boom, hitWebContents: boom, companionLog: (m) => logs.push(m) } });
+  for (let i = 0; i < 3; i += 1) {
+    h.ipcMain.send("play-click-reaction", "left.svg", 2500);
+    h.ipcMain.send("pet-interaction:gesture", "pet-start");
+  }
+  assert.deepStrictEqual(h.companion, []);
+  assert.equal(logs.length, 2, logs.join("; "));
+  assert.ok(logs.some((m) => m.includes("isCompanionEnabled")), logs.join("; "));
+  assert.ok(logs.some((m) => m.includes("hitWebContents")), logs.join("; "));
+});
+
 test("click reaction notes click vs clickBurst", () => {
   const h = companionHarness();
   h.ipcMain.send("play-click-reaction", "left.svg", 2500);

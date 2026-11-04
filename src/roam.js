@@ -144,13 +144,22 @@ module.exports = function initRoam(ctx) {
       let playing = false;
       try {
         playing = ctx.isCompanionPlaying();
-      } catch {
+      } catch (err) {
         // A broken companion hook reads as "no beat": roam keeps its
         // feature-off behaviour instead of dying on every frame.
+        warnOnce("isCompanionPlaying", err);
       }
       if (playing) return false;
     }
     return true;
+  }
+
+  // A throwing companion hook warns once per label, never on every frame.
+  const warnedHookLabels = new Set();
+  function warnOnce(label, err) {
+    if (warnedHookLabels.has(label)) return;
+    warnedHookLabels.add(label);
+    console.warn("[roam] companion hook threw:", label, err);
   }
 
   // Clawd Alive: optional pause modulation. Anything unusable — no hook, a

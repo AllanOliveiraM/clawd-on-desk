@@ -3692,6 +3692,27 @@ describe("roam companion hooks", () => {
     assert.deepStrictEqual(throwing, baseline);
   });
 
+  it("a throwing isCompanionPlaying warns once, not on every frame", () => {
+    const warns = [];
+    const realWarn = console.warn;
+    console.warn = (...args) => warns.push(args);
+    try {
+      const ctx = makeCtx({ isCompanionPlaying: () => { throw new Error("boom"); } });
+      const roam = roamModule(ctx);
+      roam.setEnabled(true);
+      roam.tick();
+      mock.timers.tick(8000);
+      mock.timers.tick(1000);
+      finishWalk(roam);
+      roam.setEnabled(false);
+    } finally {
+      console.warn = realWarn;
+    }
+    const mine = warns.filter((w) => w[0] === "[roam] companion hook threw:");
+    assert.equal(mine.length, 1);
+    assert.equal(mine[0][1], "isCompanionPlaying");
+  });
+
   it("a throwing isCompanionPlaying never cancels a walk mid-stride", () => {
     const ctx = makeCtx({ isCompanionPlaying: () => { throw new Error("boom"); } });
     const roam = roamModule(ctx);

@@ -172,11 +172,20 @@ function registerPetInteractionIpc(options = {}) {
     setAccessoryMirror(!!mirrored);
   });
 
+  // A throwing companion getter is logged once per getter, not per event.
+  const warnedGetters = new Set();
+  function warnGetterOnce(label, err) {
+    if (warnedGetters.has(label)) return;
+    warnedGetters.add(label);
+    companionLog(`companion getter threw: ${label}: ${(err && err.message) || err}`);
+  }
+
   function companionObserving() {
     if (!isCompanionEnabledOption) return true;
     try {
       return isCompanionEnabledOption() === true;
-    } catch {
+    } catch (err) {
+      warnGetterOnce("isCompanionEnabled", err);
       return false;
     }
   }
@@ -266,7 +275,8 @@ function registerPetInteractionIpc(options = {}) {
         let wc = null;
         try {
           wc = typeof hitWebContents === "function" ? hitWebContents() : hitWebContents;
-        } catch {
+        } catch (err) {
+          warnGetterOnce("hitWebContents", err);
           return;
         }
         if (!isTrustedMainFrameEvent(event, wc)) return;
