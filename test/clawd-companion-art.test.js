@@ -159,3 +159,118 @@ test("built-in clawd: companion visual usages are required assets and exist on d
     assert.ok(fs.existsSync(path.join(SVG_DIR, f)), `${f} exists`);
   }
 });
+
+const { BUILTIN_ACCESSORY_MOTION_PADDING: HEAD_ENV, BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING: MOUTH_ENV } = require("../src/pet-accessory-hitbox");
+const { auditSvgCompositing } = require("./helpers/svg-animation-compositing");
+
+const companionFiles = () => {
+  const out = new Set();
+  for (const e of Object.values(raw.companionAnimations)) out.add(e.file);
+  for (const g of Object.values(raw.companionWorkTiers)) {
+    for (const t of g) for (const f of [...(t.files || []), ...(t.variants || [])]) out.add(f);
+  }
+  return [...out].sort();
+};
+
+test("envelope coverage: every companion/work file has head+mouth envelopes or is hidden", () => {
+  const head = raw.customization.accessories.files;
+  const mouth = raw.customization.mouthAccessories.files;
+  const files = companionFiles();
+  assert.ok(files.length > 70);
+  // Per accessory: hidden, or an envelope.
+  const missing = [];
+  for (const f of files) {
+    if (!(head[f] && head[f].visibility === "hidden") && !HEAD_ENV.clawd[f]) missing.push(`${f}:head`);
+    if (!(mouth[f] && mouth[f].visibility === "hidden") && !MOUTH_ENV.clawd[f]) missing.push(`${f}:mouth`);
+  }
+  assert.deepEqual(missing, []);
+});
+
+test("envelope tables: no stale keys, sane magnitudes, unregistered files get no padding", () => {
+  const known = new Set(fs.readdirSync(SVG_DIR));
+  for (const table of [HEAD_ENV.clawd, MOUTH_ENV.clawd]) {
+    for (const [f, pad] of Object.entries(table)) {
+      assert.ok(known.has(f), `stale envelope key ${f}`);
+      if (!f.startsWith("clawd-alive-")) continue;
+      for (const [side, v] of Object.entries(pad)) {
+        assert.ok(["left", "top", "right", "bottom"].includes(side), `${f}.${side}`);
+        assert.ok(Number.isFinite(v) && v >= 0 && v <= 12, `${f}.${side}=${v}`);
+      }
+    }
+  }
+  assert.equal(HEAD_ENV.clawd["clawd-not-registered.svg"], undefined);
+  assert.equal(MOUTH_ENV.clawd["clawd-not-registered.svg"], undefined);
+  assert.equal(HEAD_ENV.other, undefined);
+});
+
+test("mirrored left/right envelope pairs are pinned within tolerance (T4)", () => {
+  const pairs = [];
+  for (const f of Object.keys(HEAD_ENV.clawd)) {
+    const m = /^(clawd-alive-.*)-left(\.svg)$/.exec(f);
+    if (m && HEAD_ENV.clawd[`${m[1]}-right${m[2]}`]) pairs.push([f, `${m[1]}-right${m[2]}`]);
+  }
+  assert.ok(pairs.length >= 3, "found mirrored pairs");
+  for (const table of [HEAD_ENV.clawd, MOUTH_ENV.clawd]) {
+    for (const [l, r] of pairs) {
+      if (!table[l] || !table[r]) continue;
+      const a = table[l], b = table[r];
+      const tol = 2.5;
+      assert.ok(Math.abs((a.left || 0) - (b.right || 0)) <= tol, `${l} left vs right`);
+      assert.ok(Math.abs((a.right || 0) - (b.left || 0)) <= tol, `${l} right vs left`);
+      assert.ok(Math.abs((a.top || 0) - (b.top || 0)) <= tol, `${l} top`);
+      assert.ok(Math.abs((a.bottom || 0) - (b.bottom || 0)) <= tol, `${l} bottom`);
+    }
+  }
+});
+
+test("compositing audit passes for every alive file, work tier and juggle art", () => {
+  const bad = [];
+  for (const f of [...new Set([...aliveFiles, ...companionFiles()])]) {
+    const result = auditSvgCompositing(read(f));
+    for (const v of result.violations) bad.push(`${f}: [${v.id}] ${v.element} ${v.animation} ${v.property}`);
+  }
+  assert.deepEqual(bad, []);
+});
+
+test("crabwalk and error art stay registered and well formed", () => {
+  for (const f of ["clawd-mini-crabwalk.svg", "clawd-error.svg"]) {
+    const s = read(f);
+    assert.ok(!/<script\b/i.test(s), `${f} script`);
+    assert.ok(!/url\(\s*['"]?\s*(https?:|data:|\/\/)/i.test(s), `${f} url`);
+    assert.ok(/viewBox=/.test(s), `${f} viewBox`);
+    assert.ok(raw.rendering.objectChannelFiles.includes(f) || f === "clawd-error.svg", `${f} registered`);
+    assert.ok(raw.customization.accessories.files[f], `${f} head accessory entry`);
+    assert.ok(raw.customization.mouthAccessories.files[f], `${f} mouth accessory entry`);
+  }
+  assert.equal(raw.rendering.discreteSampling["clawd-mini-crabwalk.svg"], 24);
+  assert.deepEqual(raw.states.error, ["clawd-error.svg"]);
+  assert.deepEqual(raw.miniMode.states["mini-crabwalk"], ["clawd-mini-crabwalk.svg"]);
+  assert.ok(HEAD_ENV.clawd["clawd-mini-crabwalk.svg"] && Object.keys(HEAD_ENV.clawd["clawd-mini-crabwalk.svg"]).length > 0, "crabwalk head envelope");
+  assert.ok(loopLengths("clawd-mini-crabwalk.svg").size >= 1);
+});
+
+test("one-shot intro/outro parts parse and declare their loop length", () => {
+  for (const key of ["sitDown", "standUp", "fakeNapIn", "fakeNapOut", "pettingIn", "pettingOut"]) {
+    const e = raw.companionAnimations[key];
+    assert.ok(e, `${key} declared`);
+    const s = read(e.file);
+    assert.ok(/<svg\b[\s\S]*<\/svg>\s*$/.test(s), `${key} well formed`);
+    assert.ok(/<svg\b[^>]*viewBox="[-\d.\s]+"/.test(s), `${key} viewBox`);
+    assert.ok(loopLengths(e.file).has(e.duration), `${key} loop equals declared duration`);
+  }
+});
+
+test("built-in alive files are not shared between unrelated slots except the allow-list", () => {
+  const owners = new Map();
+  for (const [k, e] of Object.entries(raw.companionAnimations)) {
+    (owners.get(e.file) || owners.set(e.file, []).get(e.file)).push(`anim:${k}`);
+  }
+  for (const [g, tiers] of Object.entries(raw.companionWorkTiers)) {
+    for (const t of tiers) for (const f of [...(t.files || []), ...(t.variants || [])]) {
+      (owners.get(f) || owners.set(f, []).get(f)).push(`tier:${g}:${t.minSessions}`);
+    }
+  }
+  const shared = [...owners].filter(([, o]) => o.length > 1).map(([f, o]) => `${f} <- ${o.join(",")}`);
+  assert.deepEqual(shared, []);
+  for (const f of owners.keys()) assert.ok(fs.existsSync(path.join(SVG_DIR, f)), `${f} exists`);
+});
