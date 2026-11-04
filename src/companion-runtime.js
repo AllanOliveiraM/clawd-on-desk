@@ -187,18 +187,23 @@ function createCompanionRuntime(options = {}) {
   function now() {
     const t = rawNow();
     if (isNum(t)) {
-      if (lastNow !== null && t < lastNow) rebaseClock(t);
+      if (lastNow !== null && t < lastNow) rebaseClock(t, lastNow);
       lastNow = t;
     }
     return t;
   }
-  function rebaseClock(t) {
+  function rebaseClock(t, was) {
+    // Past stamps cannot be ahead of the clock: cap them. Deadlines keep the
+    // time that was left at the last read (Ruling R2').
     const cap = (v) => (isNum(v) && v > t ? t : v);
-    breatherUntil = cap(breatherUntil);
-    nextBeatAt = cap(nextBeatAt);
+    const deadline = (v) => (isNum(v) && v > t ? Math.min(v, t + Math.max(0, v - was)) : v);
+    breatherUntil = deadline(breatherUntil);
+    nextBeatAt = deadline(nextBeatAt);
     lastTrustedCursorAt = cap(lastTrustedCursorAt);
-    hoverReadyAt = cap(hoverReadyAt);
-    for (const key of Object.keys(cooldownUntil)) cooldownUntil[key] = cap(cooldownUntil[key]);
+    hoverReadyAt = deadline(hoverReadyAt);
+    for (const key of Object.keys(cooldownUntil)) cooldownUntil[key] = deadline(cooldownUntil[key]);
+    const running = scenes.current();
+    if (running && isNum(running.partStartedAt)) running.partStartedAt = cap(running.partStartedAt);
     if (idleQueue) idleQueue.at = cap(idleQueue.at);
     if (pendingWalk) pendingWalk.at = cap(pendingWalk.at);
     if (walkingMischief) walkingMischief.at = cap(walkingMischief.at);

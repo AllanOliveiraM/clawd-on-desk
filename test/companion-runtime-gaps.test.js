@@ -19,6 +19,8 @@ function harness(keys, extra = {}) {
   env.theme = { states: { idle: ["idle.svg"] }, companionAnimations: anims };
   env.setNow = (v) => { t = v; };
   env.now = () => t;
+  // A wall-clock step: real timers keep their remaining duration.
+  env.step = (v) => { for (const x of timers) x.at += v - t; t = v; };
   env.advance = (ms) => {
     const target = t + ms;
     for (;;) {
@@ -62,8 +64,53 @@ test("a backwards clock jump does not freeze roam through holdsRoam", () => {
   env.commitLast();
   env.advance(3500);
   env.setNow(0);
+  env.runtime.tick();
   env.advance(5000);
   assert.equal(env.runtime.holdsRoam(), false);
+});
+
+const BEAT_KEYS = ["content", "tired", "grumpy", "curious", "shy", "greet", "petting"];
+
+test("a 1 ms backwards step keeps a pending beat and a long cooldown pending", () => {
+  const env = harness(BEAT_KEYS);
+  env.setNow(1000000);
+  env.runtime.configure(ON);
+  env.runtime.tick(); // arms the beat 30 s..6 min ahead
+  env.setNow(999999);
+  env.runtime.tick();
+  assert.equal(env.sends.length, 0, "the step must not fire the beat");
+  // hover cooldown (60 s): greet once, step back 1 ms, a second dwell stays blocked
+  const h = harness(["greet"]);
+  h.mode = "none";
+  h.setNow(5000000);
+  h.runtime.configure({ ...ON, personality: "playful", memory: false });
+  h.runtime.handleGesture("hover-dwell");
+  assert.equal(h.sends.length, 1);
+  h.runtime.cancel();
+  h.setNow(5000000 + 30000);
+  h.runtime.tick();
+  h.setNow(5000000 + 29999);
+  h.runtime.handleGesture("hover-dwell");
+  assert.equal(h.sends.length, 1, "hover cooldown still pending");
+});
+
+test("a backwards step caps a running scene's start so a loop still ends at maxMs", () => {
+  const env = harness(["fakeNap"], { options: { getHour: () => 12 } });
+  env.runtime.configure({ ...ON, mischief: true });
+  env.setNow(3600000);
+  env.runtime.debugPlay("fakeNap");
+  assert.equal(env.sends.length, 1);
+  env.commitLast();
+  env.advance(1000);
+  env.step(0);
+  env.runtime.tick();
+  // fakeNap loops for 20 s from its start; after the jump it must end within ~20 s, not an hour
+  let committed = 1;
+  for (let i = 0; i < 30; i += 1) {
+    env.advance(1000);
+    if (env.sends.length > committed) { committed = env.sends.length; env.commitLast(); }
+  }
+  assert.equal(env.runtime.isAnimating(), false, "the nap outlived its 20 s cap");
 });
 
 test("searchMouse under XWayland waits only its own threshold after a backwards clock jump", () => {
@@ -379,5 +426,18 @@ for (const name of ["calico", "cloudling"]) {
     const plain = run({ enabled: true, personality: "playful", autonomy: true, interactions: true, memory: false, mischief: false });
     assert.equal(plain.sends, 0);
     assert.equal(on.random, plain.random, "mischief adds no randomness without art");
+    // Same answers as a feature-off runtime for the hooks roam / idle-activity ask.
+    const probe = (cfg) => {
+      const env = harness([]);
+      env.theme = theme;
+      env.runtime.configure(cfg);
+      env.runtime.configure({});
+      return { delay: env.runtime.getRoamDelayMs(false, 4000), first: env.runtime.getRoamDelayMs(true, 4000), activity: env.runtime.chooseIdleActivity({}) };
+    };
+    const off = probe({ enabled: false });
+    const everything = probe({ enabled: true, personality: "balanced", autonomy: true, interactions: true, memory: false, mischief: true });
+    assert.equal(off.activity, null);
+    assert.equal(everything.activity, null, "idle-activity falls back to the theme's own pick");
+    assert.equal(everything.delay >= off.delay, true, "roam never walks more often than plain roam");
   });
 }

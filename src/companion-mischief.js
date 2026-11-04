@@ -182,13 +182,20 @@ function createMischiefBrain(options) {
   let pounceFired = false;
   let booFired = false;
 
-  // If the clock went backwards, a step back must not extend cooldowns beyond their nominal length.
+  // If the clock went backwards a cooldown never outlasts its nominal length,
+  // and one still pending at the last read keeps only the time that was left
+  // (a 1 ms step changes nothing, an hour back does not restart a full
+  // cooldown), Ruling R2'.
   function syncClock(t) {
     if (lastSeen !== null && t < lastSeen) {
-      for (const id of Object.keys(cooldownUntil)) {
-        cooldownUntil[id] = Math.min(cooldownUntil[id], t + (MISCHIEF_COOLDOWN_MS[id] || 0));
-      }
-      globalUntil = Math.min(globalUntil, t + globalCooldownMs(lastTraits));
+      const keep = (v, nominal) => {
+        if (!(v > t)) return v;
+        const left = v > lastSeen ? t + (v - lastSeen) : Infinity;
+        return Math.min(v, t + nominal, left);
+      };
+      for (const id of Object.keys(cooldownUntil)) cooldownUntil[id] = keep(cooldownUntil[id], MISCHIEF_COOLDOWN_MS[id] || 0);
+      globalUntil = keep(globalUntil, globalCooldownMs(lastTraits));
+      lastSeen = t;
     }
     if (lastSeen === null || t > lastSeen) lastSeen = t;
   }

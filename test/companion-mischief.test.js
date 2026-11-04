@@ -852,3 +852,16 @@ test("a single null between stills keeps the poke clock", () => {
   assert.equal(hold(brain, clock, 1600, 550, 9000), null);
   assert.equal(at(brain, clock, 1600, 550, 2000).id, "poke");
 });
+
+test("a backwards clock step keeps the remaining cooldown, not a fresh full one", () => {
+  const { brain, clock } = make();
+  brain.markPlayed("pounce", clock.t);
+  clock.t += 500000;
+  assert.equal(brain.canReact("pounce", clock.t), false); // 100 s left
+  clock.t -= 1;
+  assert.equal(brain.canReact("pounce", clock.t), false, "a 1 ms step keeps it");
+  const back = clock.t - 3600000;
+  assert.equal(brain.canReact("pounce", back), false);
+  assert.equal(brain.canReact("pounce", back + 99000), false);
+  assert.equal(brain.canReact("pounce", back + 100100), true, "only the remaining 100 s, not the full 600 s");
+});
