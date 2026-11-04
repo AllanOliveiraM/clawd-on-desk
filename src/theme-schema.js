@@ -676,11 +676,8 @@ function normalizeCompanionAnimations(value) {
   for (const key of COMPANION_ANIMATION_KEYS) {
     const entry = value[key];
     if (!isPlainObject(entry)) continue;
-    const candidates = Array.isArray(entry.files) ? entry.files : [entry.file];
-    const files = candidates
-      .filter((file) => typeof file === "string")
-      .map(basenameOnly)
-      .filter(isUsableBasename);
+    let files = normalizeTierFileList(entry.files);
+    if (files.length === 0) files = normalizeTierFileList([entry.file]);
     if (files.length === 0) continue;
     const duration = Number.isFinite(entry.duration) && entry.duration > 0 ? entry.duration : null;
     out[key] = { files, duration };
@@ -709,7 +706,8 @@ function normalizeCompanionWorkTiers(value) {
     for (const tier of tiers) {
       if (!isPlainObject(tier)) continue;
       if (typeof tier.minSessions !== "number" || !Number.isFinite(tier.minSessions) || tier.minSessions < 1) continue;
-      const files = normalizeTierFileList(Array.isArray(tier.files) ? tier.files : [tier.file]);
+      let files = normalizeTierFileList(tier.files);
+      if (files.length === 0) files = normalizeTierFileList([tier.file]);
       const variants = normalizeTierFileList(tier.variants);
       if (files.length === 0 && variants.length === 0) continue;
       out[group].push({ minSessions: Math.floor(tier.minSessions), files, variants });
