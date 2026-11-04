@@ -951,10 +951,17 @@ function createCompanionRuntime(options = {}) {
         restHolds = 0;
         return null;
       }
+      const sameDisplay = restSpot.displayId == null || displayId == null || restSpot.displayId === displayId;
+      const otherArea = typeof getDisplayWorkArea === "function" ? validArea(getDisplayWorkArea(restSpot.displayId)) : null;
+      // A rest spot on another monitor the pet cannot reach from here would
+      // clamp to the wrong edge every time: no preferred target (Ruling R11).
+      if (!sameDisplay && !otherArea) return null;
+      const restArea = otherArea || area;
+      const rx = restArea.x + restSpot.x * restArea.width;
+      const ry = restArea.y + restSpot.y * restArea.height;
+      if (!sameDisplay && (rx < area.x || rx > area.x + area.width || ry < area.y || ry > area.y + area.height)) return null;
       restHolds += 1;
-      const restArea = (typeof getDisplayWorkArea === "function" && validArea(getDisplayWorkArea(restSpot.displayId)))
-        || area;
-      return toTarget(restArea.x + restSpot.x * restArea.width, restArea.y + restSpot.y * restArea.height, true);
+      return toTarget(rx, ry, true);
     }
     restHolds = 0;
     if (random() < traits.curiosity * EXPLORE_CHANCE_PER_CURIOSITY) {
@@ -1408,6 +1415,7 @@ function createCompanionRuntime(options = {}) {
 
   function stopEverything() {
     debugWalkFile = null;
+    collapseTwitchHit = null;
     workPicks.clear();
     clearPetTimer();
     petSession = false;
