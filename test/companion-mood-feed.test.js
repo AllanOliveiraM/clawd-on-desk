@@ -175,3 +175,106 @@ describe("createCompanionMoodFeed (spec §3: only while Settings is open, <= 1 p
     feed.dispose();
   });
 });
+
+describe("createCompanionMoodFeed gap hunting", () => {
+  function make(extra = {}) {
+    const clock = { now: 3_600_000 };
+    const delays = [];
+    const cleared = [];
+    const sent = [];
+    const state = { open: true, energy: 50, throwSend: false };
+    const feed = createCompanionMoodFeed({
+      getSnapshot: () => ({ mood: { energy: state.energy, contentment: 50, familiarity: 0 }, label: "neutral", personality: null, lastInteractionAt: null }),
+      send: (s) => { if (state.throwSend) throw new Error("destroyed"); sent.push(s.mood.energy); },
+      isOpen: () => state.open,
+      now: () => clock.now,
+      setTimeout: (fn, ms) => { const t = { fn, ms }; delays.push(ms); return t; },
+      clearTimeout: (t) => cleared.push(t),
+      ...extra,
+    });
+    return { feed, clock, delays, cleared, sent, state };
+  }
+
+  it("clamps the wait when the clock steps backwards (item 1)", () => {
+    const h = make();
+    assert.equal(h.feed.notify(), true);
+    h.clock.now -= 3_600_000;
+    h.state.energy = 60;
+    h.feed.notify();
+    assert.equal(h.delays.length, 1);
+    assert.ok(h.delays[0] <= MOOD_FEED_MIN_INTERVAL_MS, `delay ${h.delays[0]}`);
+    assert.ok(h.delays[0] >= 0);
+  });
+
+  it("sends immediately when the clock steps forward by an hour", () => {
+    const h = make();
+    h.feed.notify();
+    h.clock.now += 3_600_000;
+    h.state.energy = 60;
+    h.feed.notify();
+    assert.deepEqual(h.sent, [50, 60]);
+    assert.equal(h.delays.length, 0);
+  });
+
+  it("dispose cancels the pending timer and later notify is a no-op (S2)", () => {
+    const h = make();
+    h.feed.notify();
+    h.state.energy = 60;
+    h.feed.notify();
+    assert.equal(h.delays.length, 1);
+    h.feed.dispose();
+    assert.equal(h.cleared.length, 1);
+    h.clock.now += 5000;
+    h.state.energy = 70;
+    assert.equal(h.feed.notify(), false);
+    assert.equal(h.delays.length, 1);
+    assert.deepEqual(h.sent, [50]);
+  });
+
+  it("a throwing send is retried by the next notify (S3)", () => {
+    const h = make();
+    h.state.throwSend = true;
+    h.feed.notify();
+    h.state.throwSend = false;
+    h.clock.now += 5000;
+    h.feed.notify();
+    assert.deepEqual(h.sent, [50]);
+  });
+
+  it("a timer firing after close sends nothing, and reopening delivers the same snapshot (item 4)", () => {
+    const clock = { now: 10_000 };
+    let timerFn = null;
+    const sent = [];
+    const state = { open: true };
+    const feed = createCompanionMoodFeed({
+      getSnapshot: () => ({ mood: { energy: 50, contentment: 50, familiarity: 0 }, label: "neutral", personality: null, lastInteractionAt: null }),
+      send: (s) => sent.push(s),
+      isOpen: () => state.open,
+      now: () => clock.now,
+      setTimeout: (fn) => { timerFn = fn; return {}; },
+      clearTimeout: () => {},
+    });
+    feed.notify();
+    clock.now += 100;
+    feed.notify();
+    assert.equal(sent.length, 1);
+    state.open = false;
+    timerFn();
+    assert.equal(sent.length, 1);
+    state.open = true;
+    clock.now += 5000;
+    feed.notify();
+    assert.equal(sent.length, 2, "same snapshot is delivered after reopen");
+  });
+
+  it("master off/on with the same mood still pushes", () => {
+    const h = make();
+    h.feed.notify();
+    h.state.open = false;
+    h.feed.notify();
+    h.state.open = true;
+    h.clock.now += 5000;
+    h.feed.notify();
+    assert.deepEqual(h.sent, [50, 50]);
+  });
+});

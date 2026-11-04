@@ -64,6 +64,7 @@ function createCompanionMoodFeed({
   let lastSentAt = -Infinity;
   let lastJson = null;
   let timer = null;
+  let disposed = false;
 
   function open() {
     try { return isOpen() === true; } catch { return false; }
@@ -76,6 +77,7 @@ function createCompanionMoodFeed({
 
   function flush() {
     timer = null;
+    if (disposed) return false;
     if (!open()) {
       lastJson = null;
       return false;
@@ -87,25 +89,37 @@ function createCompanionMoodFeed({
     if (json === lastJson) return false;
     lastJson = json;
     lastSentAt = now();
-    try { send(snapshot); } catch {}
+    try {
+      send(snapshot);
+    } catch {
+      // A failed send must not count as delivered: the next notify retries.
+      lastJson = null;
+    }
     return true;
   }
 
   function notify() {
+    if (disposed) return false;
     if (!open()) {
       cancel();
       lastJson = null;
       return false;
     }
     if (timer) return false;
-    const wait = lastSentAt + minIntervalMs - now();
+    // Clamp to [0, minIntervalMs]: a backwards clock step must not stall pushes.
+    const wait = Math.min(minIntervalMs, lastSentAt + minIntervalMs - now());
     if (wait <= 0) return flush();
     timer = schedule(flush, wait);
     if (timer && typeof timer.unref === "function") timer.unref();
     return true;
   }
 
-  return { notify, dispose: cancel };
+  function dispose() {
+    disposed = true;
+    cancel();
+  }
+
+  return { notify, dispose };
 }
 
 module.exports = {
