@@ -110,6 +110,27 @@ test("settings preload exposes the companion mood pull and push channels", async
   assert.equal(typeof settingsAPI.onCompanionMoodChanged(null), "function");
 });
 
+test("a throwing companion mood listener does not block the others and unsubscribe is idempotent", () => {
+  const { exposed, ipcHandlers } = loadPreload();
+  const settingsAPI = exposed.get("settingsAPI");
+  const forward = ipcHandlers.get("settings:companion-mood-changed");
+  const received = [];
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    const off1 = settingsAPI.onCompanionMoodChanged(() => { throw new Error("listener boom"); });
+    settingsAPI.onCompanionMoodChanged((s) => received.push(s));
+    assert.doesNotThrow(() => forward({}, { label: "tired" }));
+    assert.deepStrictEqual(received, [{ label: "tired" }]);
+    off1();
+    off1();
+    forward({}, { label: "content" });
+    assert.equal(received.length, 2);
+  } finally {
+    console.warn = warn;
+  }
+});
+
 test("settings preload queries the current size context on its dedicated IPC channel", async () => {
   const { exposed, invokes } = loadPreload();
   await exposed.get("settingsAPI").getSizeContext();

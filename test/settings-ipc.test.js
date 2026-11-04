@@ -436,6 +436,25 @@ test("companion reset calls runtime and rejects untrusted senders", async () => 
   });
 });
 
+test("companion reset needs no prefs write and concurrent resets both resolve ok (S4)", async () => {
+  let calls = 0;
+  const harness = createHarness({
+    companionRuntime: {
+      async reset() {
+        calls += 1;
+        await new Promise((resolve) => setImmediate(resolve));
+      },
+    },
+  });
+  const [a, b] = await Promise.all([
+    harness.ipcMain.invoke("settings:companion-reset"),
+    harness.ipcMain.invoke("settings:companion-reset"),
+  ]);
+  assert.deepStrictEqual(a, { status: "ok" });
+  assert.deepStrictEqual(b, { status: "ok" });
+  assert.equal(calls, 2);
+});
+
 test("companion mood snapshot is normalized and limited to the trusted Settings window", async () => {
   const harness = createHarness({
     companionRuntime: {

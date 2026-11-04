@@ -480,6 +480,20 @@ test("settings window pushes the companion mood only to a loaded renderer", () =
   assert.deepStrictEqual(win.calls, [["send", "settings:companion-mood-changed", { label: "content" }]]);
 });
 
+test("settings window sendCompanionMood is false for destroyed windows, destroyed contents and a throwing send", () => {
+  const { runtime } = createRuntime();
+  runtime.open();
+  const win = FakeBrowserWindow.instances[0];
+  win.emitWebContents("did-finish-load");
+  win.webContents.isDestroyed = () => true;
+  assert.equal(runtime.sendCompanionMood({ label: "content" }), false);
+  win.webContents.isDestroyed = () => false;
+  win.webContents.send = () => { throw new Error("Object has been destroyed"); };
+  assert.equal(runtime.sendCompanionMood({ label: "content" }), false);
+  win.destroyed = true;
+  assert.equal(runtime.sendCompanionMood({ label: "content" }), false);
+});
+
 test("settings window deep-link survives a reopen before load and reaches a minimized live window", () => {
   const { runtime, timers } = createRuntime();
   runtime.open();
