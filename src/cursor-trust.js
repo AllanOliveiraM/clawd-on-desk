@@ -38,6 +38,7 @@ function createCursorTrust({ enabled = false, getWindows = () => [], now = Date.
   let windows = null;
   let windowsAt = 0;
   let lastPoint = null;
+  let lastPointAt = null;
   let movedAt = null;
   let leftSinceMotion = false;
   // Pinned windows the point moved inside since they last appeared.
@@ -84,7 +85,11 @@ function createCursorTrust({ enabled = false, getWindows = () => [], now = Date.
     if (!enabled) return true;
     if (!point || !isNum(point.x) || !isNum(point.y)) return false;
     const t = now();
-    const moved = !!lastPoint && (lastPoint.x !== point.x || lastPoint.y !== point.y);
+    // A change across a sample gap longer than MOTION_TRUST_MS proves nothing
+    // (the frozen point may have moved long ago): only refresh lastPoint.
+    const fresh = lastPointAt !== null && t - lastPointAt <= MOTION_TRUST_MS;
+    const moved = !!lastPoint && fresh && (lastPoint.x !== point.x || lastPoint.y !== point.y);
+    lastPointAt = t;
     if (moved) {
       movedAt = t;
       leftSinceMotion = false;

@@ -109,6 +109,21 @@ test("HUD, bubbles and the hit rect: trusted only while the point moved within 2
   assert.equal(env.at(170, 130, 0), false, "a leave report also drops the motion trust");
 });
 
+test("a point that changed across a sample gap longer than 2 s is not motion", () => {
+  const env = setup();
+  env.at(150, 120);
+  assert.equal(env.at(160, 120, MOTION_TRUST_MS + 1), false, "stale previous sample");
+  assert.equal(env.at(160, 120), false, "still since");
+  assert.equal(env.at(170, 120), true, "real motion between close samples");
+  // Exactly 2 s apart still counts as motion.
+  assert.equal(env.at(180, 120, MOTION_TRUST_MS), true);
+  // Same for a pinned window: a stale change does not arm it.
+  const pinned = setup();
+  pinned.at(990, 400);
+  assert.equal(pinned.at(1000, 400, 60000), false);
+  assert.equal(pinned.at(1000, 400), false, "not armed by the stale change");
+});
+
 test("anywhere else (another app, the transparent pet window area) is never trusted", () => {
   const env = setup();
   assert.equal(env.at(600, 400), false);
