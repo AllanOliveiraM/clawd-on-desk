@@ -275,7 +275,13 @@ function createMischiefBrain(options) {
   }
 
   function setNapping(value) {
+    const wasNapping = napping;
     napping = !!value;
+    // Waking up: the parked-cursor clock restarts, no poke the instant he wakes.
+    if (wasNapping && !napping) {
+      stillSince = now();
+      pokeFired = false;
+    }
     // A cursor already close when the nap starts must leave and re-enter to boo.
     booFired = napping && lastEdge !== null && lastEdge < BOO_RANGE_PX;
     bandSince = null;

@@ -475,3 +475,15 @@ test("fetch and searchMouse never change the picks of a theme without their art"
     assert.deepEqual(pick(a.brain, a.clock), pick(b.brain, b.clock, { cursorUnseenMs: 9e9 }));
   }
 });
+
+test("waking from a nap with a parked far cursor does not poke at once (G1)", () => {
+  const { brain, clock } = make();
+  brain.setNapping(true);
+  for (let i = 0; i < 30; i += 1) { brain.observeCursor(sample(1600, 550)); clock.t += 1000; }
+  brain.setNapping(false);
+  clock.t += 1000;
+  assert.equal(brain.observeCursor(sample(1600, 550)), null, "no poke the instant he wakes");
+  assert.equal(hold(brain, clock, 1600, 550, 18000), null);
+  clock.t += 2000;
+  assert.equal(brain.observeCursor(sample(1600, 550)).id, "poke", "a fresh 20 s of stillness after waking");
+});
