@@ -3648,4 +3648,109 @@ describe("roam companion hooks", () => {
     assert.equal(roam.isRoamAnimating(), false);
     roam.setEnabled(false);
   });
+  // ── gap-hunting ──
+  it("every companion hook throwing is byte-identical to no hooks (incl. isCompanionPlaying)", () => {
+    const boom = () => { throw new Error("boom"); };
+    const baseline = scriptedRun({});
+    const throwing = scriptedRun({
+      isCompanionPlaying: boom,
+      getRoamDelayMs: boom,
+      pickPreferredTarget: boom,
+      pickWalkVisual: boom,
+      onWalkFinished: boom,
+      onPreferredTargetDiscarded: boom,
+    });
+    assert.deepStrictEqual(throwing, baseline);
+  });
+
+  it("a throwing isCompanionPlaying never cancels a walk mid-stride", () => {
+    const ctx = makeCtx({ isCompanionPlaying: () => { throw new Error("boom"); } });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    assert.equal(roam.isRoamAnimating(), true);
+    mock.timers.tick(160);
+    assert.equal(roam.isRoamAnimating(), true);
+    finishWalk(roam);
+    roam.setEnabled(false);
+  });
+
+  it("overhang values are sanitised: bad sides become 0, fractions round, all-zero is dropped", () => {
+    const wall = (overhang, extra = {}) => ({
+      x: -99999, y: 300, preferred: true, mischief: "wall", side: "left", spot: { x: -99999, y: 300 }, overhang, ...extra,
+    });
+    const cases = [
+      [wall({ left: 25.4, right: -5, top: NaN, bottom: "x" }), -25, { overhang: { left: 25, right: 0, top: 0, bottom: 0 } }],
+      // Non-finite is dropped, not capped; a huge finite value is capped at half the pet.
+      [wall({ left: Infinity, right: 0 }), 0, "none"],
+      [wall({ left: 1e9 }), -60, { overhang: { left: 60, right: 0, top: 0, bottom: 0 } }],
+      [wall({ left: 0, right: 0, top: 0, bottom: 0 }), 0, "none"],
+      [wall("big"), 0, "none"],
+      [wall(null), 0, "none"],
+      // An overhang without a spot is ignored: the margin band applies.
+      [{ x: -99999, y: 300, preferred: true, mischief: "wall", side: "left", overhang: { left: 25, right: 0, top: 0, bottom: 0 } }, 0, "none"],
+    ];
+    for (const [proposal, endX, clamp] of cases) {
+      const clampCalls = [];
+      const run = edgeRun([proposal], {
+        clampToScreenVisual: (x, y, w, h, options) => {
+          clampCalls.push(options === undefined ? "none" : JSON.parse(JSON.stringify(options)));
+          return { x, y, width: w, height: h };
+        },
+      });
+      assert.equal(run.ends[0].x, endX, JSON.stringify(proposal));
+      assert.deepStrictEqual(clampCalls, [clamp], JSON.stringify(proposal));
+    }
+  });
+
+  it("a discarded non-preferred proposal falls back to the random picker and tells the owner", () => {
+    let discarded = 0;
+    const baseline = scriptedRun({});
+    const run = scriptedRun({
+      pickPreferredTarget: () => ({ x: 410, y: 310, preferred: false }),
+      onPreferredTargetDiscarded: () => { discarded += 1; throw new Error("boom"); },
+    });
+    assert.equal(discarded, 1, "only the first round is within the minimum hop");
+    assert.deepStrictEqual(run.first, baseline.first);
+    assert.deepStrictEqual(run.firstEnd, baseline.firstEnd, "the first walk is the random one");
+  });
+
+  it("a preferred proposal inside the minimum hop holds the round and tells the owner once", () => {
+    let discarded = 0;
+    const ctx = makeCtx({
+      pickPreferredTarget: () => ({ x: 410, y: 310, preferred: true }),
+      onPreferredTargetDiscarded: () => { discarded += 1; },
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    assert.equal(roam.isRoamAnimating(), false);
+    assert.equal(discarded, 1);
+    roam.setEnabled(false);
+  });
+
+  it("a mischief walk cancelled mid-stride reports nothing and leaves roam usable", () => {
+    const reports = [];
+    const queue = [{ x: 1800, y: 300, preferred: true, mischief: "wall", side: "right" }];
+    const ctx = makeCtx({
+      pickPreferredTarget: () => queue.shift() || null,
+      onWalkFinished: (info) => reports.push(info),
+      getPlatform: () => "linux",
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    mock.timers.tick(160);
+    assert.equal(roam.isRoamAnimating(), true);
+    roam.cancelRoam();
+    assert.equal(roam.isRoamAnimating(), false);
+    assert.deepStrictEqual(reports, []);
+    assert.equal(ctx.getCurrentState(), "idle");
+    mock.timers.tick(30000);
+    assert.deepStrictEqual(reports, [], "a cancelled walk is never reported later");
+    roam.setEnabled(false);
+  });
 });

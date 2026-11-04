@@ -140,11 +140,16 @@ module.exports = function initRoam(ctx) {
     )
       return false;
     // Clawd Alive: a companion beat borrows the visual the same way.
-    if (
-      typeof ctx.isCompanionPlaying === "function" &&
-      ctx.isCompanionPlaying()
-    )
-      return false;
+    if (typeof ctx.isCompanionPlaying === "function") {
+      let playing = false;
+      try {
+        playing = ctx.isCompanionPlaying();
+      } catch {
+        // A broken companion hook reads as "no beat": roam keeps its
+        // feature-off behaviour instead of dying on every frame.
+      }
+      if (playing) return false;
+    }
     return true;
   }
 
