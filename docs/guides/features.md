@@ -21,6 +21,8 @@
 - **Autonomy** — mood shapes which idle activities and Free Roam walks happen (the existing `When idle` mode still decides: `Stay put` keeps Clawd in place); Clawd learns a favorite resting spot from where you drop it after a drag
 - **Local and private** — only mood, familiarity, and the resting spot are saved, in `companion-state.json` under the app's data folder (never mouse history, code, prompts, or window titles). Agent work always takes priority over these moments
 - **Theme art** — themes add visuals through an optional [`companionAnimations`](guide-theme-creation.md#companion-animations-optional) block; themes without it work unchanged
+- **Mood card** — while Clawd Alive is on, `Settings…` → `Pet` → `Personality & behavior` shows energy, contentment and familiarity bars, the current mood, the personality and how long ago you last interacted. It only updates while Settings is open
+- **Test mode** — a `Test animations` submenu in the pet's right-click menu plays any Clawd Alive animation the theme has, on demand, with Clawd Alive on. Packaged builds show it on **Shift + right-click**; development builds always show it. A walking moment walks first; agent work, permissions, DND, mini mode and sleep still win, and the menu shows why an item is blocked
 
 ### Mischief
 
@@ -37,8 +39,12 @@ Part of Clawd Alive, with its own switch: `Settings…` → `Pet` → `Personali
 - **Toy** — plays with a ball, yo-yo, or paper plane
 - **Welcome back** — celebrates when you return after a sleep of 10 minutes or more
 - **Stretch back** — stretches after a long work stretch of 10 minutes or more ends
+- **Fetch** ("vai buscar") — walks to the nearest side edge, slips out through it and comes back hauling something big: a giant cursor, a rubber duck, the Enter key, a bug in a net, a box or an endless sock. Mostly for playful pets (rare for balanced and curious, never calm or shy), at most once every 2 hours
+- **Searching the mouse** — when Clawd has not seen where your cursor is for a while, it shades its eyes with a claw and looks around for it. Under XWayland that is after 30 s (before it dozes off), elsewhere after 10 minutes; at most once every 30 minutes, not counted against the shared mischief cooldown
 
-How `When idle` decides what: with `Stay put`, only the cursor reactions catch and pounce happen. With `Activities`, day rhythm, toy, welcome back and stretch back join them, plus catch and pounce. With `Free Roam`, everything can happen, including fake nap and the walking moments (poke, reach close, wall, sit on the edge); those ride Free Roam's normal walks, and the corner/edge ones may go past the usual margin toward the screen edge. Reach close stops a little short of the corner so the pet does not sit on real window buttons, and after any edge moment Clawd soon walks back into the usual area. They still respect the Roam Fence and keep the pet fully on screen. Agent work, DND, mini mode, and dragging always win.
+How `When idle` decides what: with `Stay put`, only the cursor reactions catch and pounce happen. With `Activities`, day rhythm, toy, welcome back, stretch back and searching the mouse join them, plus catch and pounce. With `Free Roam`, everything can happen, including fake nap and the walking moments (poke, reach close, wall, sit on the edge, fetch); those ride Free Roam's normal walks, and the corner/edge ones may go past the usual margin toward the screen edge. Reach close stops a little short of the corner so the pet does not sit on real window buttons, and after any edge moment Clawd soon walks back into the usual area. They still respect the Roam Fence and keep the pet fully on screen (fetch is the exception: it parks the pet right at the side edge so it can slip out). Agent work, DND, mini mode, and dragging always win.
+
+Under XWayland (a Wayland session where Clawd relaunched itself on X11), the cursor position is only real over Clawd's own windows, so Clawd trusts it only there: over the Settings and Dashboard windows a parked cursor still counts, while over the pet, its bubbles and the HUD only a cursor that moved in the last 2 seconds counts. Anywhere else the cursor is treated as unseen, which is what makes searching the mouse come sooner there.
 
 ## Permission Bubble
 
