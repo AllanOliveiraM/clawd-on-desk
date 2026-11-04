@@ -1,80 +1,78 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
   <defs>
     <style>
-      /* 2.2-Second Loop — Catch miss (high): same reach as catch-high (small
-         hop, elbows up, fists slap shut right above his head at u 7.5,
-         v 4.5 on the landing)... but the hands are empty. They spring open,
-         eyes dart after the thing as it gets away, arms flail, he totters
-         back and          lands on his bottom with a bounce, shakes his head (eye wobble),
+      /* 2.2-Second Loop — Catch miss (high): same reach as catch-high (eyes
+         roll up a little cross-eyed, small hop, lean and short cat-like paw swat
+         up to just above the head top, paw tip about u 11, v 4.5)... but it slips away. He bats
+         after it twice more, eyes darting, overreaches, loses his balance and
+         lands on his bottom with a bounce, shakes his head (eye wobble),
          looks away embarrassed with a double blink, scratches his head and
          stands back up (same tail as clawd-alive-catch-miss.svg). */
       .body-jump {
-        animation: mhigh-jump 2.2s infinite ease-in-out;
+        animation: mswat-jump 2.2s infinite ease-in-out;
       }
 
       .body-tilt {
         transform-origin: 7.5px 15px;
-        animation: mhigh-tilt 2.2s infinite ease-in-out;
+        animation: mswat-tilt 2.2s infinite ease-in-out;
       }
 
       .body-squash {
         transform-origin: 7.5px 13px;
-        animation: mhigh-squash 2.2s infinite ease-in-out;
+        animation: mswat-squash 2.2s infinite ease-in-out;
       }
 
       .legs-jump {
         transform-origin: 7.5px 15px;
-        animation: mhigh-legs 2.2s infinite ease-in-out;
+        animation: mswat-legs 2.2s infinite ease-in-out;
       }
 
       .shadow-anim {
         transform-origin: 7.5px 15.5px;
-        animation: mhigh-shadow 2.2s infinite ease-in-out;
+        animation: mswat-shadow 2.2s infinite ease-in-out;
       }
 
       .arm-l {
         transform-origin: 1px 11px;
-        animation: mhigh-arm-l 2.2s infinite ease-in-out;
+        animation: mswat-arm-l 2.2s infinite ease-in-out;
       }
 
       .arm-r {
         transform-origin: 14px 11px;
-        animation: mhigh-arm-r 2.2s infinite ease-in-out;
-      }
-
-      .fore-l {
-        opacity: 0;
-        transform-origin: 1.5px 1.5px;
-        animation: mhigh-fore-l 2.2s infinite ease-in-out;
-      }
-
-      .fore-r {
-        opacity: 0;
-        transform-origin: 13.5px 1.5px;
-        animation: mhigh-fore-r 2.2s infinite ease-in-out;
+        animation: mswat-arm-r 2.2s infinite ease-in-out;
       }
 
       .eyes-look {
-        animation: mhigh-look 2.2s infinite ease-in-out;
+        animation: mswat-look 2.2s infinite ease-in-out;
+      }
+
+      .eye-l {
+        animation: mswat-eye-l 2.2s infinite ease-in-out;
+      }
+
+      .eye-r {
+        animation: mswat-eye-r 2.2s infinite ease-in-out;
       }
 
       .eyes-blink {
         transform-origin: 7.5px 9px;
-        animation: mhigh-blink 2.2s infinite ease-in-out;
+        animation: mswat-blink 2.2s infinite ease-in-out;
       }
 
       /* --- Keyframes --- */
 
-      @keyframes mhigh-jump {
+      @keyframes mswat-jump {
         0%, 5% { transform: translate(0, 0); }
-        8.9%, 11.5% { transform: translate(0px, 1.2px); }
-        15.9% { transform: translate(0px, -1.4px); }
-        19.7% { transform: translate(0px, -2px); }
-        23.5% { transform: translate(0px, -0.9px); }
-        26.7% { transform: translate(0, 0); }
-        29% { transform: translate(0px, 0.3px); }
-        33%, 38% { transform: translate(0, 0); }
-        42% { transform: translate(0px, -0.6px); }
+        10.2%, 12.7% { transform: translate(0px, 1px); }
+        15.3% { transform: translate(0px, -0.7px); }
+        17.8% { transform: translate(0px, -1px); }
+        21% { transform: translate(0px, -0.3px); }
+        23.5% { transform: translate(0px, 0.1px); }
+        27% { transform: translate(0, 0); }
+        31% { transform: translate(0px, -0.6px); }
+        35% { transform: translate(0, 0); }
+        39% { transform: translate(0px, -0.7px); }
+        43% { transform: translate(0px, -0.4px); }
         46% { transform: translate(0, 0); }
         49% { transform: translate(0px, 2.4px); }
         55% { transform: translate(0px, -1.2px); }
@@ -84,10 +82,18 @@
         100% { transform: translate(0, 0); }
       }
 
-      @keyframes mhigh-tilt {
-        0%, 38% { transform: rotate(0deg); }
-        42% { transform: rotate(-4deg); }
-        46% { transform: rotate(-6deg); }
+      @keyframes mswat-tilt {
+        0%, 5% { transform: rotate(0deg); }
+        10.2%, 12.7% { transform: rotate(3deg); }
+        15.3% { transform: rotate(-6deg); }
+        21% { transform: rotate(-7deg); }
+        24% { transform: rotate(-4deg); }
+        27% { transform: rotate(-2deg); }
+        31% { transform: rotate(-6deg); }
+        35% { transform: rotate(-2deg); }
+        39% { transform: rotate(-8deg); }
+        43% { transform: rotate(-9deg); }
+        46% { transform: rotate(-5deg); }
         49%, 62% { transform: rotate(0deg); }
         64.5% { transform: rotate(4deg); }
         67.5% { transform: rotate(-4deg); }
@@ -99,17 +105,17 @@
         95%, 100% { transform: rotate(0deg); }
       }
 
-      @keyframes mhigh-squash {
+      @keyframes mswat-squash {
         0%, 5% { transform: scale(1, 1); }
-        8.9% { transform: scale(1.12, 0.86); }
-        11.5% { transform: scale(1.14, 0.84); }
-        15.9% { transform: scale(0.9, 1.1); }
-        19.7% { transform: scale(0.97, 1.03); }
-        23.5% { transform: scale(0.98, 1.02); }
-        26.7% { transform: scale(1, 1); }
-        29% { transform: scale(1.05, 0.95); }
-        33%, 38% { transform: scale(1, 1); }
-        42% { transform: scale(0.96, 1.05); }
+        10.2%, 12.7% { transform: scale(1.1, 0.88); }
+        15.3% { transform: scale(0.95, 1.06); }
+        17.8% { transform: scale(0.97, 1.03); }
+        21% { transform: scale(0.99, 1.01); }
+        23.5% { transform: scale(1.04, 0.96); }
+        27% { transform: scale(1, 1); }
+        31% { transform: scale(0.96, 1.05); }
+        35% { transform: scale(1.03, 0.97); }
+        39% { transform: scale(0.95, 1.06); }
         46% { transform: scale(0.9, 1.12); }
         49% { transform: scale(1.2, 0.78); }
         55% { transform: scale(0.95, 1.06); }
@@ -120,16 +126,17 @@
         100% { transform: scale(1, 1); }
       }
 
-      @keyframes mhigh-legs {
+      @keyframes mswat-legs {
         0%, 5% { transform: translate(0, 0) scale(1, 1); }
-        8.9%, 11.5% { transform: translate(0, 0) scale(1, 0.67); }
-        15.9% { transform: translate(0px, -0.8px) scale(1, 1.12); }
-        19.7% { transform: translate(0px, -1.6px) scale(1, 1); }
-        23.5% { transform: translate(0px, -0.7px) scale(1, 1); }
-        26.7% { transform: translate(0, 0) scale(1, 1); }
-        29% { transform: translate(0, 0) scale(1, 0.85); }
-        33%, 38% { transform: translate(0, 0) scale(1, 1); }
-        42% { transform: translate(0px, -0.4px) scale(1, 1.05); }
+        10.2%, 12.7% { transform: translate(0, 0) scale(1, 0.7); }
+        15.3% { transform: translate(0px, -0.6px) scale(1, 1.1); }
+        17.8% { transform: translate(0px, -1px) scale(1, 1); }
+        21% { transform: translate(0px, -0.3px) scale(1, 1); }
+        23.5% { transform: translate(0, 0) scale(1, 0.85); }
+        27% { transform: translate(0, 0) scale(1, 1); }
+        31% { transform: translate(0px, -0.4px) scale(1, 1.05); }
+        35% { transform: translate(0, 0) scale(1, 0.95); }
+        39% { transform: translate(0px, -0.5px) scale(1, 1.05); }
         46% { transform: translate(0px, -0.3px) scale(1, 1.05); }
         49% { transform: translate(0, 0) scale(1, 0.34); }
         55% { transform: translate(0px, -1.2px) scale(1, 0.9); }
@@ -138,14 +145,15 @@
         100% { transform: translate(0, 0) scale(1, 1); }
       }
 
-      @keyframes mhigh-shadow {
+      @keyframes mswat-shadow {
         0%, 5% { transform: scaleX(1); opacity: 0.5; }
-        8.9%, 11.5% { transform: scaleX(1.12); opacity: 0.55; }
-        19.7% { transform: scaleX(0.78); opacity: 0.36; }
-        26.7% { transform: scaleX(1); opacity: 0.5; }
-        29% { transform: scaleX(1.08); opacity: 0.54; }
-        38% { transform: scaleX(1); opacity: 0.5; }
-        42% { transform: scaleX(0.92); opacity: 0.46; }
+        10.2%, 12.7% { transform: scaleX(1.1); opacity: 0.55; }
+        17.8% { transform: scaleX(0.84); opacity: 0.4; }
+        23.5% { transform: scaleX(1.06); opacity: 0.53; }
+        27% { transform: scaleX(1); opacity: 0.5; }
+        31% { transform: scaleX(0.92); opacity: 0.46; }
+        35% { transform: scaleX(1); opacity: 0.5; }
+        39% { transform: scaleX(0.9); opacity: 0.45; }
         49% { transform: scaleX(1.24); opacity: 0.6; }
         55% { transform: scaleX(0.9); opacity: 0.45; }
         61% { transform: scaleX(1.18); opacity: 0.58; }
@@ -154,16 +162,18 @@
         100% { transform: scaleX(1); opacity: 0.5; }
       }
 
-      @keyframes mhigh-arm-l {
+      @keyframes mswat-arm-l {
         0%, 5% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
-        8.9%, 11.5% { transform: translate(0px, 0.5px) rotate(-30deg) scale(1, 1); }
-        15.9% { transform: translate(0.3px, -1.2px) rotate(-6deg) scale(1, 3.4); }
-        19.7% { transform: translate(0.5px, -1.6px) rotate(-2deg) scale(1, 4.7); }
-        23.5%, 30% { transform: translate(0.5px, -1.5px) rotate(0deg) scale(1, 4.5); }
-        34% { transform: translate(0.5px, -1.6px) rotate(-6deg) scale(1, 4.5); }
-        38% { transform: translate(0.5px, -1.4px) rotate(4deg) scale(1, 4.3); }
-        42% { transform: translate(0.3px, -1px) rotate(-14deg) scale(1, 3.2); }
-        46% { transform: translate(0px, -0.5px) rotate(-30deg) scale(1, 1.8); }
+        10.2%, 12.7% { transform: translate(0px, 0.5px) rotate(-20deg) scale(1, 1); }
+        15.3% { transform: translate(-0.3px, 0px) rotate(-45deg) scale(1, 1.2); }
+        17.8% { transform: translate(-0.3px, -0.2px) rotate(-30deg) scale(1, 1.2); }
+        21% { transform: translate(0, 0) rotate(-40deg) scale(1, 1.1); }
+        27% { transform: translate(0px, 0.3px) rotate(-10deg) scale(1, 1); }
+        31% { transform: translate(-0.3px, -0.3px) rotate(-50deg) scale(1, 1.3); }
+        35% { transform: translate(0, 0) rotate(-20deg) scale(1, 1); }
+        39% { transform: translate(-0.4px, -0.5px) rotate(-60deg) scale(1, 1.4); }
+        43% { transform: translate(-0.5px, -0.8px) rotate(-75deg) scale(1, 1.5); }
+        46% { transform: translate(-0.5px, -0.5px) rotate(-45deg) scale(1, 1.2); }
         49% { transform: translate(-0.5px, 0px) rotate(-40deg) scale(1, 1); }
         55% { transform: translate(0px, -1.5px) rotate(-20deg) scale(1, 1.4); }
         61% { transform: translate(0px, 0.5px) rotate(-10deg) scale(1, 1); }
@@ -171,35 +181,42 @@
         96%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
       }
 
-      @keyframes mhigh-arm-r {
-        0%, 5% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
-        8.9%, 11.5% { transform: translate(0px, 0.5px) rotate(30deg) scale(1, 1); }
-        15.9% { transform: translate(-0.3px, -1.2px) rotate(6deg) scale(1, 3.4); }
-        19.7% { transform: translate(-0.5px, -1.6px) rotate(2deg) scale(1, 4.7); }
-        23.5%, 30% { transform: translate(-0.5px, -1.5px) rotate(0deg) scale(1, 4.5); }
-        34% { transform: translate(-0.5px, -1.6px) rotate(6deg) scale(1, 4.5); }
-        38% { transform: translate(-0.5px, -1.4px) rotate(-4deg) scale(1, 4.3); }
-        42% { transform: translate(-0.3px, -1px) rotate(14deg) scale(1, 3.2); }
-        46% { transform: translate(0px, -0.5px) rotate(30deg) scale(1, 1.8); }
+      @keyframes mswat-arm-r {
+        0% { transform: translate(0px, 0px) rotate(0deg) scale(1, 1); }
+        5% { transform: translate(0px, 0px) rotate(0deg) scale(1, 1); }
+        10.2% { transform: translate(0.3px, 0.6px) rotate(35deg) scale(1, 1); }
+        12.7% { transform: translate(0.3px, 0.6px) rotate(40deg) scale(1, 1); }
+        15.3% { transform: translate(-0.6px, -3.6px) rotate(-36deg) scale(1, 1.5); }
+        17.8% { transform: translate(-0.5px, -3px) rotate(-5deg) scale(1, 1.35); }
+        21% { transform: translate(-0.6px, -3.5px) rotate(-20deg) scale(1, 1.5); }
+        24% { transform: translate(-0.7px, -3.6px) rotate(-46deg) scale(1, 1.5); }
+        27% { transform: translate(-0.5px, -3px) rotate(-5deg) scale(1, 1.35); }
+        31% { transform: translate(-0.7px, -3.7px) rotate(-42deg) scale(1, 1.5); }
+        35% { transform: translate(-0.5px, -3px) rotate(-10deg) scale(1, 1.35); }
+        39% { transform: translate(-0.8px, -3.8px) rotate(-52deg) scale(1, 1.5); }
+        43% { transform: translate(-0.4px, -2px) rotate(-30deg) scale(1, 1.2); }
+        46% { transform: translate(0.4px, -0.5px) rotate(30deg) scale(1, 1.2); }
         49% { transform: translate(0.5px, 0px) rotate(40deg) scale(1, 1); }
         55% { transform: translate(0px, -1.5px) rotate(20deg) scale(1, 1.4); }
         61% { transform: translate(0px, 0.5px) rotate(10deg) scale(1, 1); }
         66%, 78% { transform: translate(0px, 0.5px) rotate(0deg) scale(1, 1); }
-        81% { transform: translate(-0.5px, -3px) rotate(-12deg) scale(1, 1.8); }
-        83% { transform: translate(-0.5px, -3.3px) rotate(4deg) scale(1, 1.8); }
-        85% { transform: translate(-0.5px, -3px) rotate(-12deg) scale(1, 1.8); }
-        87% { transform: translate(-0.5px, -3.3px) rotate(4deg) scale(1, 1.8); }
-        89% { transform: translate(-0.5px, -3px) rotate(-8deg) scale(1, 1.8); }
+        81% { transform: translate(-0.5px, -3px) rotate(-12deg) scale(1, 1.5); }
+        83% { transform: translate(-0.5px, -3.3px) rotate(4deg) scale(1, 1.5); }
+        85% { transform: translate(-0.5px, -3px) rotate(-12deg) scale(1, 1.5); }
+        87% { transform: translate(-0.5px, -3.3px) rotate(4deg) scale(1, 1.5); }
+        89% { transform: translate(-0.5px, -3px) rotate(-8deg) scale(1, 1.5); }
         94%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
       }
 
-      @keyframes mhigh-look {
-        0% { transform: translate(0, 0); }
-        3%, 26% { transform: translate(0px, -1.5px); }
-        31% { transform: translate(0px, -1.8px); }
-        35% { transform: translate(1.5px, -1.8px); }
-        40% { transform: translate(2px, -1.2px); }
-        46% { transform: translate(0px, -1px); }
+      @keyframes mswat-look {
+        0%, 2% { transform: translate(0, 0); }
+        4%, 21% { transform: translate(0.4px, -1.5px); }
+        24% { transform: translate(-1.2px, -1.8px); }
+        28% { transform: translate(1.5px, -1.6px); }
+        32% { transform: translate(-1.5px, -1.6px); }
+        36% { transform: translate(1.8px, -1.2px); }
+        41% { transform: translate(-1.5px, -1px); }
+        46% { transform: translate(0px, -0.8px); }
         48%, 62% { transform: translate(0, 0); }
         64.5% { transform: translate(1px, 0px); }
         67.5% { transform: translate(-1px, 0px); }
@@ -211,14 +228,25 @@
         96%, 100% { transform: translate(0, 0); }
       }
 
-      @keyframes mhigh-blink {
+      @keyframes mswat-eye-l {
+        0%, 2% { transform: translate(0, 0); }
+        4%, 21% { transform: translate(0.6px, 0px); }
+        26%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes mswat-eye-r {
+        0%, 2% { transform: translate(0, 0); }
+        4%, 21% { transform: translate(-0.6px, 0px); }
+        26%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes mswat-blink {
         0%, 2% { transform: scaleY(1); }
-        3% { transform: scaleY(1.2); }
-        9%, 11.5% { transform: scaleY(0.75); }
-        16%, 26% { transform: scaleY(1.15); }
-        29% { transform: scaleY(1); }
-        31% { transform: scaleY(1.3); }
-        36%, 44% { transform: scaleY(1.25); }
+        4% { transform: scaleY(1.2); }
+        10%, 12.7% { transform: scaleY(0.75); }
+        15.3%, 21% { transform: scaleY(1.15); }
+        24% { transform: scaleY(1.3); }
+        44% { transform: scaleY(1.25); }
         48% { transform: scaleY(1); }
         50% { transform: scaleY(0.1); }
         55% { transform: scaleY(1); }
@@ -229,43 +257,13 @@
         88% { transform: scaleY(0.1); }
         90%, 100% { transform: scaleY(1); }
       }
-
-      @keyframes mhigh-fore-l {
-        0%, 15.9% { opacity: 0; transform: rotate(-60deg) scale(1, 1); }
-        17.5% { opacity: 1; transform: rotate(-64deg) scale(1, 1); }
-        21% { opacity: 1; transform: rotate(-52deg) scale(1, 1); }
-        24.5% { opacity: 1; transform: rotate(-8deg) scale(1, 1); }
-        26.7% { opacity: 1; transform: rotate(30deg) scale(1, 1); }
-        28.5% { opacity: 1; transform: rotate(26.57deg) scale(1, 1); }
-        31% { opacity: 1; transform: rotate(-62deg) scale(1, 1); }
-        34% { opacity: 1; transform: rotate(-80deg) scale(1, 1); }
-        36.5% { opacity: 1; transform: rotate(-58deg) scale(1, 1); }
-        38.5% { opacity: 1; transform: rotate(-78deg) scale(1, 1); }
-        39.5% { opacity: 1; transform: rotate(-85deg) scale(0.4, 1); }
-        40%, 100% { opacity: 0; transform: rotate(-85deg) scale(0.2, 1); }
-      }
-
-      @keyframes mhigh-fore-r {
-        0%, 15.9% { opacity: 0; transform: rotate(60deg) scale(1, 1); }
-        17.5% { opacity: 1; transform: rotate(64deg) scale(1, 1); }
-        21% { opacity: 1; transform: rotate(52deg) scale(1, 1); }
-        24.5% { opacity: 1; transform: rotate(8deg) scale(1, 1); }
-        26.7% { opacity: 1; transform: rotate(-30deg) scale(1, 1); }
-        28.5% { opacity: 1; transform: rotate(-26.57deg) scale(1, 1); }
-        31% { opacity: 1; transform: rotate(62deg) scale(1, 1); }
-        34% { opacity: 1; transform: rotate(80deg) scale(1, 1); }
-        36.5% { opacity: 1; transform: rotate(58deg) scale(1, 1); }
-        38.5% { opacity: 1; transform: rotate(78deg) scale(1, 1); }
-        39.5% { opacity: 1; transform: rotate(85deg) scale(0.4, 1); }
-        40%, 100% { opacity: 0; transform: rotate(85deg) scale(0.2, 1); }
-      }
     </style>
   </defs>
 
   <!-- Ground Shadow -->
   <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
 
-  <!-- Legs (fold under him when he sits) -->
+  <!-- Legs -->
   <g class="legs-jump">
     <g id="legs" fill="#DE886D">
       <rect x="3" y="12" width="1" height="3"/>
@@ -278,35 +276,27 @@
   <!-- Animated Upper Body -->
   <g class="body-jump">
     <g class="body-tilt">
-      <g class="body-squash">
-        <!-- Torso -->
-        <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
-        <!-- Left Arm -->
-        <g class="arm-l">
-          <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
-        </g>
-        <!-- Right Arm -->
-        <g class="arm-r">
-          <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
-        </g>
-        <!-- Forearms: elbows up high, fists slap shut just above the head
-             (u 7.5, v 4.5) and come up empty -->
-        <g class="fore-l" fill="#DE886D">
-          <rect x="1.5" y="0.85" width="6.7" height="1.3"/>
-          <rect class="fist" x="7.3" y="0.6" width="1.8" height="1.8"/>
-        </g>
-        <g class="fore-r" fill="#DE886D">
-          <rect x="6.8" y="0.85" width="6.7" height="1.3"/>
-          <rect class="fist" x="5.9" y="0.6" width="1.8" height="1.8"/>
-        </g>
-        <!-- Eyes -->
+    <g class="body-squash">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm (balance) -->
+      <g class="arm-l">
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Right Arm (the swatting paw; stretches to 3 units at most) -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Eyes: look up, a little cross-eyed -->
+      <g class="eyes-open">
         <g class="eyes-look">
           <g class="eyes-blink" fill="#000000">
-            <rect x="4" y="8" width="1" height="2"/>
-            <rect x="10" y="8" width="1" height="2"/>
+            <g class="eye-l"><rect x="4" y="8" width="1" height="2"/></g>
+            <g class="eye-r"><rect x="10" y="8" width="1" height="2"/></g>
           </g>
         </g>
       </g>
+    </g>
     </g>
   </g>
 </svg>
