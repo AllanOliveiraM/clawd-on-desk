@@ -608,15 +608,33 @@ test("a backwards clock does not replay a dayRhythm window", () => {
   assert.equal(pick(brain, clock, { available: only }), null, "still the same morning window");
 });
 
+test("a cooldown already expired at the last read stays expired after a clock step back (R2')", () => {
+  const { brain, clock } = make();
+  brain.markPlayed("poke", clock.t, TRAITS);
+  const expiredAt = clock.t + m.MISCHIEF_COOLDOWN_MS.poke;
+  assert.equal(brain.canReact("poke", expiredAt + 5000), true, "read after it expired");
+  // The clock steps back to before the old deadline: the cooldown must not revive.
+  assert.equal(brain.canReact("poke", expiredAt - 1000), true);
+  assert.equal(brain.canReact("poke", expiredAt - 500), true);
+  // Same for the global cooldown.
+  const fresh = make();
+  fresh.brain.markPlayed("poke", fresh.clock.t, TRAITS);
+  const globalEnd = fresh.clock.t + m.globalCooldownMs(TRAITS);
+  assert.equal(fresh.brain.isGlobalReady(globalEnd + 5000), true);
+  assert.equal(fresh.brain.isGlobalReady(globalEnd - 1000), true);
+});
+
 test("a cooldown set after a clock step back is not shortened by later calls", () => {
   const { brain, clock } = make();
   brain.markPlayed("fakeNap", clock.t, TRAITS);
   const back = clock.t - 1000000;
   brain.markPlayed("poke", back, TRAITS);
   assert.equal(brain.canReact("poke", back + 1000), false);
+  // Probed in clock order: an earlier probe after a later read is itself a
+  // clock step back (R2': what had expired at the last read stays expired).
+  assert.equal(brain.isGlobalReady(back + m.globalCooldownMs(TRAITS) - 1), false);
   assert.equal(brain.canReact("poke", back + 1199999), false);
   assert.equal(brain.canReact("poke", back + 1200000), true);
-  assert.equal(brain.isGlobalReady(back + m.globalCooldownMs(TRAITS) - 1), false);
 });
 
 test("a forward jump of 8 h releases the global and every own cooldown", () => {
@@ -624,10 +642,10 @@ test("a forward jump of 8 h releases the global and every own cooldown", () => {
   brain.markPlayed("fakeNap", clock.t, TRAITS);
   brain.markPlayed("sitEdge", clock.t, TRAITS);
   const later = clock.t + 8 * 3600000;
+  assert.equal(brain.canReact("fakeNap", clock.t + 2 * 3600000), false, "still cooling before the jump target");
   assert.equal(brain.isGlobalReady(later), true);
   assert.equal(brain.canReact("sitEdge", later), true);
   assert.equal(brain.canReact("fakeNap", later), true, "the longest cooldown is 3 h");
-  assert.equal(brain.canReact("fakeNap", clock.t + 2 * 3600000), false, "still cooling before the jump target");
 });
 
 test("searchMouse: unusable unseen values never pick, min 0 with unseen 0 picks", () => {

@@ -190,7 +190,8 @@ function createMischiefBrain(options) {
     if (lastSeen !== null && t < lastSeen) {
       const keep = (v, nominal) => {
         if (!(v > t)) return v;
-        const left = v > lastSeen ? t + (v - lastSeen) : Infinity;
+        // Already expired at the last read: stays expired (left = 0).
+        const left = v > lastSeen ? t + (v - lastSeen) : t;
         return Math.min(v, t + nominal, left);
       };
       for (const id of Object.keys(cooldownUntil)) cooldownUntil[id] = keep(cooldownUntil[id], MISCHIEF_COOLDOWN_MS[id] || 0);
