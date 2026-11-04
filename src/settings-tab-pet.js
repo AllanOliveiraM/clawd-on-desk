@@ -522,20 +522,27 @@
     row.appendChild(controlHost);
 
     let busy = false;
+    let confirming = false;
     function isMounted() {
       return document.body.contains(row);
     }
     button.addEventListener("click", async () => {
-      if (busy || !readCompanionEnabled()) return;
+      if (busy || confirming || !readCompanionEnabled()) return;
       if (!window.settingsAPI || typeof window.settingsAPI.resetCompanion !== "function") return;
-      const action = await helpers.showSettingsConfirmModal({
-        title: t("companionResetConfirmTitle"),
-        detail: t("companionResetConfirmDetail"),
-        actions: [
-          { id: "cancel", label: t("companionResetConfirmCancel"), tone: "neutral", defaultFocus: true },
-          { id: "confirm", label: t("companionResetConfirmAction"), tone: "danger" },
-        ],
-      });
+      confirming = true;
+      let action;
+      try {
+        action = await helpers.showSettingsConfirmModal({
+          title: t("companionResetConfirmTitle"),
+          detail: t("companionResetConfirmDetail"),
+          actions: [
+            { id: "cancel", label: t("companionResetConfirmCancel"), tone: "neutral", defaultFocus: true },
+            { id: "confirm", label: t("companionResetConfirmAction"), tone: "danger" },
+          ],
+        });
+      } finally {
+        confirming = false;
+      }
       if (action !== "confirm" || busy) return;
       busy = true;
       helpers.setButtonState(button, { pending: true });
@@ -579,7 +586,7 @@
 
   function formatLastInteraction(at) {
     const ts = Number(at);
-    if (at == null || !Number.isFinite(ts) || ts <= 0) return t("companionMoodLastNever");
+    if (typeof at !== "number" || !Number.isFinite(ts) || ts <= 0) return t("companionMoodLastNever");
     const ageMs = Math.max(0, Date.now() - ts);
     const minutes = Math.floor(ageMs / 60000);
     if (minutes < 1) return t("companionMoodLastJustNow");
@@ -686,6 +693,8 @@
     function setVisible(visible) {
       const wasHidden = row.hidden;
       row.hidden = !visible;
+      // Hiding invalidates in-flight pulls so a stale result never renders.
+      if (!visible) requestId += 1;
       if (visible && wasHidden) Promise.resolve().then(refresh);
     }
     if (enabled) Promise.resolve().then(refresh);

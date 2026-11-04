@@ -13208,6 +13208,169 @@ describe("settings renderer browser environment", () => {
         assert.deepStrictEqual(bars(card()).map((b) => b[2]), ["1", "2", "3"]);
       });
     });
+
+    describe("gap hunting: mood card and reset", () => {
+      const BASE = {
+        mood: { energy: 64, contentment: 80, familiarity: 12 },
+        label: "content",
+        personality: "playful",
+        lastInteractionAt: null,
+      };
+      function setup({ enabled = true, settingsAPI = {} } = {}) {
+        const pulls = [];
+        const harness = loadGeneralTabForTest({
+          tab: "pet",
+          snapshot: companionSnapshot({ companionEnabled: enabled }),
+          settingsAPI: { getCompanionMood: () => { pulls.push(1); return { status: "ok", snapshot: BASE }; }, ...settingsAPI },
+        });
+        harness.renderContent();
+        return { harness, pulls, card: () => harness.content.querySelector(".companion-mood-card") };
+      }
+      const last = (card) => card.querySelector(".companion-mood-last").textContent;
+
+      it("formatLastInteraction boundaries (item 7, 24)", async () => {
+        const { harness, card } = setup();
+        await flush();
+        const S = 1000, M = 60 * S, H = 60 * M, D = 24 * H;
+        const mins = (n) => en.companionMoodLastMinutes.replace("{n}", String(n));
+        const hrs = (n) => en.companionMoodLastHours.replace("{n}", String(n));
+        const days = (n) => en.companionMoodLastDays.replace("{n}", String(n));
+        const cases = [
+          [59 * S, en.companionMoodLastJustNow],
+          [60 * S, mins(1)],
+          [59 * M + 59 * S, mins(59)],
+          [60 * M, hrs(1)],
+          [23 * H + 59 * M, hrs(23)],
+          [24 * H, days(1)],
+          [-5 * M, en.companionMoodLastJustNow],
+        ];
+        for (const [age, text] of cases) {
+          // 500 ms of slack keeps the boundary stable against test runtime.
+          harness.core.tabs.pet.applyCompanionMood({ ...BASE, lastInteractionAt: Date.now() - age - (age > 0 ? 500 : 0) });
+          const got = last(card());
+          if (age > 0 && age % M === 0) {
+            // exact boundary: allow the next-lower bucket never; we added slack above so it must match
+            assert.strictEqual(got, text, `age ${age}`);
+          } else {
+            assert.strictEqual(got, text, `age ${age}`);
+          }
+        }
+        for (const bad of ["123", 0, -5, NaN, Infinity, null, undefined]) {
+          harness.core.tabs.pet.applyCompanionMood({ ...BASE, lastInteractionAt: bad });
+          assert.strictEqual(last(card()), en.companionMoodLastNever, String(bad));
+        }
+      });
+
+      it("clamps out-of-range bars and falls back on unknown label/personality (item 9)", async () => {
+        const { harness, card } = setup();
+        await flush();
+        harness.core.tabs.pet.applyCompanionMood({
+          mood: { energy: -50, contentment: 250, familiarity: "x" },
+          label: "weird",
+          personality: "nope",
+          lastInteractionAt: null,
+        });
+        const rows = card().querySelectorAll(".companion-mood-bar").map((b) => [
+          b.querySelector(".companion-mood-bar-track").getAttribute("aria-valuenow"),
+          b.querySelector(".companion-mood-bar-fill").style.getPropertyValue("width"),
+        ]);
+        assert.deepStrictEqual(rows, [["0", "0%"], ["100", "100%"], ["0", "0%"]]);
+        assert.strictEqual(card().querySelector(".companion-mood-summary").textContent,
+          en.companionMoodSummary.replace("{mood}", en.companionMoodLabelNeutral).replace("{personality}", "Balanced"));
+        harness.core.tabs.pet.applyCompanionMood({ ...BASE, mood: { energy: 12.6, contentment: 1, familiarity: 1 } });
+        assert.strictEqual(card().querySelector(".companion-mood-bar-track").getAttribute("aria-valuenow"), "13");
+      });
+
+      it("{mood:null} and [] apply false and leave the DOM unchanged", async () => {
+        const { harness, card } = setup();
+        await flush();
+        const html = card().querySelector(".companion-mood-summary").textContent;
+        assert.strictEqual(harness.core.tabs.pet.applyCompanionMood({ mood: null }), false);
+        assert.strictEqual(harness.core.tabs.pet.applyCompanionMood([]), false);
+        assert.strictEqual(card().querySelector(".companion-mood-summary").textContent, html);
+        assert.strictEqual(card().querySelector(".companion-mood-bar-track").getAttribute("aria-valuenow"), "64");
+      });
+
+      it("rapid master toggle never applies a stale pull (item 8, S5)", async () => {
+        const pending = createDeferred();
+        let n = 0;
+        const { harness, card } = setup({
+          enabled: false,
+          settingsAPI: { getCompanionMood: () => { n += 1; return n === 1 ? pending.promise : { status: "ok", snapshot: BASE }; } },
+        });
+        await flush();
+        applyBroadcast(harness, { companionEnabled: true });
+        await flush();
+        assert.strictEqual(n, 1);
+        applyBroadcast(harness, { companionEnabled: false });
+        pending.resolve({ status: "ok", snapshot: { ...BASE, mood: { energy: 99, contentment: 99, familiarity: 99 } } });
+        await flush();
+        assert.strictEqual(card().querySelector(".companion-mood-bar-track").getAttribute("aria-valuenow"), "0",
+          "stale pull must not render after hide");
+      });
+
+      it("feature off: no pull at mount, reset disabled, push returns false (item 21)", async () => {
+        const { harness, pulls, card } = setup({ enabled: false });
+        await flush();
+        assert.deepStrictEqual(pulls, []);
+        assert.strictEqual(card().hidden, true);
+        assert.strictEqual(companionControls(harness).resetButton.disabled, true);
+        assert.strictEqual(harness.core.tabs.pet.applyCompanionMood(BASE), false);
+      });
+
+      it("missing getCompanionMood shows the unavailable text without throwing", async () => {
+        const harness = loadGeneralTabForTest({
+          tab: "pet",
+          snapshot: companionSnapshot({ companionEnabled: true }),
+          settingsAPI: {},
+        });
+        assert.doesNotThrow(() => harness.renderContent());
+        await flush();
+        assert.strictEqual(harness.content.querySelector(".companion-mood-summary").textContent, en.companionMoodUnavailable);
+      });
+
+      it("a double click on reset while the confirm is open resets once with one toast (item 6, S4)", async () => {
+        const resets = [];
+        const toasts = [];
+        const modal = createDeferred();
+        const harness = loadGeneralTabForTest({
+          tab: "pet",
+          snapshot: companionSnapshot({ companionEnabled: true }),
+          settingsAPI: { resetCompanion: () => { resets.push(1); return { status: "ok" }; } },
+        });
+        harness.core.ops.showToast = (message, options) => toasts.push({ message, options });
+        let modals = 0;
+        harness.core.helpers.showSettingsConfirmModal = () => { modals += 1; return modal.promise; };
+        harness.renderContent();
+        const button = companionControls(harness).resetButton;
+        button.dispatchEvent({ type: "click", bubbles: false });
+        button.dispatchEvent({ type: "click", bubbles: false });
+        await flush();
+        assert.strictEqual(modals, 1);
+        modal.resolve("confirm");
+        await flush();
+        assert.strictEqual(resets.length, 1);
+        assert.strictEqual(toasts.length, 1);
+      });
+
+      it("master off mid-reset does not throw", async () => {
+        const pending = createDeferred();
+        const harness = loadGeneralTabForTest({
+          tab: "pet",
+          snapshot: companionSnapshot({ companionEnabled: true }),
+          settingsAPI: { resetCompanion: () => pending.promise },
+        });
+        harness.core.ops.showToast = () => {};
+        harness.core.helpers.showSettingsConfirmModal = () => Promise.resolve("confirm");
+        harness.renderContent();
+        companionControls(harness).resetButton.dispatchEvent({ type: "click", bubbles: false });
+        await flush();
+        applyBroadcast(harness, { companionEnabled: false });
+        pending.resolve({ status: "ok" });
+        await flush();
+        assert.strictEqual(companionControls(harness).resetButton.disabled, true);
+      });
+    });
   });
 
   it("uses snapshot mode changes when a broadcast arrives before the optimistic save resolves", async () => {
