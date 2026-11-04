@@ -16,6 +16,7 @@
 ## Clawd Alive (opt-in)
 
 - **Off by default** — turn it on in `Settings…` → `Pet` → `Personality & behavior`. With it off, nothing is computed, read, or written
+- **Two original animations improved for everyone** — the error animation (`clawd-error.svg`) and the mini-mode crab walk (`clawd-mini-crabwalk.svg`) were reworked as part of this feature and ship to all users, so they look slightly different from earlier releases even with Clawd Alive off
 - **Mood and familiarity** — Clawd keeps a small mood and a slowly growing familiarity with you, shaped by a personality (Balanced, Playful, Curious, Calm, Shy). Familiarity never fades from absence; only **Reset** clears it
 - **Petting and hover** — stroke Clawd with a back-and-forth cursor motion to pet it; clicks, double clicks, drags, and hovering feed the mood too (native Wayland has no hover/drag, so petting is unavailable there)
 - **Autonomy** — mood shapes which idle activities and Free Roam walks happen (the existing `When idle` mode still decides: `Stay put` keeps Clawd in place); Clawd learns a favorite resting spot from where you drop it after a drag
@@ -44,7 +45,7 @@ Part of Clawd Alive, with its own switch: `Settings…` → `Pet` → `Personali
 
 How `When idle` decides what: with `Stay put`, only the cursor reactions catch and pounce happen. With `Activities`, day rhythm, toy, welcome back, stretch back and searching the mouse join them, plus catch and pounce. With `Free Roam`, everything can happen, including fake nap and the walking moments (poke, reach close, wall, sit on the edge, fetch); those ride Free Roam's normal walks, and the corner/edge ones may go past the usual margin toward the screen edge. Reach close stops a little short of the corner so the pet does not sit on real window buttons, and after any edge moment Clawd soon walks back into the usual area. They still respect the Roam Fence and keep the pet fully on screen (fetch is the exception: it parks the pet right at the side edge so it can slip out). Agent work, DND, mini mode, and dragging always win.
 
-Under XWayland (a Wayland session where Clawd relaunched itself on X11), the cursor position is only real over Clawd's own windows, so Clawd trusts it only there: over the Settings and Dashboard windows a parked cursor still counts, while over the pet, its bubbles and the HUD only a cursor that moved in the last 2 seconds counts. Anywhere else the cursor is treated as unseen, which is what makes searching the mouse come sooner there.
+Under XWayland (a Wayland session where Clawd relaunched itself on X11), the cursor position is only real over Clawd's own windows, so Clawd trusts it only there: over the Settings and Dashboard windows a parked cursor counts only after it moved inside that window, and for at most 90 seconds without further motion; a cursor resting on the pet itself counts for as long as it stays there; over the pet's bubbles and the HUD only a cursor that moved in the last 2 seconds counts. Anywhere else the cursor is treated as unseen, which is what makes searching the mouse come sooner there.
 
 ## Permission Bubble
 
