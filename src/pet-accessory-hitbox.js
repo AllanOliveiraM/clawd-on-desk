@@ -114,6 +114,9 @@ const BUILTIN_ACCESSORY_MOTION_PADDING = Object.freeze({
     "clawd-alive-work-control-room.svg": Object.freeze({ left: 4.9, top: 3.4, right: 5.6, bottom: 1.3 }),
     "clawd-alive-work-swamped.svg": Object.freeze({ left: 2.9, top: 2.4, right: 3.1, bottom: 1.7 }),
     "clawd-alive-juggle-laptops.svg": Object.freeze({ left: 1.1, top: 0.1, right: 1.1, bottom: 0.6 }),
+    // Searching the mouse: visor claw, far peeks, hop and tilt (fetch parts
+    // hide accessories, so they have no envelope).
+    "clawd-alive-search-mouse.svg": Object.freeze({ left: 4.8, top: 5.9, right: 3.6, bottom: 1.7 }),
   }),
   cloudling: Object.freeze({
     // Idle is script-driven, so this one is derived rather than sampled: the
@@ -227,6 +230,7 @@ const BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING = Object.freeze({
     "clawd-alive-work-swamped.svg": Object.freeze({ left: 1.2, top: 1.3, right: 1.7, bottom: 1.5 }),
     "clawd-alive-juggle-laptops.svg": Object.freeze({ left: 0.7, top: 0.1, right: 0.7, bottom: 0.6 }),
     "clawd-alive-juggle-chaos.svg": Object.freeze({ left: 0.9, top: 1.5, right: 3, bottom: 1.7 }),
+    "clawd-alive-search-mouse.svg": Object.freeze({ left: 2.6, top: 4.9, right: 2.5, bottom: 0.8 }),
     "clawd-idle-reading.svg": Object.freeze({ right: 0.2, bottom: 0.9 }),
     "clawd-react-left.svg": Object.freeze({ left: 2.4, top: 0.4 }),
     "clawd-react-right.svg": Object.freeze({ right: 2.4, bottom: 0.4 }),

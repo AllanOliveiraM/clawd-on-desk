@@ -92,7 +92,22 @@
       "clawd-alive-work-swamped.svg",
       "clawd-alive-work-chaos.svg",
       "clawd-alive-juggle-laptops.svg",
-      "clawd-alive-juggle-chaos.svg"
+      "clawd-alive-juggle-chaos.svg",
+      "clawd-alive-fetch-exit-left.svg",
+      "clawd-alive-fetch-exit-right.svg",
+      "clawd-alive-fetch-cursor-left.svg",
+      "clawd-alive-fetch-cursor-right.svg",
+      "clawd-alive-fetch-duck-left.svg",
+      "clawd-alive-fetch-duck-right.svg",
+      "clawd-alive-fetch-enter-left.svg",
+      "clawd-alive-fetch-enter-right.svg",
+      "clawd-alive-fetch-bug-left.svg",
+      "clawd-alive-fetch-bug-right.svg",
+      "clawd-alive-fetch-box-left.svg",
+      "clawd-alive-fetch-box-right.svg",
+      "clawd-alive-fetch-sock-left.svg",
+      "clawd-alive-fetch-sock-right.svg",
+      "clawd-alive-search-mouse.svg"
     ],
     "discreteSampling": {
       "clawd-working-thinking.svg": 24,
@@ -180,7 +195,22 @@
       "clawd-alive-work-swamped.svg": 24,
       "clawd-alive-work-chaos.svg": 24,
       "clawd-alive-juggle-laptops.svg": 24,
-      "clawd-alive-juggle-chaos.svg": 24
+      "clawd-alive-juggle-chaos.svg": 24,
+      "clawd-alive-fetch-exit-left.svg": 24,
+      "clawd-alive-fetch-exit-right.svg": 24,
+      "clawd-alive-fetch-cursor-left.svg": 24,
+      "clawd-alive-fetch-cursor-right.svg": 24,
+      "clawd-alive-fetch-duck-left.svg": 24,
+      "clawd-alive-fetch-duck-right.svg": 24,
+      "clawd-alive-fetch-enter-left.svg": 24,
+      "clawd-alive-fetch-enter-right.svg": 24,
+      "clawd-alive-fetch-bug-left.svg": 24,
+      "clawd-alive-fetch-bug-right.svg": 24,
+      "clawd-alive-fetch-box-left.svg": 24,
+      "clawd-alive-fetch-box-right.svg": 24,
+      "clawd-alive-fetch-sock-left.svg": 24,
+      "clawd-alive-fetch-sock-right.svg": 24,
+      "clawd-alive-search-mouse.svg": 24
     }
   },
   "customization": {
@@ -1561,6 +1591,63 @@
         "clawd-alive-juggle-chaos.svg": {
           "visibility": "hidden"
         },
+        "clawd-alive-fetch-exit-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-exit-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-cursor-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-cursor-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-duck-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-duck-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-enter-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-enter-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-bug-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-bug-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-box-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-box-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-sock-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-sock-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-search-mouse.svg": {
+          "staticFrame": {
+            "cx": 7.5,
+            "baseY": 6.5,
+            "width": 16
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 7.5,
+              "baseY": 6.5,
+              "width": 16
+            }
+          }
+        },
         "clawd-outlaw-bender.svg": {
           "visibility": "hidden"
         },
@@ -2925,6 +3012,63 @@
             }
           }
         },
+        "clawd-alive-fetch-exit-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-exit-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-cursor-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-cursor-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-duck-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-duck-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-enter-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-enter-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-bug-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-bug-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-box-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-box-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-sock-left.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-fetch-sock-right.svg": {
+          "visibility": "hidden"
+        },
+        "clawd-alive-search-mouse.svg": {
+          "staticFrame": {
+            "cx": 14,
+            "baseY": 13,
+            "width": 5
+          },
+          "followTarget": {
+            "id": "torso",
+            "frame": {
+              "cx": 14,
+              "baseY": 13,
+              "width": 5
+            }
+          }
+        },
         "clawd-outlaw-bender.svg": {
           "visibility": "hidden"
         },
@@ -3537,6 +3681,66 @@
     "collapseSleepTwitch": {
       "file": "clawd-alive-collapse-sleep-twitch.svg",
       "duration": 18000
+    },
+    "fetchExitLeft": {
+      "file": "clawd-alive-fetch-exit-left.svg",
+      "duration": 2000
+    },
+    "fetchExitRight": {
+      "file": "clawd-alive-fetch-exit-right.svg",
+      "duration": 2000
+    },
+    "fetchCursorLeft": {
+      "file": "clawd-alive-fetch-cursor-left.svg",
+      "duration": 7600
+    },
+    "fetchCursorRight": {
+      "file": "clawd-alive-fetch-cursor-right.svg",
+      "duration": 7600
+    },
+    "fetchDuckLeft": {
+      "file": "clawd-alive-fetch-duck-left.svg",
+      "duration": 7900
+    },
+    "fetchDuckRight": {
+      "file": "clawd-alive-fetch-duck-right.svg",
+      "duration": 7900
+    },
+    "fetchEnterLeft": {
+      "file": "clawd-alive-fetch-enter-left.svg",
+      "duration": 8000
+    },
+    "fetchEnterRight": {
+      "file": "clawd-alive-fetch-enter-right.svg",
+      "duration": 8000
+    },
+    "fetchBugLeft": {
+      "file": "clawd-alive-fetch-bug-left.svg",
+      "duration": 8000
+    },
+    "fetchBugRight": {
+      "file": "clawd-alive-fetch-bug-right.svg",
+      "duration": 8000
+    },
+    "fetchBoxLeft": {
+      "file": "clawd-alive-fetch-box-left.svg",
+      "duration": 8000
+    },
+    "fetchBoxRight": {
+      "file": "clawd-alive-fetch-box-right.svg",
+      "duration": 8000
+    },
+    "fetchSockLeft": {
+      "file": "clawd-alive-fetch-sock-left.svg",
+      "duration": 8000
+    },
+    "fetchSockRight": {
+      "file": "clawd-alive-fetch-sock-right.svg",
+      "duration": 8000
+    },
+    "searchMouse": {
+      "file": "clawd-alive-search-mouse.svg",
+      "duration": 3000
     }
   },
   "companionWorkTiers": {

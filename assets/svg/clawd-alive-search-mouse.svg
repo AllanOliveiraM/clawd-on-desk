@@ -1,0 +1,212 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 3-Second Loop - Search mouse: "where did the mouse go?" Raises a claw
+         as a visor, peers far left, far right, hops to see higher, drops the
+         visor into a confused head tilt with a little pixel "?", shrugs, rests. */
+      .hop-anim {
+        transform-origin: 7.5px 15px;
+        animation: search-hop 3s infinite ease-in-out;
+      }
+
+      .action-body {
+        transform-origin: 7.5px 15px;
+        animation: search-lean 3s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: search-shadow 3s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: search-arm-r 3s infinite ease-in-out;
+      }
+
+      .visor {
+        transform-origin: 14px 9px;
+        opacity: 0;
+        animation: search-visor 3s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 10px;
+        animation: search-arm-l 3s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: search-look 3s infinite ease-in-out;
+      }
+
+      .eyes-squint {
+        transform-origin: 7.5px 10px;
+        animation: search-squint 3s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: search-blink 3s infinite linear;
+      }
+
+      .qmark {
+        transform-origin: 16px 4px;
+        opacity: 0;
+        animation: search-qmark 3s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Squash/stretch from the feet: wind-up for the visor, the hop, the shrug */
+      @keyframes search-hop {
+0%,4%,12%,50%,67%,80%,94%,100%{transform:translate(0,0) scale(1,1)}
+6.5%,83%{transform:translate(0,0) scale(1.04,0.96)}
+9%{transform:translate(0,0) scale(0.98,1.03)}
+53.5%{transform:translate(0,0) scale(1.1,0.88)}
+56%{transform:translate(0,-4px) scale(0.94,1.08)}
+58.5%{transform:translate(0,-4.5px) scale(1,1)}
+61%{transform:translate(0,0) scale(0.96,1.04)}
+62.5%{transform:translate(0,0) scale(1.08,0.9)}
+65%{transform:translate(0,0) scale(0.98,1.02)}
+86%{transform:translate(0,-0.5px) scale(0.98,1.03)}
+90%{transform:translate(0,0) scale(1.01,0.99)}
+}
+
+      /* Lean far left, swing far right, upright for the hop, confused tilt */
+      @keyframes search-lean {
+0%,8%,50%,64%,94%,100%{transform:translate(0,0) rotate(0deg)}
+14%{transform:translate(-1.5px,0) rotate(-5deg)}
+17%,27%{transform:translate(-1.2px,0) rotate(-4deg)}
+34%{transform:translate(1.5px,0) rotate(5deg)}
+37%,46%{transform:translate(1.2px,0) rotate(4deg)}
+67.5%{transform:translate(-0.6px,0) rotate(-10deg)}
+70%,79%{transform:translate(-0.4px,0) rotate(-8deg)}
+84%{transform:translate(0,0) rotate(1deg)}
+88%{transform:translate(0,0) rotate(-0.5deg)}
+}
+
+      @keyframes search-shadow {
+0%,8%,50%,64%,94%,100%{transform:translate(0,0) scaleX(1);opacity:0.5}
+14%,27%{transform:translate(-1px,0) scaleX(1.05);opacity:0.5}
+34%,46%{transform:translate(1px,0) scaleX(1.05);opacity:0.5}
+53.5%,62.5%{transform:translate(0,0) scaleX(1.12);opacity:0.5}
+58.5%{transform:translate(0,0) scaleX(0.65);opacity:0.25}
+70%,79%{transform:translate(-0.5px,0) scaleX(1.03);opacity:0.5}
+}
+
+      /* Front claw swings up to the brow, swaps to the visor, then drops and shrugs */
+      @keyframes search-arm-r {
+0%,4%,68%,81%,93%,100%{transform:translate(0,0) rotate(0deg);opacity:1}
+10%,10.9%,64%{transform:translate(-0.5px,-3px) rotate(-45deg);opacity:1}
+11%,63.9%{transform:translate(-0.5px,-3px) rotate(-45deg);opacity:0}
+84%{transform:translate(0.5px,-2.5px) rotate(-30deg);opacity:1}
+88%{transform:translate(0.5px,-2px) rotate(-25deg);opacity:1}
+}
+
+      @keyframes search-visor {
+0%,10.9%{transform:translate(0,1px) scale(1,0.5);opacity:0}
+11%{transform:translate(0,0.5px) scale(1,0.7);opacity:1}
+13%{transform:translate(0,0) scale(1,1.08);opacity:1}
+15.5%,63.9%{transform:translate(0,0) scale(1,1);opacity:1}
+64%,100%{transform:translate(0,0) scale(1,1);opacity:0}
+}
+
+      @keyframes search-arm-l {
+0%,81%,93%,100%{transform:translate(0,0) rotate(0deg)}
+84%{transform:translate(-0.5px,-2.5px) rotate(30deg)}
+88%{transform:translate(-0.5px,-2px) rotate(25deg)}
+}
+
+      /* Peer far left, far right, up while hopping, up-right at the "?" */
+      @keyframes search-look {
+0%,8%,64%,82%,100%{transform:translate(0,0)}
+14%,28%{transform:translate(-2px,0)}
+34%,47%{transform:translate(2px,0)}
+52%,61%{transform:translate(0,-1px)}
+68%,79%{transform:translate(1px,-1px)}
+}
+
+      /* Squints while peering under the visor, and again for the shrug */
+      @keyframes search-squint {
+0%,9%,50%,81%,92%,100%{transform:scaleY(1)}
+13%,47%,84%,89%{transform:scaleY(0.5)}
+}
+
+      /* Double blink during the confused tilt */
+      @keyframes search-blink {
+0%,70%,72%,74%,76%,100%{transform:scaleY(1)}
+71%,75%{transform:scaleY(0.1)}
+}
+
+      @keyframes search-qmark {
+0%,65.5%{transform:translate(0,1px) scale(0.4);opacity:0}
+67.5%{transform:translate(0,-0.5px) scale(1.55);opacity:1}
+69.5%{transform:translate(0,0) scale(1.2);opacity:1}
+71.5%,79%,83%{transform:translate(0,0) scale(1.3);opacity:1}
+75%{transform:translate(0,-0.5px) scale(1.3);opacity:1}
+87%,100%{transform:translate(0,-1.5px) scale(1);opacity:0}
+}
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g class="hop-anim">
+    <!-- Legs -->
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="11" width="1" height="4"/>
+      <rect x="5" y="11" width="1" height="4"/>
+      <rect x="9" y="11" width="1" height="4"/>
+      <rect x="11" y="11" width="1" height="4"/>
+    </g>
+
+    <!-- Animated Upper Body -->
+    <g class="action-body">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm -->
+      <g class="arm-l">
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Right Arm -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Visor claw: forearm up the side, flat claw over the brow -->
+      <g class="visor" fill="#DE886D">
+        <rect x="13" y="5" width="2" height="4"/>
+        <rect x="8" y="5" width="5" height="1"/>
+        <rect x="7" y="5" width="1" height="1" opacity="0.85"/>
+        <rect x="8" y="6" width="5" height="1" fill="#000000" opacity="0.15"/>
+      </g>
+      <!-- Eyes -->
+      <g class="eyes-look">
+        <g class="eyes-squint">
+          <g class="eyes-blink" fill="#000000">
+            <rect x="4" y="8" width="1" height="2"/>
+            <rect x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- Pixel question mark (outline behind, light fill on top) -->
+  <g class="qmark">
+    <g fill="#3A2926">
+      <rect x="14.5" y="-2.5" width="3" height="2"/>
+      <rect x="13.5" y="-1.5" width="2" height="2"/>
+      <rect x="16.5" y="-1.5" width="2" height="3"/>
+      <rect x="15.5" y="0.5" width="2" height="2"/>
+      <rect x="15.5" y="2.5" width="2" height="2"/>
+    </g>
+    <g fill="#F4F1EC">
+      <rect x="15" y="-2" width="2" height="1"/>
+      <rect x="14" y="-1" width="1" height="1"/>
+      <rect x="17" y="-1" width="1" height="2"/>
+      <rect x="16" y="1" width="1" height="1"/>
+      <rect x="16" y="3" width="1" height="1"/>
+    </g>
+  </g>
+</svg>

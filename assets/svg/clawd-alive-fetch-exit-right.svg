@@ -1,0 +1,479 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 2-Second Loop — Fetch exit (right): parked at the right screen edge (screen edge at u = 16.5). He peeks out past the edge, snaps back to you with sly half-lidded "shh" eyes and a shifty glance, crouches, then ZIPS out through the edge (stretched, dust puff, speed lines), fading before the window edge. The frame stays empty for the last second: the edge trembles and a few dust bits get tossed back in while he rummages off-screen; everything is gone by 1.85 s. */
+      .fx-c-root {
+        transform-origin: 15px 0px;
+        animation: fx-c-root 2s infinite ease-in-out;
+      }
+
+      .fx-c-fade {
+        animation: fx-c-fade 2s infinite ease-in-out;
+      }
+
+      .fx-c-shadow {
+        transform-origin: 7.5px 15.5px;
+        animation: fx-c-shadow 2s infinite ease-in-out;
+      }
+
+      .fx-c-hop {
+        transform-origin: 15px 0px;
+        animation: fx-c-hop 2s infinite ease-in-out;
+      }
+
+      .fx-c-legs {
+        transform-origin: 7.5px 15px;
+        animation: fx-c-legs 2s infinite ease-in-out;
+      }
+
+      .fx-c-leg1 {
+        transform-origin: 15px 0px;
+        animation: fx-c-leg1 2s infinite ease-in-out;
+      }
+
+      .fx-c-leg2 {
+        transform-origin: 15px 0px;
+        animation: fx-c-leg2 2s infinite ease-in-out;
+      }
+
+      .fx-c-leg3 {
+        transform-origin: 15px 0px;
+        animation: fx-c-leg3 2s infinite ease-in-out;
+      }
+
+      .fx-c-leg4 {
+        transform-origin: 15px 0px;
+        animation: fx-c-leg4 2s infinite ease-in-out;
+      }
+
+      .fx-c-body {
+        transform-origin: 7.5px 15px;
+        animation: fx-c-body 2s infinite ease-in-out;
+      }
+
+      .fx-c-arm-l {
+        transform-origin: 13px 10px;
+        animation: fx-c-arm-l 2s infinite ease-in-out;
+      }
+
+      .fx-c-arm-r {
+        transform-origin: 2px 10px;
+        animation: fx-c-arm-r 2s infinite ease-in-out;
+      }
+
+      .fx-c-eyes {
+        transform-origin: 15px 0px;
+        animation: fx-c-eyes 2s infinite ease-in-out;
+      }
+
+      .fx-c-lid {
+        transform-origin: 7.5px 10px;
+        animation: fx-c-lid 2s infinite ease-in-out;
+      }
+
+      .fx-c-eye-s {
+        animation: fx-c-eye-s 2s infinite ease-in-out;
+      }
+
+      .fx-c-eye-h {
+        animation: fx-c-eye-h 2s infinite ease-in-out;
+      }
+
+      .fx-puff0 {
+        transform-origin: 11.8px 14.3px;
+        animation: fx-puff0 2s infinite ease-in-out;
+      }
+
+      .fx-puff1 {
+        transform-origin: 7.9px 14.6px;
+        animation: fx-puff1 2s infinite ease-in-out;
+      }
+
+      .fx-puff2 {
+        transform-origin: 3.8px 14.4px;
+        animation: fx-puff2 2s infinite ease-in-out;
+      }
+
+      .fx-puff3 {
+        transform-origin: 1.3px 14.7px;
+        animation: fx-puff3 2s infinite ease-in-out;
+      }
+
+      .fx-line0 {
+        transform-origin: 14px 8.2px;
+        animation: fx-line0 2s infinite ease-in-out;
+      }
+
+      .fx-line1 {
+        transform-origin: 16px 10.6px;
+        animation: fx-line1 2s infinite ease-in-out;
+      }
+
+      .fx-line2 {
+        transform-origin: 13px 13px;
+        animation: fx-line2 2s infinite ease-in-out;
+      }
+
+      .fx-junk0 {
+        transform-origin: 16.5px 12px;
+        animation: fx-junk0 2s infinite ease-in-out;
+      }
+
+      .fx-junk1 {
+        transform-origin: 16.5px 10px;
+        animation: fx-junk1 2s infinite ease-in-out;
+      }
+
+      .fx-junk2 {
+        transform-origin: 16px 13px;
+        animation: fx-junk2 2s infinite ease-in-out;
+      }
+
+      .fx-grit0 {
+        transform-origin: 15px 0px;
+        animation: fx-grit0 2s infinite ease-in-out;
+      }
+
+      .fx-grit1 {
+        transform-origin: 15px 0px;
+        animation: fx-grit1 2s infinite ease-in-out;
+      }
+
+      @keyframes fx-c-root {
+0%,35%{transform:translate(0px,0px)}
+38.5%{transform:translate(-0.5px,0px);animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+44%{transform:translate(0.4px,0px);animation-timing-function:linear}
+45.75%{transform:translate(3px,0px);animation-timing-function:linear}
+47%{transform:translate(6.5px,0px);animation-timing-function:linear}
+48.25%{transform:translate(10.5px,0px);animation-timing-function:linear}
+49.5%{transform:translate(16px,0px)}
+50%,100%{transform:translate(18px,0px)}
+}
+
+      @keyframes fx-c-fade {
+0%{opacity:1}
+45.9%{opacity:1;animation-timing-function:linear}
+48.1%,100%{opacity:0}
+}
+
+      @keyframes fx-c-shadow {
+0%,3.5%,19.5%,38.5%{transform:translate(0px,0px) scale(1,1)}
+11%,15.5%{transform:translate(0.6px,0px) scale(1.06,1)}
+44%{transform:translate(0px,0px) scale(1.1,1)}
+46%,100%{transform:translate(0px,0px) scale(1.15,1)}
+}
+
+      @keyframes fx-c-hop {
+0%,38.5%{transform:translate(0px,0px)}
+40%,100%{transform:translate(0px,-0.3px)}
+}
+
+      @keyframes fx-c-legs {
+0%,3.5%{transform:skewX(0deg) scale(1,1)}
+11%{transform:skewX(-12deg) scale(1,1)}
+15.5%{transform:skewX(-13deg) scale(1,1)}
+19.5%{transform:skewX(1deg) scale(1,1)}
+22.5%,31.5%{transform:skewX(0deg) scale(1,0.96)}
+35%,38.5%{transform:skewX(9deg) scale(1,0.86)}
+40%{transform:skewX(12deg) scale(1,0.9)}
+44%{transform:skewX(12deg) scale(1,0.9);animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+46%,100%{transform:skewX(-24deg) scale(1.25,0.95)}
+}
+
+      @keyframes fx-c-leg1 {
+0%,39.875%,42.625%,100%{transform:translate(0px,0px)}
+38.5%,41.25%{transform:translate(0px,0px);animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+39.188%,41.938%{transform:translate(0px,-0.9px);animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+}
+
+      @keyframes fx-c-leg2 {
+0%,41.25%,44%,100%{transform:translate(0px,0px)}
+39.875%,42.625%{transform:translate(0px,0px);animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+40.562%,43.312%{transform:translate(0px,-0.9px);animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+}
+
+      @keyframes fx-c-leg3 {
+0%,39.875%,42.625%,100%{transform:translate(0px,0px)}
+38.5%,41.25%{transform:translate(0px,0px);animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+39.188%,41.938%{transform:translate(0px,-0.9px);animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+}
+
+      @keyframes fx-c-leg4 {
+0%,7.5%,19.5%,41.25%,44%,100%{transform:translate(0px,0px)}
+12%,16.5%{transform:translate(0px,-0.8px)}
+39.875%,42.625%{transform:translate(0px,0px);animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+40.562%,43.312%{transform:translate(0px,-0.9px);animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+}
+
+      @keyframes fx-c-body {
+0%,3.5%{transform:translate(0px,0px) skewX(0deg) scale(1,1)}
+11%{transform:translate(0.5px,0px) skewX(-10deg) scale(0.97,1.03)}
+15.5%{transform:translate(0.7px,0px) skewX(-11deg) scale(0.97,1.03)}
+19.5%{transform:translate(-0.1px,0px) skewX(1.5deg) scale(1.03,0.97)}
+22.5%,31.5%{transform:translate(0px,0px) skewX(0deg) scale(1.06,0.93)}
+35%,38.5%{transform:translate(-0.7px,0px) skewX(8deg) scale(1.07,0.9)}
+40%{transform:translate(-0.9px,0px) skewX(10deg) scale(1.08,0.88)}
+44%{transform:translate(-0.9px,0px) skewX(10deg) scale(1.08,0.88);animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+46%,100%{transform:translate(0.6px,0px) skewX(-16deg) scale(1.28,0.84)}
+}
+
+      @keyframes fx-c-arm-l {
+0%,3.5%,19.5%{transform:translate(0px,0px) rotate(0deg) scale(1,1)}
+11%,15.5%{transform:translate(0px,-1.2px) rotate(-18deg) scale(1.2,1)}
+22.5%,31.5%{transform:translate(0px,-0.6px) rotate(0deg) scale(1,1)}
+35%,44%{transform:translate(0px,-0.3px) rotate(0deg) scale(1,1)}
+46%,100%{transform:translate(0px,-1px) rotate(0deg) scale(1.7,1)}
+}
+
+      @keyframes fx-c-arm-r {
+0%,19.5%{transform:translate(0px,0px) rotate(0deg) scale(1,1)}
+22.5%,31.5%{transform:translate(0px,-0.6px) rotate(0deg) scale(1,1)}
+35%,38.5%{transform:translate(0px,-0.8px) rotate(15deg) scale(1,1)}
+40%,44%{transform:translate(0px,-1.2px) rotate(35deg) scale(1,1)}
+46%,100%{transform:translate(0px,-1.5px) rotate(50deg) scale(1.3,1)}
+}
+
+      @keyframes fx-c-eyes {
+0%,3.5%,20.5%,23.5%{transform:translate(0px,0px)}
+9%,16%{transform:translate(1.2px,0px)}
+18.5%{transform:translate(-0.3px,0px)}
+25%,27.25%{transform:translate(0.7px,0px)}
+28.75%,30.75%{transform:translate(-0.7px,0px)}
+32.5%,44%{transform:translate(1.3px,0px)}
+46%,100%{transform:translate(1.5px,0px)}
+}
+
+      @keyframes fx-c-lid {
+0%,20.5%,37%,100%{transform:scale(1,1)}
+22.5%,31.5%{transform:scale(1,0.45)}
+34%{transform:scale(1,1.15)}
+}
+
+      @keyframes fx-c-eye-s {
+0%,100%{opacity:0}
+}
+
+      @keyframes fx-c-eye-h {
+0%,100%{opacity:0}
+}
+
+      @keyframes fx-puff0 {
+0%{transform:translate(0px,0px) scale(1,1);opacity:0}
+44.45%{transform:translate(0px,0px) scale(0.4,0.4);opacity:0;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+46.5%{transform:translate(0px,0px) scale(1,1);opacity:0.95;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+57.5%{transform:translate(2.2px,-1.6px) scale(1.3,1.3);opacity:0.7}
+65.5%,100%{transform:translate(2.86px,-1.92px) scale(1.3,1.3);opacity:0}
+}
+
+      @keyframes fx-puff1 {
+0%{transform:translate(0px,0px) scale(1,1);opacity:0}
+45.7%{transform:translate(0px,0px) scale(0.4,0.4);opacity:0;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+47.75%{transform:translate(0px,0px) scale(1,1);opacity:0.95;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+58.75%{transform:translate(1.2px,-2.4px) scale(1.3,1.3);opacity:0.7}
+66.75%,100%{transform:translate(1.56px,-2.88px) scale(1.3,1.3);opacity:0}
+}
+
+      @keyframes fx-puff2 {
+0%{transform:translate(0px,0px) scale(1,1);opacity:0}
+46.95%{transform:translate(0px,0px) scale(0.4,0.4);opacity:0;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+49%{transform:translate(0px,0px) scale(1,1);opacity:0.95;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+60%{transform:translate(-0.8px,-1.8px) scale(1.3,1.3);opacity:0.7}
+68%,100%{transform:translate(-1.04px,-2.16px) scale(1.3,1.3);opacity:0}
+}
+
+      @keyframes fx-puff3 {
+0%{transform:translate(0px,0px) scale(1,1);opacity:0}
+48.2%{transform:translate(0px,0px) scale(0.4,0.4);opacity:0;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+50.25%{transform:translate(0px,0px) scale(1,1);opacity:0.95;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+61.25%{transform:translate(-1.6px,-0.9px) scale(1.3,1.3);opacity:0.7}
+69.25%,100%{transform:translate(-2.08px,-1.08px) scale(1.3,1.3);opacity:0}
+}
+
+      @keyframes fx-line0 {
+0%{transform:scale(1,1);opacity:0}
+45.2%{transform:scale(0.3,1);opacity:0;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+47.25%{transform:scale(1,1);opacity:0.75}
+56.75%,100%{transform:scale(0.15,1);opacity:0}
+}
+
+      @keyframes fx-line1 {
+0%{transform:scale(1,1);opacity:0}
+45.95%{transform:scale(0.3,1);opacity:0;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+48%{transform:scale(1,1);opacity:0.75}
+57.5%,100%{transform:scale(0.15,1);opacity:0}
+}
+
+      @keyframes fx-line2 {
+0%{transform:scale(1,1);opacity:0}
+46.7%{transform:scale(0.3,1);opacity:0;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+48.75%{transform:scale(1,1);opacity:0.75}
+58.25%,100%{transform:scale(0.15,1);opacity:0}
+}
+
+      @keyframes fx-junk0 {
+0%{transform:translate(0px,0px);opacity:0}
+62.45%{transform:translate(0px,0px);opacity:0;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+62.5%{transform:translate(0px,0px);opacity:1;animation-timing-function:linear}
+66%{transform:translate(-1.6px,-3.2px);opacity:1;animation-timing-function:linear}
+69.5%{transform:translate(-3px,-3.8px);opacity:1;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+73.5%{transform:translate(-4.2px,-1.2px);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+77%{transform:translate(-5px,2.5px);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+79%{transform:translate(-5.4px,1.6px);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+81%,82.5%{transform:translate(-5.7px,2.5px);opacity:1}
+87.5%,100%{transform:translate(-5.7px,2.5px);opacity:0}
+}
+
+      @keyframes fx-junk1 {
+0%{transform:translate(0px,0px);opacity:0}
+66.95%{transform:translate(0px,0px);opacity:0;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+67%{transform:translate(0px,0px);opacity:1;animation-timing-function:linear}
+70.2%{transform:translate(-2.6px,-4px);opacity:1;animation-timing-function:linear}
+73.4%{transform:translate(-5px,-4.6px);opacity:1;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+77%{transform:translate(-7px,-1px);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+80.2%{transform:translate(-8.4px,4.5px);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+81.8%{transform:translate(-8.8px,3.8px);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+83.4%,84.9%{transform:translate(-9.1px,4.5px);opacity:1}
+89.9%,100%{transform:translate(-9.1px,4.5px);opacity:0}
+}
+
+      @keyframes fx-junk2 {
+0%{transform:translate(0px,0px);opacity:0}
+71.95%{transform:translate(0px,0px);opacity:0;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+72%{transform:translate(0px,0px);opacity:1;animation-timing-function:linear}
+74.4%{transform:translate(-1.2px,-1.8px);opacity:1;animation-timing-function:linear}
+76.8%{transform:translate(-2.2px,-2.2px);opacity:1;animation-timing-function:cubic-bezier(.2,.75,.35,1)}
+79.6%{transform:translate(-3px,-0.6px);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+82%{transform:translate(-3.6px,1.5px);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+83.6%{transform:translate(-3.9px,1.1px);opacity:1;animation-timing-function:cubic-bezier(.55,0,.85,.4)}
+85.2%,86.7%{transform:translate(-4.1px,1.5px);opacity:1}
+91.7%,100%{transform:translate(-4.1px,1.5px);opacity:0}
+}
+
+      @keyframes fx-grit0 {
+0%,60%,92%,100%{transform:translate(0px,0px);opacity:0}
+63%{transform:translate(0px,0px);opacity:0.85;animation-timing-function:linear}
+64%,77.5%{transform:translate(0.3px,-0.4px);opacity:0.85;animation-timing-function:linear}
+66.25%,75.25%,79.75%{transform:translate(-0.35px,0px);opacity:0.85;animation-timing-function:linear}
+68.5%,73%,82%{transform:translate(0.3px,0px);opacity:0.85;animation-timing-function:linear}
+70.75%{transform:translate(-0.35px,-0.4px);opacity:0.85;animation-timing-function:linear}
+84.25%{transform:translate(-0.35px,-0.4px);opacity:0.85}
+88%{transform:translate(0px,0px);opacity:0.85}
+}
+
+      @keyframes fx-grit1 {
+0%,60%,92%,100%{transform:translate(0px,0px);opacity:0}
+63%{transform:translate(0px,0px);opacity:0.85;animation-timing-function:linear}
+64%,77.5%{transform:translate(-0.35px,-0.4px);opacity:0.85;animation-timing-function:linear}
+66.25%,75.25%,79.75%{transform:translate(0.3px,0px);opacity:0.85;animation-timing-function:linear}
+68.5%,73%,82%{transform:translate(-0.35px,0px);opacity:0.85;animation-timing-function:linear}
+70.75%{transform:translate(0.3px,-0.4px);opacity:0.85;animation-timing-function:linear}
+84.25%{transform:translate(0.3px,-0.4px);opacity:0.85}
+88%{transform:translate(0px,0px);opacity:0.85}
+}
+    </style>
+  </defs>
+
+  <!-- Clawd -->
+  <g class="fx-c-root">
+    <g class="fx-c-fade">
+      <g class="fx-c-shadow">
+        <rect x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+      </g>
+      <g class="fx-c-hop">
+        <g class="fx-c-legs">
+          <g id="legs" fill="#DE886D">
+            <g class="fx-c-leg1">
+              <rect x="11" y="11" width="1" height="4"/>
+            </g>
+            <g class="fx-c-leg2">
+              <rect x="9" y="11" width="1" height="4"/>
+            </g>
+            <g class="fx-c-leg3">
+              <rect x="5" y="11" width="1" height="4"/>
+            </g>
+            <g class="fx-c-leg4">
+              <rect x="3" y="11" width="1" height="4"/>
+            </g>
+          </g>
+        </g>
+        <g class="fx-c-body">
+          <g class="fx-c-arm-r">
+            <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+          </g>
+          <g class="fx-c-tor">
+            <rect x="2" y="6" width="11" height="7" fill="#DE886D" id="torso"/>
+          </g>
+          <g class="fx-c-arm-l">
+            <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+          </g>
+          <g class="fx-c-eyes" fill="#000000">
+            <g class="fx-c-eye-n">
+              <g class="fx-c-lid">
+                <rect x="10" y="8" width="1" height="2"/>
+                <rect x="4" y="8" width="1" height="2"/>
+              </g>
+            </g>
+            <g class="fx-c-eye-s">
+              <rect x="11" y="7.5" width="1" height="1"/>
+              <rect x="10" y="8.5" width="1" height="1"/>
+              <rect x="11" y="9.5" width="1" height="1"/>
+              <rect x="3" y="7.5" width="1" height="1"/>
+              <rect x="4" y="8.5" width="1" height="1"/>
+              <rect x="3" y="9.5" width="1" height="1"/>
+            </g>
+            <g class="fx-c-eye-h">
+              <rect x="11" y="9" width="1" height="1"/>
+              <rect x="10" y="8" width="1" height="1"/>
+              <rect x="9" y="9" width="1" height="1"/>
+              <rect x="5" y="9" width="1" height="1"/>
+              <rect x="4" y="8" width="1" height="1"/>
+              <rect x="3" y="9" width="1" height="1"/>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+  <!-- dust puff and speed lines -->
+  <g>
+    <g class="fx-puff0">
+      <rect x="11.1" y="13.8" width="1.4" height="1" fill="#C8B49E"/>
+    </g>
+    <g class="fx-puff1">
+      <rect x="7.3" y="14.1" width="1.2" height="1" fill="#C8B49E"/>
+    </g>
+    <g class="fx-puff2">
+      <rect x="3.1" y="13.9" width="1.4" height="1" fill="#C8B49E"/>
+    </g>
+    <g class="fx-puff3">
+      <rect x="0.8" y="14.2" width="1" height="1" fill="#C8B49E"/>
+    </g>
+    <g class="fx-line0">
+      <rect x="0" y="8.2" width="12" height="0.5" fill="#8E8E8E"/>
+    </g>
+    <g class="fx-line1">
+      <rect x="1.5" y="10.6" width="12.5" height="0.5" fill="#8E8E8E"/>
+    </g>
+    <g class="fx-line2">
+      <rect x="0.5" y="13" width="10.5" height="0.5" fill="#8E8E8E"/>
+    </g>
+  </g>
+  <!-- rummaging off-screen -->
+  <g>
+    <g class="fx-junk0">
+      <rect x="16" y="11.5" width="1" height="1" fill="#C8B49E"/>
+    </g>
+    <g class="fx-junk1">
+      <rect x="16" y="9.5" width="1" height="1" fill="#9C8C7C"/>
+    </g>
+    <g class="fx-junk2">
+      <rect x="15" y="12.5" width="2" height="1" fill="#9C8C7C"/>
+    </g>
+    <g class="fx-grit0">
+      <rect x="15.2" y="14" width="1" height="0.8" fill="#C8B49E"/>
+    </g>
+    <g class="fx-grit1">
+      <rect x="13.6" y="14.2" width="1" height="0.8" fill="#C8B49E"/>
+    </g>
+  </g>
+</svg>

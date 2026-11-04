@@ -1,0 +1,602 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* Mirror of clawd-alive-fetch-box-left.svg (enters and leaves through the RIGHT edge).
+         8-Second One-Shot — Fetch: Box (left). Starts on an EMPTY frame (he left
+         through the left screen edge in clawd-alive-fetch-exit-left). He hauls himself
+         back in backwards with three tugs, both claws gripping a cardboard box that is
+         still off-screen; it jams in the edge with a jolt (eyes pop). He glances at you,
+         strains (lean back, stretch, tremble) twice; on the second tug it pops free: he
+         flies back onto his bottom, the box shoots in and bonks his feet. Dazed double
+         blink, gets up, one proud hop with a "ta-da" pointing at the box (the box jiggles
+         back). Sly look, jumps in (legs tucked), silence, then only his eyes and claws
+         peek over the rim, look left, right, double blink, duck. The box grows his feet,
+         tiptoes away, freezes (busted!) with eyes popping up, ducks and scurries off,
+         fading before the window edge. A beat of empty frame, then he pops back in a
+         small dust puff and settles. The last 200 ms hold the exact rest pose of
+         clawd-idle-follow.svg. */
+      .fbx-cvis {
+        animation: fbx-cvis 8000ms infinite ease-in-out;
+      }
+
+      .fbx-cpos {
+        animation: fbx-cpos 8000ms infinite ease-in-out;
+      }
+
+      .fbx-shadow {
+        transform-origin: 7.5px 15.5px;
+        animation: fbx-shadow 8000ms infinite ease-in-out;
+      }
+
+      .fbx-cair {
+        transform-origin: 7.5px 15px;
+        animation: fbx-cair 8000ms infinite ease-in-out;
+      }
+
+      .fbx-legs {
+        transform-origin: 7.5px 15px;
+        animation: fbx-legs 8000ms infinite ease-in-out;
+      }
+
+      .fbx-lega {
+        animation: fbx-lega 8000ms infinite ease-in-out;
+      }
+
+      .fbx-legb {
+        animation: fbx-legb 8000ms infinite ease-in-out;
+      }
+
+      .fbx-body {
+        transform-origin: 7.5px 15px;
+        animation: fbx-body 8000ms infinite ease-in-out;
+      }
+
+      .fbx-arml {
+        transform-origin: 2px 10px;
+        animation: fbx-arml 8000ms infinite ease-in-out;
+      }
+
+      .fbx-armr {
+        transform-origin: 13px 10px;
+        animation: fbx-armr 8000ms infinite ease-in-out;
+      }
+
+      .fbx-legsout {
+        animation: fbx-legsout 8000ms infinite ease-in-out;
+      }
+
+      .fbx-look {
+        animation: fbx-look 8000ms infinite ease-in-out;
+      }
+
+      .fbx-lid {
+        transform-origin: 7.5px 9px;
+        animation: fbx-lid 8000ms infinite ease-in-out;
+      }
+
+      .fbx-bpos {
+        transform-origin: 6.5px 15px;
+        animation: fbx-bpos 8000ms infinite ease-in-out;
+      }
+
+      .fbx-bsh {
+        transform-origin: 6.5px 15.5px;
+        animation: fbx-bsh 8000ms infinite ease-in-out;
+      }
+
+      .fbx-bvis {
+        animation: fbx-bvis 8000ms infinite ease-in-out;
+      }
+
+      .fbx-bfront {
+        animation: fbx-bfront 8000ms infinite ease-in-out;
+      }
+
+      .fbx-claws {
+        animation: fbx-claws 8000ms infinite ease-in-out;
+      }
+
+      .fbx-puffvis {
+        animation: fbx-puffvis 8000ms infinite ease-in-out;
+      }
+
+      .fbx-puff0 {
+        transform-origin: 7.5px 10px;
+        animation: fbx-puff0 8000ms infinite ease-in-out;
+      }
+
+      .fbx-puff1 {
+        transform-origin: 7.5px 10px;
+        animation: fbx-puff1 8000ms infinite ease-in-out;
+      }
+
+      .fbx-puff2 {
+        transform-origin: 7.5px 10px;
+        animation: fbx-puff2 8000ms infinite ease-in-out;
+      }
+
+      .fbx-puff3 {
+        transform-origin: 7.5px 10px;
+        animation: fbx-puff3 8000ms infinite ease-in-out;
+      }
+
+      .fbx-puff4 {
+        transform-origin: 7.5px 10px;
+        animation: fbx-puff4 8000ms infinite ease-in-out;
+      }
+
+      .fbx-puff5 {
+        transform-origin: 7.5px 10px;
+        animation: fbx-puff5 8000ms infinite ease-in-out;
+      }
+
+      .fbx-puff6 {
+        transform-origin: 7.5px 10px;
+        animation: fbx-puff6 8000ms infinite ease-in-out;
+      }
+
+      .fbx-puff7 {
+        transform-origin: 7.5px 10px;
+        animation: fbx-puff7 8000ms infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      @keyframes fbx-cvis {
+0%,91.25%{opacity:0}
+3.737%,93.487%{opacity:0;animation-timing-function:step-end}
+3.75%,89.625%,93.5%,100%{opacity:1}
+}
+
+      @keyframes fbx-cpos {
+0%,3.75%{transform:translate(-30px,0px)}
+5.375%,6.5%{transform:translate(-21px,0px)}
+8.125%,9%{transform:translate(-12px,0px)}
+10.625%{transform:translate(-3px,0px);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+11.25%{transform:translate(-3.7px,0px);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+12.5%,85.125%{transform:translate(-3px,0px)}
+34.375%{transform:translate(-3px,0px);animation-timing-function:cubic-bezier(0.1,0.8,0.25,1)}
+36%,60.375%{transform:translate(6px,0px)}
+64.125%,80.75%{transform:translate(-8px,0px)}
+81.625%{transform:translate(-7px,0px)}
+82.5%{transform:translate(-6px,0px)}
+83.375%{transform:translate(-5px,0px)}
+84.25%{transform:translate(-4px,0px)}
+86%,88.75%{transform:translate(-2px,0px)}
+89.125%{transform:translate(-0.6px,0px)}
+89.5%{transform:translate(0.8px,0px)}
+89.875%{transform:translate(2.2px,0px)}
+90.25%{transform:translate(3.6px,0px)}
+90.625%{transform:translate(5px,0px)}
+91%{transform:translate(6.4px,0px)}
+91.375%{transform:translate(7.8px,0px)}
+91.75%{transform:translate(9.2px,0px)}
+92.487%{transform:translate(9.2px,0px);animation-timing-function:step-end}
+92.5%,100%{transform:translate(0px,0px)}
+}
+
+      @keyframes fbx-shadow {
+0%,34.375%,46.5%,49.375%,54.125%,60.375%,78.75%,96.25%,100%{transform:scale(1,1)}
+35.188%{transform:scale(0.6,1)}
+36%,45.75%{transform:scale(1.15,1)}
+51.375%{transform:scale(0.7,1)}
+53.125%{transform:scale(1.08,1)}
+62.25%{transform:scale(0.4,1)}
+63.75%,92.5%,93.5%{transform:scale(0,1)}
+78.737%{transform:scale(0,1);animation-timing-function:step-end}
+92.487%{transform:scale(1,1);animation-timing-function:step-end}
+95%{transform:scale(1.05,1)}
+}
+
+      @keyframes fbx-cair {
+0%,3.75%,5.375%,6.5%,8.125%,9%,10.625%,36%,36.25%,37.188%,53.125%,64.125%,100%{transform:translate(0px,0px) rotate(0deg)}
+4.562%,7.312%,9.812%{transform:translate(0px,-1px) rotate(0deg);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+34.375%,49.375%,60.375%{transform:translate(0px,0px) rotate(0deg);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+35.188%{transform:translate(0px,-2.5px) rotate(14deg);animation-timing-function:cubic-bezier(0.6,0,0.8,0.4)}
+36.688%{transform:translate(0px,-1.2px) rotate(0deg);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+51.375%{transform:translate(0px,-3.2px) rotate(0deg);animation-timing-function:cubic-bezier(0.6,0,0.8,0.4)}
+62.25%{transform:translate(0px,-7px) rotate(0deg);animation-timing-function:cubic-bezier(0.6,0,0.8,0.4)}
+}
+
+      @keyframes fbx-legs {
+0%,47.5%,48.375%,52.25%,54.125%,59.5%,78.75%,96.5%,100%{transform:scale(1,1)}
+35.737%,92.487%{transform:scale(1,1);animation-timing-function:step-end}
+35.75%,62.25%{transform:scale(1,0)}
+45.737%,78.737%{transform:scale(1,0);animation-timing-function:step-end}
+45.75%{transform:scale(1,0.6)}
+46.5%{transform:scale(1,1.04);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+49.375%,60.375%{transform:scale(1,0.9)}
+50.125%,61.125%{transform:scale(1,1.05)}
+53.125%{transform:scale(1,0.92)}
+92.5%,93.5%{transform:scale(0.2,0.2)}
+94.5%{transform:scale(0.9,1.08);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+95.5%{transform:scale(1.05,0.94)}
+}
+
+      @keyframes fbx-lega {
+0%,3.75%,4.75%,6.5%,7.5%,9%,10%,80.75%,82.5%,84.25%,86%,88.75%,89.5%,90.25%,91%,100%{transform:translate(0px,0px)}
+4.25%,7%,9.5%{transform:translate(0px,-1px)}
+81.625%,85.125%,89.125%,90.625%{transform:translate(0px,-1px);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+}
+
+      @keyframes fbx-legb {
+0%,4.25%,5.25%,7%,8%,9.5%,10.5%,82.5%,84.25%,89.5%,90.25%,91%,91.75%,100%{transform:translate(0px,0px)}
+4.75%,7.5%,10%{transform:translate(0px,-1px)}
+83.375%,89.875%,91.375%{transform:translate(0px,-1px);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+}
+
+      @keyframes fbx-body {
+0%,3.75%{transform:translate(0px,0px) rotate(0deg) skewX(-6deg) scale(1,1)}
+4.75%,7.5%,10%{transform:translate(0px,0px) rotate(0deg) skewX(-10deg) scale(0.97,1.04)}
+5.375%,8.125%{transform:translate(0px,0px) rotate(0deg) skewX(-4deg) scale(1.04,0.95)}
+6.5%,9%{transform:translate(0px,0px) rotate(0deg) skewX(-5deg) scale(1,1)}
+10.875%{transform:translate(0px,0px) rotate(0deg) skewX(4deg) scale(0.95,1.06);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+12.5%,18.125%,48.125%,48.375%,52.25%,54.75%,59.5%,97.25%,100%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(1,1)}
+19.375%{transform:translate(0px,0px) rotate(0deg) skewX(4deg) scale(1.03,0.96)}
+20.625%,24.375%{transform:translate(0px,0px) rotate(0deg) skewX(-10deg) scale(0.96,1.05);animation-timing-function:linear}
+21.188%,22.312%,23.438%{transform:translate(0.35px,0px) rotate(0deg) skewX(-10deg) scale(0.96,1.05);animation-timing-function:linear}
+21.75%,22.875%{transform:translate(-0.35px,0px) rotate(0deg) skewX(-10deg) scale(0.96,1.05);animation-timing-function:linear}
+25.625%{transform:translate(0px,0px) rotate(0deg) skewX(-2deg) scale(1.05,0.94)}
+26.375%,27.5%{transform:translate(0px,0px) rotate(0deg) skewX(-2deg) scale(1,1)}
+27%{transform:translate(0px,0px) rotate(0deg) skewX(-2deg) scale(1.04,0.95)}
+28.625%{transform:translate(0px,0px) rotate(0deg) skewX(6deg) scale(1.06,0.93)}
+29.875%,34.125%{transform:translate(0px,0px) rotate(0deg) skewX(-14deg) scale(0.93,1.08);animation-timing-function:linear}
+30.375%,31.375%,32.375%,33.375%{transform:translate(0.5px,0px) rotate(0deg) skewX(-14deg) scale(0.93,1.095);animation-timing-function:linear}
+30.875%,31.875%,32.875%{transform:translate(-0.5px,0px) rotate(0deg) skewX(-14deg) scale(0.93,1.065);animation-timing-function:linear}
+34.375%{transform:translate(0px,0px) rotate(0deg) skewX(-15deg) scale(0.93,1.08)}
+35%{transform:translate(0px,0px) rotate(0deg) skewX(-4deg) scale(1,1)}
+36%{transform:translate(0px,2px) rotate(0deg) skewX(0deg) scale(1.12,0.86);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+37%{transform:translate(0px,2px) rotate(0deg) skewX(0deg) scale(0.98,1.03)}
+37.625%,43.375%,44.375%,64.125%,68.5%,78.5%,78.75%{transform:translate(0px,2px) rotate(0deg) skewX(0deg) scale(1,1)}
+38.5%{transform:translate(0px,2px) rotate(4deg) skewX(0deg) scale(1,1)}
+39.75%{transform:translate(0px,2px) rotate(-3.5deg) skewX(0deg) scale(1,1)}
+41%{transform:translate(0px,2px) rotate(2.5deg) skewX(0deg) scale(1,1)}
+42.25%{transform:translate(0px,2px) rotate(-1.5deg) skewX(0deg) scale(1,1)}
+45.5%{transform:translate(0px,2px) rotate(0deg) skewX(0deg) scale(1.07,0.92)}
+46.5%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(0.95,1.06);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+47.5%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(1.02,0.98)}
+49.375%,60.375%,95.5%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(1.08,0.9)}
+50.125%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(0.94,1.08);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+53.125%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(1.1,0.88)}
+54.125%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(0.99,1.02)}
+61.125%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(0.92,1.08);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+62.25%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(1.04,0.94)}
+70.25%,77.5%{transform:translate(0px,-2px) rotate(0deg) skewX(0deg) scale(1,1)}
+80%{transform:translate(0px,-1.4px) rotate(0deg) skewX(0deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+80.75%,82.5%,84.25%,86%,86.25%,88.75%,89.5%,90.25%,91%,91.75%{transform:translate(0px,-1px) rotate(0deg) skewX(0deg) scale(1,1)}
+81.625%,83.375%,85.125%{transform:translate(0px,-1.6px) rotate(0deg) skewX(0deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+87%,88.25%{transform:translate(0px,-5px) rotate(0deg) skewX(0deg) scale(1,1)}
+89.125%,89.875%,90.625%,91.375%{transform:translate(0px,-1.8px) rotate(0deg) skewX(0deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+92.487%{transform:translate(0px,-1px) rotate(0deg) skewX(0deg) scale(1,1);animation-timing-function:step-end}
+92.5%,93.5%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(0.2,0.2)}
+94.5%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(0.9,1.15);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+96.5%{transform:translate(0px,0px) rotate(0deg) skewX(0deg) scale(0.98,1.02)}
+}
+
+      @keyframes fbx-arml {
+0%,12.5%,18.125%,25.625%{transform:translate(0px,-1px) scale(2.5,1)}
+10.625%{transform:translate(0px,0px) scale(2.5,1)}
+11.25%{transform:translate(0px,-1px) scale(2.85,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+19.375%{transform:translate(0px,-1px) scale(2.75,1)}
+20.625%{transform:translate(0px,-1px) scale(3,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+28.625%{transform:translate(0px,-1px) scale(2.65,1)}
+29.875%{transform:translate(0px,-1px) scale(3.2,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+34.375%{transform:translate(0px,-1px) scale(3.25,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+35%{transform:translate(0px,-3px) scale(1,1)}
+36.25%{transform:translate(0px,-1px) scale(1,1)}
+46.5%,50.75%,57.25%,92.5%,93.75%,96.25%,100%{transform:translate(0px,0px) scale(1,1)}
+52.125%{transform:translate(0px,-3px) scale(1.6,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+53%{transform:translate(0px,-2.6px) scale(1.75,1)}
+56%{transform:translate(0px,-3px) scale(1.6,1)}
+61.125%{transform:translate(0px,0px) scale(0,1)}
+92.487%{transform:translate(0px,0px) scale(0,1);animation-timing-function:step-end}
+94.75%{transform:translate(0px,-2px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+}
+
+      @keyframes fbx-armr {
+0%,10.625%,12.5%,18.125%,25.625%{transform:translate(-16px,1px) scale(4,1)}
+11.25%{transform:translate(-16.7px,1px) scale(4.35,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+19.375%{transform:translate(-16.5px,1px) scale(4.25,1)}
+20.625%{transform:translate(-17px,1px) scale(4.5,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+28.625%{transform:translate(-16.3px,1px) scale(4.15,1)}
+29.875%{transform:translate(-17.4px,1px) scale(4.7,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+34.375%{transform:translate(-17.5px,1px) scale(4.75,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+35%,56%{transform:translate(0px,-3px) scale(1,1)}
+36.25%{transform:translate(0px,-1px) scale(1,1)}
+46.5%,50.75%,57.25%,92.5%,93.75%,96.25%,100%{transform:translate(0px,0px) scale(1,1)}
+52.125%{transform:translate(0px,-3px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+53%{transform:translate(0px,-3.4px) scale(1,1)}
+61.125%{transform:translate(0px,0px) scale(0,1)}
+92.487%{transform:translate(0px,0px) scale(0,1);animation-timing-function:step-end}
+94.75%{transform:translate(0px,-2px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+}
+
+      @keyframes fbx-legsout {
+0%,45.75%,100%{opacity:0}
+35.737%{opacity:0;animation-timing-function:step-end}
+35.75%{opacity:1}
+45.737%{opacity:1;animation-timing-function:step-end}
+}
+
+      @keyframes fbx-look {
+0%,12.5%,18.75%,25.75%,27.5%,34.375%{transform:translate(-1px,0px)}
+13.75%,15.625%{transform:translate(-1.5px,0.5px)}
+16.375%,18.125%,26.125%,27.125%,41.625%,48.125%,57.25%,64.125%,70.625%,74.875%,100%{transform:translate(0px,0px)}
+34.75%{transform:translate(0px,-0.5px)}
+42.75%,58.125%{transform:translate(-1.3px,0px);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+62.375%{transform:translate(0px,0.5px)}
+71.5%,72.5%{transform:translate(-1.5px,0px)}
+73.25%,74.25%{transform:translate(1.5px,0px)}
+}
+
+      @keyframes fbx-lid {
+0%,10.625%,12.5%,16.75%,17.5%,19.375%,25%,28.625%,37.5%,39.125%,39.875%,40.5%,41.25%,52.125%,56.5%,58%,60.5%,75.125%,75.875%,76.375%,77.125%,87.375%,88.375%,96%,100%{transform:scale(1,1)}
+11%{transform:scale(1,1.35);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+17.125%,39.5%,40.875%,75.5%,76.75%,92.5%,95.25%{transform:scale(1,0.1)}
+20.625%,24.375%{transform:scale(1,0.4)}
+29.875%{transform:scale(1,0.3)}
+34.375%{transform:scale(1,0.3);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+34.625%{transform:scale(1,1.35)}
+36.25%{transform:scale(1,1.1)}
+36.438%{transform:scale(1,1.4)}
+52.75%,55.75%{transform:scale(1,0.25)}
+58.75%,60%{transform:scale(1,0.6)}
+87.625%,88.25%{transform:scale(1,1.3)}
+92.487%{transform:scale(1,1);animation-timing-function:step-end}
+}
+
+      @keyframes fbx-bpos {
+0%,3.75%{transform:translate(-46px,0px) rotate(0deg) scale(1,1)}
+5.375%,6.5%{transform:translate(-37px,0px) rotate(0deg) scale(1,1)}
+8.125%,9%{transform:translate(-28px,0px) rotate(0deg) scale(1,1)}
+10.625%,11.75%,24.375%,34.125%{transform:translate(-19px,0px) rotate(0deg) scale(1,1)}
+11%{transform:translate(-19.4px,0px) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+20.625%,29.875%{transform:translate(-19px,0px) rotate(0deg) scale(1,1);animation-timing-function:linear}
+21.188%,22.312%,23.438%{transform:translate(-18.75px,0px) rotate(0deg) scale(1,1);animation-timing-function:linear}
+21.75%,22.875%{transform:translate(-19.25px,0px) rotate(0deg) scale(1,1);animation-timing-function:linear}
+30.375%,31.375%,32.375%,33.375%{transform:translate(-18.6px,0px) rotate(0deg) scale(1,1);animation-timing-function:linear}
+30.875%,31.875%,32.875%{transform:translate(-19.4px,0px) rotate(0deg) scale(1,1);animation-timing-function:linear}
+34.375%{transform:translate(-19px,0px) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(0.1,0.8,0.25,1)}
+36.25%{transform:translate(-6.3px,0px) rotate(0deg) scale(0.92,1.06);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+37.375%{transform:translate(-7px,0px) rotate(0deg) scale(1.04,0.97)}
+38.25%,53.25%,55%,64.125%,66.125%,78.75%{transform:translate(-7px,0px) rotate(0deg) scale(1,1)}
+53.75%{transform:translate(-7px,0px) rotate(0deg) scale(1.05,0.9)}
+54.375%{transform:translate(-7px,0px) rotate(0deg) scale(0.97,1.05)}
+64.625%{transform:translate(-7px,0px) rotate(0deg) scale(1.07,0.9);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+65.375%{transform:translate(-7px,0px) rotate(0deg) scale(0.98,1.03)}
+80%{transform:translate(-7px,-3.4px) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+80.75%{transform:translate(-7px,-3px) rotate(0deg) scale(1,1)}
+81.625%{transform:translate(-6px,-3.6px) rotate(3deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+82.5%{transform:translate(-5px,-3px) rotate(0deg) scale(1,1)}
+83.375%{transform:translate(-4px,-3.6px) rotate(-3deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+84.25%{transform:translate(-3px,-3px) rotate(0deg) scale(1,1)}
+85.125%{transform:translate(-2px,-3.6px) rotate(3deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+86%,86.25%,87.125%,88.75%{transform:translate(-1px,-3px) rotate(0deg) scale(1,1)}
+86.625%{transform:translate(-1px,-3px) rotate(0deg) scale(1.03,0.97)}
+89.125%{transform:translate(0.4px,-3.8px) rotate(4deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+89.5%{transform:translate(1.8px,-3px) rotate(0deg) scale(1,1)}
+89.875%{transform:translate(3.2px,-3.8px) rotate(-4deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+90.25%{transform:translate(4.6px,-3px) rotate(0deg) scale(1,1)}
+90.625%{transform:translate(6px,-3.8px) rotate(4deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+91%{transform:translate(7.4px,-3px) rotate(0deg) scale(1,1)}
+91.375%{transform:translate(8.8px,-3.8px) rotate(-4deg) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+91.75%,100%{transform:translate(10.2px,-3px) rotate(0deg) scale(1,1)}
+}
+
+      @keyframes fbx-bsh {
+0%,3.75%{transform:translate(-46px,0px) scale(1,1)}
+5.375%,6.5%{transform:translate(-37px,0px) scale(1,1)}
+8.125%,9%{transform:translate(-28px,0px) scale(1,1)}
+10.625%,11.75%,24.375%,34.125%{transform:translate(-19px,0px) scale(1,1)}
+11%{transform:translate(-19.4px,0px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+20.625%,29.875%{transform:translate(-19px,0px) scale(1,1);animation-timing-function:linear}
+21.188%,22.312%,23.438%{transform:translate(-18.75px,0px) scale(1,1);animation-timing-function:linear}
+21.75%,22.875%{transform:translate(-19.25px,0px) scale(1,1);animation-timing-function:linear}
+30.375%,31.375%,32.375%,33.375%{transform:translate(-18.6px,0px) scale(1,1);animation-timing-function:linear}
+30.875%,31.875%,32.875%{transform:translate(-19.4px,0px) scale(1,1);animation-timing-function:linear}
+34.375%{transform:translate(-19px,0px) scale(1,1);animation-timing-function:cubic-bezier(0.1,0.8,0.25,1)}
+36.25%{transform:translate(-6.3px,0px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+37.375%,78.75%{transform:translate(-7px,0px) scale(1,1)}
+80%,80.75%{transform:translate(-7px,0px) scale(0,1)}
+81.625%{transform:translate(-6px,0px) scale(0,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+82.5%{transform:translate(-5px,0px) scale(0,1)}
+83.375%{transform:translate(-4px,0px) scale(0,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+84.25%{transform:translate(-3px,0px) scale(0,1)}
+85.125%{transform:translate(-2px,0px) scale(0,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+86%,88.75%{transform:translate(-1px,0px) scale(0,1)}
+89.125%{transform:translate(0.4px,0px) scale(0,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+89.5%{transform:translate(1.8px,0px) scale(0,1)}
+89.875%{transform:translate(3.2px,0px) scale(0,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+90.25%{transform:translate(4.6px,0px) scale(0,1)}
+90.625%{transform:translate(6px,0px) scale(0,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+91%{transform:translate(7.4px,0px) scale(0,1)}
+91.375%{transform:translate(8.8px,0px) scale(0,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+91.75%,100%{transform:translate(10.2px,0px) scale(0,1)}
+}
+
+      @keyframes fbx-bvis {
+0%,91.25%,100%{opacity:0}
+3.737%{opacity:0;animation-timing-function:step-end}
+3.75%,89.625%{opacity:1}
+}
+
+      @keyframes fbx-bfront {
+0%,92.5%,100%{opacity:0}
+62.3%{opacity:0;animation-timing-function:step-end}
+62.312%{opacity:1}
+92.487%{opacity:1;animation-timing-function:step-end}
+}
+
+      @keyframes fbx-claws {
+0%,77.875%,88.5%,100%{opacity:0}
+69.487%,86.862%{opacity:0;animation-timing-function:step-end}
+69.5%,86.875%{opacity:1}
+77.862%,88.487%{opacity:1;animation-timing-function:step-end}
+}
+
+      @keyframes fbx-puffvis {
+0%,96.875%,100%{opacity:0}
+93.112%{opacity:0;animation-timing-function:step-end}
+93.125%,95%{opacity:0.85}
+}
+
+      @keyframes fbx-puff0 {
+0%,93.125%{transform:translate(0px,0px) scale(0.3,0.3)}
+95.625%{transform:translate(-5px,-3px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+96.875%,100%{transform:translate(-5.75px,-4.05px) scale(0.5,0.5)}
+}
+
+      @keyframes fbx-puff1 {
+0%,93.125%{transform:translate(0px,0px) scale(0.3,0.3)}
+95.625%{transform:translate(5px,-4px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+96.875%,100%{transform:translate(5.75px,-5.2px) scale(0.5,0.5)}
+}
+
+      @keyframes fbx-puff2 {
+0%,93.125%{transform:translate(0px,0px) scale(0.3,0.3)}
+95.625%{transform:translate(-7px,1px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+96.875%,100%{transform:translate(-8.05px,0.55px) scale(0.5,0.5)}
+}
+
+      @keyframes fbx-puff3 {
+0%,93.125%{transform:translate(0px,0px) scale(0.3,0.3)}
+95.625%{transform:translate(7px,0px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+96.875%,100%{transform:translate(8.05px,-0.6px) scale(0.5,0.5)}
+}
+
+      @keyframes fbx-puff4 {
+0%,93.125%{transform:translate(0px,0px) scale(0.3,0.3)}
+95.625%{transform:translate(-3px,-6px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+96.875%,100%{transform:translate(-3.45px,-7.5px) scale(0.5,0.5)}
+}
+
+      @keyframes fbx-puff5 {
+0%,93.125%{transform:translate(0px,0px) scale(0.3,0.3)}
+95.625%{transform:translate(3px,-7px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+96.875%,100%{transform:translate(3.45px,-8.65px) scale(0.5,0.5)}
+}
+
+      @keyframes fbx-puff6 {
+0%,93.125%{transform:translate(0px,0px) scale(0.3,0.3)}
+95.625%{transform:translate(-6px,4px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+96.875%,100%{transform:translate(-6.9px,4px) scale(0.5,0.5)}
+}
+
+      @keyframes fbx-puff7 {
+0%,93.125%{transform:translate(0px,0px) scale(0.3,0.3)}
+95.625%{transform:translate(6px,4px) scale(1,1);animation-timing-function:cubic-bezier(0.2,0.7,0.3,1)}
+96.875%,100%{transform:translate(6.9px,4px) scale(0.5,0.5)}
+}
+    </style>
+  </defs>
+
+  <!-- Mirrored: everything below is the left variant flipped horizontally -->
+  <g transform="translate(15 0) scale(-1 1)">
+    <!-- Cardboard box (back layer: inside of the box + whole box while he hauls it) -->
+    <g class="fbx-bvis">
+      <g class="fbx-bsh">
+        <rect x="0" y="15" width="13" height="1" fill="#000000" opacity="0.5"/>
+      </g>
+      <g class="fbx-bpos">
+        <rect x="2" y="7" width="9" height="1" fill="#5E4024"/>
+                <rect x="0" y="8" width="13" height="7" fill="#C99A5F"/>
+                <rect x="12" y="8" width="1" height="7" fill="#A97B46"/>
+                <rect x="0" y="14" width="13" height="1" fill="#A97B46"/>
+                <rect x="0" y="8" width="13" height="1" fill="#D9AE74"/>
+                <rect x="6" y="8" width="1" height="4" fill="#ECCF9C"/>
+                <rect x="2" y="11" width="3" height="2" fill="#F2E5C8"/>
+                <rect x="2" y="12" width="2" height="1" fill="#B89466"/>
+                <rect x="-2" y="6" width="3" height="1" fill="#B8874E"/>
+                <rect x="-1" y="7" width="3" height="1" fill="#B8874E"/>
+                <rect x="12" y="6" width="3" height="1" fill="#A97B46"/>
+                <rect x="11" y="7" width="3" height="1" fill="#A97B46"/>
+      </g>
+    </g>
+
+    <!-- Dust puff when he pops back (behind him) -->
+    <g class="fbx-puffvis" fill="#B9B0A2">
+      <g class="fbx-puff0"><rect x="7" y="10" width="1" height="1"/></g>
+      <g class="fbx-puff1"><rect x="7" y="10" width="1" height="1"/></g>
+      <g class="fbx-puff2"><rect x="7" y="10" width="1" height="1"/></g>
+      <g class="fbx-puff3"><rect x="7" y="10" width="1" height="1"/></g>
+      <g class="fbx-puff4"><rect x="7" y="10" width="1" height="1"/></g>
+      <g class="fbx-puff5"><rect x="7" y="10" width="1" height="1"/></g>
+      <g class="fbx-puff6"><rect x="7" y="10" width="1" height="1"/></g>
+      <g class="fbx-puff7"><rect x="7" y="10" width="1" height="1"/></g>
+    </g>
+
+    <!-- Clawd -->
+    <g class="fbx-cvis">
+      <g class="fbx-cpos">
+        <!-- Ground Shadow -->
+        <g class="fbx-shadow">
+          <rect x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+        </g>
+        <g class="fbx-cair">
+          <!-- Legs (two pairs for steps; squash to tuck / sit) -->
+          <g class="fbx-legs">
+            <g id="legs" fill="#DE886D">
+              <g class="fbx-lega">
+                <rect x="3" y="11" width="1" height="4"/>
+                <rect x="9" y="11" width="1" height="4"/>
+              </g>
+              <g class="fbx-legb">
+                <rect x="5" y="11" width="1" height="4"/>
+                <rect x="11" y="11" width="1" height="4"/>
+              </g>
+            </g>
+          </g>
+          <!-- Upper Body -->
+          <g class="fbx-body">
+            <!-- Right Arm (behind the torso: becomes the lower hand when pulling) -->
+            <g class="fbx-armr">
+              <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+            </g>
+            <!-- Torso -->
+            <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+            <!-- Left Arm (upper pulling hand) -->
+            <g class="fbx-arml">
+              <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+            </g>
+            <!-- Little legs sticking out front when he lands on his bottom -->
+            <g class="fbx-legsout" fill="#DE886D">
+              <rect x="-1" y="10" width="3" height="1"/>
+              <rect x="-1" y="12" width="3" height="1"/>
+            </g>
+            <!-- Eyes -->
+            <g class="fbx-look">
+              <g class="fbx-lid" fill="#000000">
+                <rect x="4" y="8" width="1" height="2"/>
+                <rect x="10" y="8" width="1" height="2"/>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- Box front (in front of him only while he hides inside) -->
+    <g class="fbx-bvis">
+      <g class="fbx-bpos">
+        <g class="fbx-bfront">
+                <rect x="0" y="8" width="13" height="7" fill="#C99A5F"/>
+                <rect x="12" y="8" width="1" height="7" fill="#A97B46"/>
+                <rect x="0" y="14" width="13" height="1" fill="#A97B46"/>
+                <rect x="0" y="8" width="13" height="1" fill="#D9AE74"/>
+                <rect x="6" y="8" width="1" height="4" fill="#ECCF9C"/>
+                <rect x="2" y="11" width="3" height="2" fill="#F2E5C8"/>
+                <rect x="2" y="12" width="2" height="1" fill="#B89466"/>
+                <rect x="-2" y="6" width="3" height="1" fill="#B8874E"/>
+                <rect x="-1" y="7" width="3" height="1" fill="#B8874E"/>
+                <rect x="12" y="6" width="3" height="1" fill="#A97B46"/>
+                <rect x="11" y="7" width="3" height="1" fill="#A97B46"/>
+          <!-- Little claws hooked over the rim -->
+          <g class="fbx-claws" fill="#DE886D">
+            <rect x="0" y="7" width="2" height="2"/>
+            <rect x="11" y="7" width="2" height="2"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

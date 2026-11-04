@@ -258,14 +258,26 @@ describe("theme companionAnimations block", () => {
       fakeNapOut: { files: ["clawd-alive-fake-nap-out.svg"], duration: 500 },
       pettingIn: { files: ["clawd-alive-petting-in.svg"], duration: 250 },
       pettingOut: { files: ["clawd-alive-petting-out.svg"], duration: 300 },
+      // Fetch: one-shot exit, then the hauled object, each for its loop length.
+      fetchExitLeft: { files: ["clawd-alive-fetch-exit-left.svg"], duration: 2000 },
+      fetchExitRight: { files: ["clawd-alive-fetch-exit-right.svg"], duration: 2000 },
+      fetchCursorLeft: { files: ["clawd-alive-fetch-cursor-left.svg"], duration: 7600 },
+      fetchCursorRight: { files: ["clawd-alive-fetch-cursor-right.svg"], duration: 7600 },
+      fetchDuckLeft: { files: ["clawd-alive-fetch-duck-left.svg"], duration: 7900 },
+      fetchDuckRight: { files: ["clawd-alive-fetch-duck-right.svg"], duration: 7900 },
+      fetchEnterLeft: { files: ["clawd-alive-fetch-enter-left.svg"], duration: 8000 },
+      fetchEnterRight: { files: ["clawd-alive-fetch-enter-right.svg"], duration: 8000 },
+      fetchBugLeft: { files: ["clawd-alive-fetch-bug-left.svg"], duration: 8000 },
+      fetchBugRight: { files: ["clawd-alive-fetch-bug-right.svg"], duration: 8000 },
+      fetchBoxLeft: { files: ["clawd-alive-fetch-box-left.svg"], duration: 8000 },
+      fetchBoxRight: { files: ["clawd-alive-fetch-box-right.svg"], duration: 8000 },
+      fetchSockLeft: { files: ["clawd-alive-fetch-sock-left.svg"], duration: 8000 },
+      fetchSockRight: { files: ["clawd-alive-fetch-sock-right.svg"], duration: 8000 },
+      searchMouse: { files: ["clawd-alive-search-mouse.svg"], duration: 3000 },
     };
     assert.deepStrictEqual(theme.companionAnimations, base);
     const declared = Object.keys(theme.companionAnimations);
-    // The fetch / searchMouse art is still being drawn: the integration step
-    // adds it to theme.json and drops this exclusion.
-    const artPending = new Set([...schema.FETCH_ANIMATION_KEYS, ...schema.SEARCH_MOUSE_ANIMATION_KEYS]);
-    assert.deepStrictEqual(declared.filter((key) => !artPending.has(key)),
-      schema.COMPANION_ANIMATION_KEYS.filter((key) => !artPending.has(key)));
+    assert.deepStrictEqual(declared, [...schema.COMPANION_ANIMATION_KEYS]);
     const required = schema.collectRequiredAssetFiles(theme);
     for (const key of declared) {
       const [file] = theme.companionAnimations[key].files;
