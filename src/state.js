@@ -907,6 +907,12 @@ function normalizeApplyStateOptions(state, options = {}) {
 // that decision instead of rolling again. The logical state, timers, hit box
 // family and wake path stay exactly the original ones. Must run after
 // previousState and currentState are updated.
+// Alive turned off (or the hook's answers changed): forget the held file so
+// the next apply of the sleep state shows the theme's own visual (Ruling R1').
+function dropSleepVariant() {
+  sleepVariantSvg = null;
+  collapseAsked = false;
+}
 function resolveSleepVariant(state, svgOverride, options) {
   const sleepPhase = state === "sleeping" || state === "collapsing";
   if (!sleepPhase || svgOverride || options.settingsPreview === true || ctx.doNotDisturb) {
@@ -4448,7 +4454,7 @@ return {
   // Read-only, unmerged account windows for source-specific alert deduplication.
   getAccountQuotaSnapshot: () => accountQuota.snapshot({ mergeSources: false }),
   startStaleCleanup, stopStaleCleanup, startWakePoll, stopWakePoll,
-  getSvgOverride, getPetPresentationSessions, refreshPetPresentation, cleanStaleSessions, startStartupRecovery, refreshTheme,
+  getSvgOverride, getPetPresentationSessions, refreshPetPresentation, cleanStaleSessions, startStartupRecovery, refreshTheme, dropSleepVariant,
   detectRunningAgentProcesses, buildSessionSnapshot,
   emitSessionSnapshot, broadcastSessionSnapshot, getLastSessionSnapshot,
   getActiveSessionAliasKeys,

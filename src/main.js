@@ -6178,6 +6178,16 @@ try {
     _settingsController.subscribeKey(key, (_value, snapshot) => {
       _companion.configure(readCompanionConfig(snapshot));
       nudgeCompanionMood();
+      if (key === "companionEnabled" && snapshot && snapshot.companionEnabled !== true) {
+        // Alive off mid-sleep: drop the dreamy file now, not at the next sleep.
+        try {
+          _state.dropSleepVariant();
+          const current = _state.getCurrentState();
+          if (current === "sleeping" || current === "collapsing") _state.applyState(current, _state.getSvgOverride(current));
+        } catch (err) {
+          console.warn("Clawd: companion sleep variant drop failed:", err && err.message);
+        }
+      }
       if (key === "companionEnabled" || key === "companionInteractions") {
         sendToHitWin("hit-state-sync", { petGesturesEnabled: isPetGesturesEnabled(snapshot) });
       }

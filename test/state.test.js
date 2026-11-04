@@ -1510,6 +1510,17 @@ describe("Clawd Alive dreamy sleep (pickSleepVisual)", () => {
     assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
   });
 
+  it("dropSleepVariant followed by a re-apply shows the original sleeping file", () => {
+    api.applyState("idle");
+    api.applyState("sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-sleep-twitch.svg");
+    answer = null; // Alive off: the hook answers null from now on
+    api.dropSleepVariant();
+    api.applyState("sleeping", api.getSvgOverride("sleeping"));
+    assert.strictEqual(api.getCurrentState(), "sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
+  });
+
   it("a session-resolved sleep goes through the hook too", () => {
     api.applyState("idle");
     api.setState("sleeping");
