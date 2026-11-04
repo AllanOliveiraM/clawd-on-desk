@@ -80,6 +80,15 @@ const VISIBLE_MOUTH_FILES = Object.freeze([
   "clawd-react-annoyed.svg",
   "clawd-react-double.svg",
   "clawd-react-double-jump.svg",
+  // Clawd Alive work escalation: the cigarette follows the torso like typing.
+  "clawd-alive-work-coffee.svg",
+  "clawd-alive-work-dual.svg",
+  "clawd-alive-work-trio.svg",
+  "clawd-alive-work-control-room.svg",
+  "clawd-alive-work-swamped.svg",
+  "clawd-alive-work-chaos.svg",
+  "clawd-alive-juggle-laptops.svg",
+  "clawd-alive-juggle-chaos.svg",
 ]);
 
 const HIDDEN_MOUTH_FILES = Object.freeze([
@@ -127,7 +136,7 @@ const OPTIONAL_LIBRARY_FILES = Object.freeze([
   "clawd-working-wizard.svg",
 ]);
 
-test("mouth policy covers the approved 93 stock sprites exactly", () => {
+test("mouth policy covers the approved 101 stock sprites exactly", () => {
   const theme = themeLoader.loadTheme("clawd", { strict: true });
   const files = theme.customization.mouthAccessories.files;
   const stockFiles = Object.fromEntries(
@@ -141,7 +150,7 @@ test("mouth policy covers the approved 93 stock sprites exactly", () => {
     new Set(Object.keys(stockFiles)),
     new Set([...VISIBLE_MOUTH_FILES, ...HIDDEN_MOUTH_FILES])
   );
-  assert.strictEqual(Object.keys(stockFiles).length, 93);
+  assert.strictEqual(Object.keys(stockFiles).length, 101);
   assert.deepStrictEqual(files["clawd-outlaw-bender.svg"], { visibility: "hidden" });
   assert.deepStrictEqual(
     files["clawd-working-typing-boss.svg"],
@@ -411,6 +420,14 @@ test("Clawd lists its long-lived animations as object-channel SVGs", () => {
     "clawd-alive-petting-out.svg",
     "clawd-alive-sleep-twitch.svg",
     "clawd-alive-collapse-sleep-twitch.svg",
+    "clawd-alive-work-coffee.svg",
+    "clawd-alive-work-dual.svg",
+    "clawd-alive-work-trio.svg",
+    "clawd-alive-work-control-room.svg",
+    "clawd-alive-work-swamped.svg",
+    "clawd-alive-work-chaos.svg",
+    "clawd-alive-juggle-laptops.svg",
+    "clawd-alive-juggle-chaos.svg",
   ]);
 });
 
@@ -495,6 +512,14 @@ test("Clawd caps its long-lived object-channel animations to 24 discrete steps p
     "clawd-alive-petting-out.svg": 24,
     "clawd-alive-sleep-twitch.svg": 24,
     "clawd-alive-collapse-sleep-twitch.svg": 24,
+    "clawd-alive-work-coffee.svg": 24,
+    "clawd-alive-work-dual.svg": 24,
+    "clawd-alive-work-trio.svg": 24,
+    "clawd-alive-work-control-room.svg": 24,
+    "clawd-alive-work-swamped.svg": 24,
+    "clawd-alive-work-chaos.svg": 24,
+    "clawd-alive-juggle-laptops.svg": 24,
+    "clawd-alive-juggle-chaos.svg": 24,
   });
 });
 

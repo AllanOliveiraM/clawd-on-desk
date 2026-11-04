@@ -107,6 +107,14 @@ const BUILTIN_ACCESSORY_MOTION_PADDING = Object.freeze({
     "clawd-sleeping.svg": Object.freeze({ left: 0.2, top: 5.3, right: 0.2 }),
     // Sleeping plus the leg-twitch jolt (measured +0.05 below, rounded out).
     "clawd-alive-sleep-twitch.svg": Object.freeze({ left: 0.2, top: 5.3, right: 0.2, bottom: 0.1 }),
+    // Clawd Alive work escalation (trio and juggle-chaos are hatless). The
+    // chaos tier hops and flips, so its hat sweeps a wide circle.
+    "clawd-alive-work-coffee.svg": Object.freeze({ left: 0.5, top: 0.9, right: 0.9, bottom: 0.9 }),
+    "clawd-alive-work-dual.svg": Object.freeze({ left: 1, top: 0.7, right: 1, bottom: 1 }),
+    "clawd-alive-work-control-room.svg": Object.freeze({ left: 4.9, top: 3.4, right: 5.6, bottom: 1.3 }),
+    "clawd-alive-work-swamped.svg": Object.freeze({ left: 2.9, top: 2.4, right: 3.1, bottom: 1.7 }),
+    "clawd-alive-work-chaos.svg": Object.freeze({ left: 10.2, top: 12.1, right: 10.6, bottom: 19.9 }),
+    "clawd-alive-juggle-laptops.svg": Object.freeze({ left: 1.1, top: 0.1, right: 1.1, bottom: 0.6 }),
   }),
   cloudling: Object.freeze({
     // Idle is script-driven, so this one is derived rather than sampled: the
@@ -213,6 +221,14 @@ const BUILTIN_MOUTH_ACCESSORY_MOTION_PADDING = Object.freeze({
     "clawd-alive-fake-nap-out.svg": Object.freeze({ left: 0.2, top: 0.5, right: 0.3, bottom: 0.1 }),
     "clawd-alive-petting-in.svg": Object.freeze({ left: 0.1, top: 0.1, right: 0.4, bottom: 0.1 }),
     "clawd-alive-petting-out.svg": Object.freeze({ left: 0.2, top: 0.4, right: 0.3, bottom: 0.1 }),
+    "clawd-alive-work-coffee.svg": Object.freeze({ left: 0.2, top: 0.3, right: 0.6, bottom: 0.5 }),
+    "clawd-alive-work-dual.svg": Object.freeze({ left: 0.6, top: 0.3, right: 0.7, bottom: 0.6 }),
+    "clawd-alive-work-trio.svg": Object.freeze({ left: 2.9, top: 0.5, right: 2.8, bottom: 0.7 }),
+    "clawd-alive-work-control-room.svg": Object.freeze({ left: 4.9, top: 2.2, right: 5.5, bottom: 0.7 }),
+    "clawd-alive-work-swamped.svg": Object.freeze({ left: 1.2, top: 1.3, right: 1.7, bottom: 1.5 }),
+    "clawd-alive-work-chaos.svg": Object.freeze({ left: 12.6, top: 13.5, right: 9.3, bottom: 2.5 }),
+    "clawd-alive-juggle-laptops.svg": Object.freeze({ left: 0.7, top: 0.1, right: 0.7, bottom: 0.6 }),
+    "clawd-alive-juggle-chaos.svg": Object.freeze({ left: 0.9, top: 1.5, right: 3, bottom: 1.7 }),
     "clawd-idle-reading.svg": Object.freeze({ right: 0.2, bottom: 0.9 }),
     "clawd-react-left.svg": Object.freeze({ left: 2.4, top: 0.4 }),
     "clawd-react-right.svg": Object.freeze({ right: 2.4, bottom: 0.4 }),
