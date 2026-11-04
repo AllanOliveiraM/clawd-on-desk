@@ -292,6 +292,22 @@ test("a rest spot on a monitor the pet cannot reach gives no preferred target", 
   assert.deepEqual(unknown.runtime.pickRoamTarget(REST_ARGS), { x: 950, y: 350, preferred: true });
 });
 
+test("an unknown pet display only matches a rest spot whose work area is the pet's own", () => {
+  const near = { x: 0, y: 0, width: 2000, height: 800 };
+  const farArea = { x: 2000, y: 0, width: 1000, height: 800 };
+  const areas = (id) => (id === 1 ? near : id === 2 ? farArea : null);
+  const noId = { ...REST_ARGS, displayId: null };
+  const far = harness([], { loaded: REST_LOADED(2), options: { getDisplayWorkArea: areas } });
+  far.runtime.configure({ ...ON, memory: true });
+  assert.equal(far.runtime.pickRoamTarget(noId), null, "a null pet display is not 'every display'");
+  const own = harness([], { loaded: REST_LOADED(1), options: { getDisplayWorkArea: areas } });
+  own.runtime.configure({ ...ON, memory: true });
+  assert.deepEqual(own.runtime.pickRoamTarget(noId), { x: 950, y: 350, preferred: true });
+  const blind = harness([], { loaded: REST_LOADED(2) });
+  blind.runtime.configure({ ...ON, memory: true });
+  assert.equal(blind.runtime.pickRoamTarget(noId), null, "no geometry to compare: no rest target");
+});
+
 // ---- 12: sleep roll bookkeeping ----
 
 test("a collapse without twitch art leaves the sleep a fresh roll", () => {

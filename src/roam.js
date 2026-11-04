@@ -180,6 +180,18 @@ module.exports = function initRoam(ctx) {
     }
   }
 
+  // Clawd Alive: the id of the display whose work area roam walks in (the
+  // one nearest the pet center), null when unknown (Ruling R11).
+  function resolveDisplayId(bounds) {
+    if (typeof ctx.getNearestDisplayId !== "function") return null;
+    try {
+      const id = ctx.getNearestDisplayId(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      return typeof id === "number" && Number.isFinite(id) ? id : null;
+    } catch {
+      return null;
+    }
+  }
+
   // Clawd Alive: optional preferred target for unconstrained walks. Returns
   // undefined to mean "use the original random picker", null to hold this
   // round, or a target clamped into the already-computed band/fence.
@@ -197,7 +209,7 @@ module.exports = function initRoam(ctx) {
           ? { width: size.width, height: size.height }
           : { width: bounds.width, height: bounds.height },
         fence: fenceRect ? { ...fenceRect } : null,
-        displayId: null,
+        displayId: resolveDisplayId(bounds),
         workArea: { x: wa.x, y: wa.y, width: wa.width, height: wa.height },
         edgeBounds: edgeBounds ? { ...edgeBounds } : null,
       });

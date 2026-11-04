@@ -221,6 +221,10 @@ it("roam ctx isIdleActivityPlaying includes companion", () => {
   assert.ok(roamCtx.includes("pickPreferredTarget: (args) => _companion.pickRoamTarget(args),"));
   assert.ok(roamCtx.includes("onWalkFinished: (info) => nudgeCompanionMood(_companion.noteWalkFinished(info)),"));
   assert.ok(roamCtx.includes("pickWalkVisual: () => _companion.pickWalkVisual(),"));
+  // R11: the rest spot compares real display ids, from the same nearest pick.
+  assert.ok(roamCtx.includes("getNearestDisplayId,"));
+  const helper = slice("function getNearestDisplayId(cx, cy) {", "\n}\n");
+  assert.ok(helper.includes("findNearestDisplayId(screen.getAllDisplays(), cx, cy)"));
 });
 
 it("state ctx asks the companion for the dreamy sleep visual", () => {

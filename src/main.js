@@ -163,6 +163,7 @@ const { registerSettingsAnimationOverridesIpc } = createSettingsAnimationOverrid
 const createShortcutRuntime = require("./shortcut-runtime");
 const {
   findNearestWorkArea,
+  findNearestDisplayId,
   buildDisplaySnapshot,
   SYNTHETIC_WORK_AREA,
 } = require("./work-area");
@@ -5849,6 +5850,15 @@ function getNearestWorkArea(cx, cy) {
   return findNearestWorkArea(screen.getAllDisplays(), getPrimaryWorkAreaSafe(), cx, cy);
 }
 
+// The id of the display getNearestWorkArea() picks (Clawd Alive rest spot).
+function getNearestDisplayId(cx, cy) {
+  try {
+    return findNearestDisplayId(screen.getAllDisplays(), cx, cy);
+  } catch {
+    return null;
+  }
+}
+
 function clampToScreenVisual(x, y, w, h, options = {}) { return petWindowRuntime.clampToScreenVisual(x, y, w, h, options); }
 function clampToScreen(x, y, w, h) { return petWindowRuntime.clampToScreen(x, y, w, h); }
 
@@ -5941,6 +5951,7 @@ const _roamCtx = {
   get bubbleFollowPet() { return bubbleFollowPet; },
   get pendingPermissions() { return pendingPermissions; },
   getNearestWorkArea,
+  getNearestDisplayId,
   clampToScreenVisual,
   getMiniMode: () => _mini.getMiniMode(),
   getCurrentState: () => _state.getCurrentState(),

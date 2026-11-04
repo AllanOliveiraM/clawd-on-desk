@@ -40,6 +40,22 @@ function findNearestWorkArea(displays, primaryWa, cx, cy) {
   return nearest;
 }
 
+// The id of the display findNearestWorkArea would pick (same loop, same tie
+// rule), or null when there are no displays or it has no numeric id.
+function findNearestDisplayId(displays, cx, cy) {
+  if (!Array.isArray(displays) || displays.length === 0) return null;
+  let nearest = displays[0];
+  let minDist = Infinity;
+  for (const d of displays) {
+    const wa = d.workArea;
+    const dx = Math.max(wa.x - cx, 0, cx - (wa.x + wa.width));
+    const dy = Math.max(wa.y - cy, 0, cy - (wa.y + wa.height));
+    const dist = dx * dx + dy * dy;
+    if (dist < minDist) { minDist = dist; nearest = d; }
+  }
+  return nearest && Number.isFinite(nearest.id) ? nearest.id : null;
+}
+
 function computeLooseClamp(displays, primaryWa, x, y, w, h, options = {}) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   if (Array.isArray(displays)) {
@@ -151,6 +167,7 @@ function isValidDisplaySnapshot(value) {
 module.exports = {
   getDisplayInsets,
   findNearestWorkArea,
+  findNearestDisplayId,
   computeLooseClamp,
   buildDisplaySnapshot,
   findMatchingDisplay,

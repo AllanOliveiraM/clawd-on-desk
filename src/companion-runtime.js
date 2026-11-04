@@ -847,6 +847,10 @@ function createCompanionRuntime(options = {}) {
       && area.width > 0 && area.height > 0 ? area : null;
   }
 
+  function sameRect(a, b) {
+    return !!(a && b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height);
+  }
+
   function pickRoamTarget(args) {
     if (disposed || !args) return null;
     const debugWalk = !!(config.enabled && pendingWalk && pendingWalk.debug);
@@ -956,8 +960,12 @@ function createCompanionRuntime(options = {}) {
         restHolds = 0;
         return null;
       }
-      const sameDisplay = restSpot.displayId == null || displayId == null || restSpot.displayId === displayId;
-      const otherArea = typeof getDisplayWorkArea === "function" ? validArea(getDisplayWorkArea(restSpot.displayId)) : null;
+      const otherArea = restSpot.displayId != null && typeof getDisplayWorkArea === "function"
+        ? validArea(getDisplayWorkArea(restSpot.displayId)) : null;
+      // An unknown pet display is not "every display": only a rest spot whose
+      // work area is exactly the pet's own counts as the same monitor.
+      const sameDisplay = restSpot.displayId == null
+        || (displayId != null ? restSpot.displayId === displayId : sameRect(otherArea, validArea(args.workArea)));
       // A rest spot on another monitor the pet cannot reach from here would
       // clamp to the wrong edge every time: no preferred target (Ruling R11).
       if (!sameDisplay && !otherArea) return null;

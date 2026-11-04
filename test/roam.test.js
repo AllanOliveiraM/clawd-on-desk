@@ -3207,8 +3207,37 @@ describe("roam companion hooks", () => {
     assert.deepStrictEqual(args.size, { width: 120, height: 120 });
     assert.deepStrictEqual(args.workArea, { x: 0, y: 0, width: 1920, height: 1080 });
     assert.equal(args.fence, null);
-    assert.equal(args.displayId, null);
+    assert.equal(args.displayId, null, "no display lookup: unknown display");
     roam.setEnabled(false);
+  });
+
+  it("preferred-target args carry the nearest display id (R11)", () => {
+    const seen = [];
+    const centers = [];
+    const ctx = makeCtx({
+      getNearestDisplayId: (cx, cy) => { centers.push([cx, cy]); return 42; },
+      pickPreferredTarget: (args) => { seen.push(args); return null; },
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    assert.equal(seen[0].displayId, 42);
+    assert.deepStrictEqual(centers[0], [460, 360]);
+    roam.setEnabled(false);
+  });
+
+  it("a throwing or odd display lookup reports an unknown display", () => {
+    for (const lookup of [() => { throw new Error("x"); }, () => "2", () => NaN]) {
+      const seen = [];
+      const ctx = makeCtx({ getNearestDisplayId: lookup, pickPreferredTarget: (args) => { seen.push(args); return null; } });
+      const roam = roamModule(ctx);
+      roam.setEnabled(true);
+      roam.tick();
+      mock.timers.tick(8000);
+      assert.equal(seen[0].displayId, null);
+      roam.setEnabled(false);
+    }
   });
 
   it("preferred target is clamped into fence", () => {

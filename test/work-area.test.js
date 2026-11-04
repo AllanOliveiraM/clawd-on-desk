@@ -9,6 +9,7 @@ const assert = require("node:assert");
 const {
   getDisplayInsets,
   findNearestWorkArea,
+  findNearestDisplayId,
   computeLooseClamp,
   buildDisplaySnapshot,
   findMatchingDisplay,
@@ -60,6 +61,21 @@ describe("getDisplayInsets", () => {
       }),
       { top: 0, right: 64, bottom: 0, left: 0 }
     );
+  });
+});
+
+describe("findNearestDisplayId", () => {
+  it("names the display findNearestWorkArea picks", () => {
+    const displays = [{ id: 7, ...display(0, 0, 1920, 1080) }, { id: 9, ...display(1920, 0, 1920, 1080) }];
+    assert.strictEqual(findNearestDisplayId(displays, 500, 500), 7);
+    assert.strictEqual(findNearestDisplayId(displays, 2500, 500), 9);
+    assert.strictEqual(findNearestDisplayId(displays, 9000, 500), 9);
+  });
+
+  it("is null without displays or without a numeric id", () => {
+    assert.strictEqual(findNearestDisplayId([], 0, 0), null);
+    assert.strictEqual(findNearestDisplayId(null, 0, 0), null);
+    assert.strictEqual(findNearestDisplayId([display(0, 0, 100, 100)], 0, 0), null);
   });
 });
 
