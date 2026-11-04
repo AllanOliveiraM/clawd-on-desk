@@ -1285,6 +1285,7 @@ function loadGeneralTabForTest({
     core,
     content,
     tab,
+    context,
     renderContent,
     getContentRenderCount: () => contentRenderCount,
     getSwitchMeta: (key) => core.state.mountedControls.generalSwitches.get(key) || null,
@@ -13151,6 +13152,40 @@ describe("settings renderer browser environment", () => {
           harness.core.tabs.pet.applyCompanionMood({ ...SNAPSHOT, lastInteractionAt: Date.now() - age });
           assert.strictEqual(card().querySelector(".companion-mood-last").textContent, text);
         }
+      });
+
+      it("the last-interaction age refreshes when Settings regains focus (no IPC)", async () => {
+        const { harness, pulls, card } = moodHarness();
+        await flush();
+        const VmDate = vm.runInContext("Date", harness.context);
+        const realNow = VmDate.now;
+        const start = realNow.call(VmDate);
+        let fake = start;
+        VmDate.now = () => fake;
+        try {
+          harness.core.tabs.pet.applyCompanionMood({ ...SNAPSHOT, lastInteractionAt: start - 2 * 60 * 1000 });
+          const last = () => card().querySelector(".companion-mood-last").textContent;
+          assert.strictEqual(last(), en.companionMoodLastMinutes.replace("{n}", "2"));
+          fake = start + 10 * 60 * 1000;
+          assert.strictEqual(last(), en.companionMoodLastMinutes.replace("{n}", "2"), "no timer of its own");
+          harness.dispatchWindowEvent("focus");
+          assert.strictEqual(last(), en.companionMoodLastMinutes.replace("{n}", "12"));
+          assert.deepStrictEqual(pulls, ["pull"], "focus re-formats, it does not pull");
+          // Unmounted: the listener removes itself on the next focus.
+          const listening = harness.getWindowListenerCount("focus");
+          harness.content.innerHTML = "";
+          harness.dispatchWindowEvent("focus");
+          assert.strictEqual(harness.getWindowListenerCount("focus"), listening - 1);
+        } finally {
+          VmDate.now = realNow;
+        }
+      });
+
+      it("a hidden card (Clawd Alive off) adds no focus listener", async () => {
+        const off = moodHarness({ enabled: false });
+        const on = moodHarness();
+        await flush();
+        assert.strictEqual(on.harness.getWindowListenerCount("focus"), off.harness.getWindowListenerCount("focus") + 1);
       });
 
       it("is hidden with Clawd Alive off and pulls when it turns on", async () => {

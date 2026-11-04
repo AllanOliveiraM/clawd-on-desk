@@ -566,7 +566,8 @@
 
   // Spec 2026-11-04 §3: mood card. Data comes from one pull when the card is
   // (re)mounted or Clawd Alive turns on, then from main's rate-limited push
-  // (applyCompanionMood). The renderer never polls.
+  // (applyCompanionMood). The renderer never polls; window focus only
+  // re-formats the last-interaction age from the data it already has.
   const COMPANION_MOOD_BARS = [
     ["energy", "companionMoodEnergy"],
     ["contentment", "companionMoodContentment"],
@@ -650,8 +651,32 @@
     row.appendChild(text);
 
     let requestId = 0;
+    // The last snapshot's lastInteractionAt (undefined until one applied), so
+    // the age text can be re-formatted when Settings regains focus: a cheap
+    // local refresh, no IPC and no timer. The listener only exists while the
+    // card is visible and drops itself once the card is unmounted.
+    let lastAt;
+    let focusListening = false;
     function isMounted() {
       return document.body.contains(row);
+    }
+    function onWindowFocus() {
+      if (!isMounted()) {
+        stopFocusRefresh();
+        return;
+      }
+      if (row.hidden || lastAt === undefined) return;
+      last.textContent = formatLastInteraction(lastAt);
+    }
+    function startFocusRefresh() {
+      if (focusListening || typeof window.addEventListener !== "function") return;
+      window.addEventListener("focus", onWindowFocus);
+      focusListening = true;
+    }
+    function stopFocusRefresh() {
+      if (!focusListening) return;
+      if (typeof window.removeEventListener === "function") window.removeEventListener("focus", onWindowFocus);
+      focusListening = false;
     }
     function apply(snapshot) {
       if (!snapshot || typeof snapshot !== "object" || !snapshot.mood || typeof snapshot.mood !== "object") {
@@ -671,12 +696,14 @@
       summary.textContent = t("companionMoodSummary")
         .replace("{mood}", t(moodKey))
         .replace("{personality}", t(companionPersonalityLabelKey(personality)));
-      last.textContent = formatLastInteraction(snapshot.lastInteractionAt);
+      lastAt = snapshot.lastInteractionAt;
+      last.textContent = formatLastInteraction(lastAt);
       return true;
     }
     function showUnavailable() {
       summary.textContent = t("companionMoodUnavailable");
       last.textContent = "";
+      lastAt = undefined;
     }
     async function refresh() {
       if (!readCompanionEnabled()) return;
@@ -695,9 +722,14 @@
       row.hidden = !visible;
       // Hiding invalidates in-flight pulls so a stale result never renders.
       if (!visible) requestId += 1;
+      if (visible) startFocusRefresh();
+      else stopFocusRefresh();
       if (visible && wasHidden) Promise.resolve().then(refresh);
     }
-    if (enabled) Promise.resolve().then(refresh);
+    if (enabled) {
+      startFocusRefresh();
+      Promise.resolve().then(refresh);
+    }
     return { element: row, apply, refresh, setVisible, isMounted };
   }
 
