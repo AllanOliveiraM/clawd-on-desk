@@ -1487,6 +1487,29 @@ describe("Clawd Alive dreamy sleep (pickSleepVisual)", () => {
     assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
   });
 
+  it("a theme switch mid-sleep drops the old theme's twitch file", () => {
+    api.applyState("idle");
+    api.applyState("sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-sleep-twitch.svg");
+    // theme-runtime: cleanup, setActiveTheme, refreshTheme, then applyState(prev)
+    api.cleanup();
+    ctx.theme = _calicoTheme;
+    api.refreshTheme();
+    api.applyState("sleeping");
+    assert.notStrictEqual(api.getCurrentSvg(), "clawd-alive-sleep-twitch.svg");
+  });
+
+  it("a hook that now answers null shows the original file after a theme refresh", () => {
+    api.applyState("idle");
+    api.applyState("sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-sleep-twitch.svg");
+    answer = null;
+    api.cleanup();
+    api.refreshTheme();
+    api.applyState("sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
+  });
+
   it("a session-resolved sleep goes through the hook too", () => {
     api.applyState("idle");
     api.setState("sleeping");

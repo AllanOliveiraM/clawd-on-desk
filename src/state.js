@@ -306,6 +306,10 @@ let currentState = "idle";
 // since" — including a real event that re-applies the same state name.
 let displayRevision = 0;
 let previousState = "idle";
+// Dreamy sleep bookkeeping (see resolveSleepVariant); declared early because
+// refreshTheme() runs during module init.
+let sleepVariantSvg = null;
+let collapseAsked = false;
 let currentSvg = null;
 // Where the currently displayed visual came from. A Settings animation preview
 // temporarily owns the pet's visual even though it reuses a logical state name.
@@ -643,6 +647,9 @@ function refreshTheme() {
   STATE_SVGS = { ...theme.states };
   STATE_BINDINGS = buildStateBindings(theme);
   stableVisualPicker.clear();
+  // A held dreamy-sleep file belongs to the previous theme / hook answer.
+  sleepVariantSvg = null;
+  collapseAsked = false;
   // Sync back so settings-animation-overrides can resolve roam/fallback states
   theme._stateBindings = STATE_BINDINGS;
   if (theme.miniMode && theme.miniMode.states) {
@@ -900,8 +907,6 @@ function normalizeApplyStateOptions(state, options = {}) {
 // that decision instead of rolling again. The logical state, timers, hit box
 // family and wake path stay exactly the original ones. Must run after
 // previousState and currentState are updated.
-let sleepVariantSvg = null;
-let collapseAsked = false;
 function resolveSleepVariant(state, svgOverride, options) {
   const sleepPhase = state === "sleeping" || state === "collapsing";
   if (!sleepPhase || svgOverride || options.settingsPreview === true || ctx.doNotDisturb) {
@@ -4399,6 +4404,8 @@ function getCurrentHitBox() { return currentHitBox; }
 function getStartupRecoveryActive() { return startupRecoveryActive; }
 
 function cleanup() {
+  sleepVariantSvg = null;
+  collapseAsked = false;
   deferredCodexCompletionCues.clear();
   lastCodexPendingAttentionIds.clear();
   codexSubagentPresentation.clear();
