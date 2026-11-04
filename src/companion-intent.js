@@ -87,9 +87,20 @@ function beatDelayMs(traits, mood, random) {
 }
 
 // isFirst is part of the arbiter's hook signature; the formula does not use it.
+// With the companion on the pet never walks more often than plain roam: the
+// pause is at least 1.2x base and stretches for calmer (less active) pets up
+// to 2.7x, x1.5 more when tired, never past 3x base. One-off walks (pending
+// mischief, the walk back from an edge) are shortened by the runtime instead.
+const ROAM_DELAY_MIN_FACTOR = 1.2;
+const ROAM_DELAY_CALM_SPAN = 1.5;
+const ROAM_DELAY_MAX_FACTOR = 2.7;
+const ROAM_DELAY_TIRED_FACTOR = 1.5;
+
 function roamDelayMs(isFirst, baseMs, traits, mood) {
-  const lowEnergy = mood && mood.energy < 25 ? 2 : 1;
-  return clamp(baseMs * (1.6 - traits.activity) * lowEnergy, 0.5 * baseMs, 3 * baseMs);
+  const activity = traits && Number.isFinite(traits.activity) ? traits.activity : 0.5;
+  const factor = clamp(ROAM_DELAY_MIN_FACTOR + (1 - activity) * ROAM_DELAY_CALM_SPAN, ROAM_DELAY_MIN_FACTOR, ROAM_DELAY_MAX_FACTOR);
+  const lowEnergy = mood && mood.energy < 25 ? ROAM_DELAY_TIRED_FACTOR : 1;
+  return clamp(baseMs * factor * lowEnergy, baseMs, 3 * baseMs);
 }
 
 module.exports = {

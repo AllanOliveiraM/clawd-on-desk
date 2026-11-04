@@ -106,9 +106,19 @@ test("cooldownFor scales with calm", () => {
   assert.equal(cooldownFor("observe", { calm: 0.5 }), 0);
 });
 
-test("roamDelayMs is clamped", () => {
-  assert.equal(roamDelayMs(false, 4000, { activity: 0 }, { energy: 10 }), 12000);
-  assert.ok(Math.abs(roamDelayMs(true, 8000, { activity: 1 }, { energy: 80 }) - 4800) < 1e-6);
+test("roamDelayMs never walks more often than plain roam and slows calm pets", () => {
+  // multiplier = clamp(1.2 + (1 - activity) * 1.5, 1.2, 2.7), x1.5 below 25 energy, <= 3x base.
+  const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} vs ${b}`);
+  near(roamDelayMs(false, 8000, { activity: 1 }, { energy: 80 }), 9600);
+  near(roamDelayMs(false, 8000, { activity: 0.8 }, { energy: 80 }), 12000); // playful 1.5x
+  near(roamDelayMs(false, 8000, { activity: 0.5 }, { energy: 80 }), 15600); // balanced 1.95x
+  near(roamDelayMs(false, 8000, { activity: 0.25 }, { energy: 80 }), 18600); // calm 2.325x
+  near(roamDelayMs(false, 4000, { activity: 0 }, { energy: 80 }), 10800); // capped at 2.7x
+  near(roamDelayMs(false, 8000, { activity: 0.8 }, { energy: 10 }), 18000); // tired playful
+  near(roamDelayMs(false, 4000, { activity: 0 }, { energy: 10 }), 12000); // <= 3x base
+  for (const activity of [0, 0.25, 0.4, 0.5, 0.65, 0.8, 1, 1.5]) {
+    assert.ok(roamDelayMs(true, 8000, { activity }, { energy: 50 }) >= 8000 * 1.2 - 1e-6, String(activity));
+  }
 });
 
 test("beatDelayMs stays within bounds", () => {

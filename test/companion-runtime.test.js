@@ -445,9 +445,12 @@ test("personality change applies without resetting mood", () => {
 test("getRoamDelayMs scales with personality", () => {
   const env = setup();
   env.runtime.configure({ ...ON, personality: "calm" });
-  assert.ok(env.runtime.getRoamDelayMs(false, 8000) > 8000);
+  const calm = env.runtime.getRoamDelayMs(false, 8000);
   env.runtime.configure({ ...ON, personality: "playful" });
-  assert.ok(env.runtime.getRoamDelayMs(false, 8000) < 8000);
+  const playful = env.runtime.getRoamDelayMs(false, 8000);
+  // Never more walking than plain roam; calmer pets pause longer.
+  assert.equal(playful, 12000);
+  assert.ok(calm > playful);
 });
 
 test("pickRoamTarget returns rest spot when tired, explores when curious, else null", () => {
@@ -1104,14 +1107,14 @@ test("walking mischief shortens the roam delay and targets the right corner per 
   for (const [platform, x] of [["linux", 1750], ["win32", 1750], ["darwin", 150]]) {
     const env = setup({ options: { getPlatform: () => platform } });
     env.theme = themeWith(["reachClose"]);
-    env.runtime.configure(MON); // balanced: 8000 * 1.1
-    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800);
+    env.runtime.configure(MON); // balanced: 8000 * 1.95
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 15600);
     tickUntilBeat(env, 200000);
     assert.equal(env.sends.length, 0, "a walking mischief waits for the roam");
     assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000);
     const target = env.runtime.pickRoamTarget(ROAM_ARGS);
     assert.deepEqual(target, { x, y: 40, preferred: true, mischief: "reachClose" });
-    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800);
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 15600);
     env.runtime.noteWalkFinished({ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 0 });
     assert.equal(env.sends.length, 1);
     assert.equal(env.sends[0].file, "reachClose.svg");
@@ -1184,7 +1187,7 @@ test("corner target clamped by fence skips the scene", () => {
   assert.equal(env.runtime.pickRoamTarget(ROAM_ARGS).mischief, "reachClose");
   env.runtime.noteWalkFinished({ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 500 });
   assert.equal(env.sends.length, 0);
-  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "nothing pending afterwards");
+  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 15600, "nothing pending afterwards");
 });
 
 // Roam's margin band (15%) as xMin..xMax, plus its edgeBounds (work area,
@@ -1439,7 +1442,7 @@ test("discarded preferred target clears the pending walk", () => {
   tickUntilBeat(env, 200000);
   assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000);
   env.runtime.onPreferredTargetDiscarded();
-  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800);
+  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 15600);
 
   const walked = setup();
   walked.theme = themeWith(["reachClose"]);
@@ -1470,7 +1473,7 @@ test("stay-put mode only allows reactive mischief", () => {
   assert.equal(env.sends.length, 1);
   assert.equal(env.sends[0].file, "pounceRight.svg");
   env.mode = "roam";
-  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 6400, "no poke walk was queued");
+  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 12000, "no poke walk was queued");
 });
 
 test("activities mode only picks single-part mischief", () => {
@@ -1546,7 +1549,7 @@ test("a pet already at the bottom edge sits in place once and is not re-picked",
   for (let i = 0; i < 900; i += 1) {
     env.clock.advance(1000);
     env.runtime.tick();
-    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "sitEdge is not picked again");
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 15600, "sitEdge is not picked again");
   }
   assert.equal(env.sends.length, sends);
 });
@@ -1562,7 +1565,7 @@ test("a discarded walking mischief far from its edge spends its cooldown", () =>
   for (let i = 0; i < 900; i += 1) {
     env.clock.advance(1000);
     env.runtime.tick();
-    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "no repeat while on cooldown");
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 15600, "no repeat while on cooldown");
   }
   assert.equal(env.sends.length, 0);
 });
@@ -1581,7 +1584,7 @@ test("an expired pending walk spends its cooldown", () => {
   for (let i = 0; i < 900; i += 1) {
     env.clock.advance(1000);
     env.runtime.tick();
-    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "not re-picked after expiry");
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 15600, "not re-picked after expiry");
   }
 });
 
@@ -1720,7 +1723,21 @@ test("mischief off reproduces the 40b54948 golden runs exactly", () => {
   const { runScript } = require("./fixtures/companion-alive-script");
   const golden = require("./fixtures/companion-alive-golden.json");
   assert.equal(golden.length, 9);
+  // The roam pause is the one deliberate Clawd Alive change since (polish
+  // item 9: never walk more often than plain roam). The golden's pauses used
+  // 8000 * (1.6 - activity) * (2 when tired); map them onto the new formula
+  // and require everything else to match byte for byte.
+  const { getTraits } = require("../src/companion-model");
+  const { roamDelayMs } = require("../src/companion-intent");
   for (const { script, result } of golden) {
-    assert.deepEqual(runScript(createCompanionRuntime, script), result, JSON.stringify(script));
+    const activity = getTraits(script.personality).activity;
+    const old = 8000 * (1.6 - activity);
+    const answers = result.answers.map((a) => {
+      if (typeof a !== "number") return a;
+      const tired = Math.abs(a - 2 * old) < 1e-6;
+      assert.ok(tired || Math.abs(a - old) < 1e-6, `unexpected golden pause ${a}`);
+      return roamDelayMs(false, 8000, { activity }, { energy: tired ? 10 : 80 });
+    });
+    assert.deepEqual(runScript(createCompanionRuntime, script), { ...result, answers }, JSON.stringify(script));
   }
 });
