@@ -4,7 +4,10 @@
       /* 3-Second Loop — Coffee: holds a tiny cream mug (a thin steam wisp
          rising from it), glances at it, lifts it to his face and tilts it
          for a sip with happily closed eyes (two little gulps), lowers it,
-         lets out a content little exhale with soft eyes and a gentle sway. */
+         lets out a content little exhale with soft eyes and a gentle sway.
+         Starts and ends in the exact rest pose of clawd-idle-follow: the mug
+         pops into the hand with a tiny dust poof over the first ~10% and
+         poofs away the same way over the last ~10%. */
       .action-body {
         transform-origin: 7.5px 13px;
         animation: coffee-body 3s infinite ease-in-out;
@@ -27,6 +30,17 @@
       .mug-tilt {
         transform-origin: 14.5px 8px;
         animation: coffee-tilt 3s infinite ease-in-out;
+      }
+
+      .mug-pop {
+        transform-origin: 14.5px 9px;
+        animation: coffee-mug-pop 3s infinite ease-out;
+      }
+
+      .poof {
+        transform-origin: 14.6px 7.8px;
+        opacity: 0;
+        animation: coffee-poof 3s infinite ease-out;
       }
 
       .steam-a {
@@ -84,10 +98,14 @@
         64% { transform: translate(0, 0.4px); }
       }
 
-      /* Mug hand: lift, carry the mug to the face, hold for the sip,
-         lower back to the side with a small settle */
+      /* Mug hand: catches the mug as it pops in, lift, carry the mug to the
+         face, hold for the sip, lower back to the side with a small settle,
+         a little bob as the mug poofs away */
       @keyframes coffee-arm-r {
-        0%, 8% { transform: translate(0, 0); }
+        0% { transform: translate(0, 0); }
+        2.5% { transform: translate(0, 0.3px); }
+        5% { transform: translate(0, -0.4px); }
+        8% { transform: translate(0, 0); }
         13% { transform: translate(0, 0.4px); }
         18% { transform: translate(-1.5px, -1.2px); }
         24% { transform: translate(-5.9px, 1.6px); }
@@ -96,7 +114,31 @@
         51% { transform: translate(-5px, 0.6px); }
         56% { transform: translate(-0.6px, -0.6px); }
         60% { transform: translate(0, 0.3px); }
-        64%, 100% { transform: translate(0, 0); }
+        64%, 92% { transform: translate(0, 0); }
+        94.5% { transform: translate(0, -0.4px); }
+        97% { transform: translate(0, 0.2px); }
+        99%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Mug appears with a springy scale-in on the hand, leaves the same way */
+      @keyframes coffee-mug-pop {
+        0%, 2% { transform: scale(0); opacity: 0; }
+        2.1% { transform: scale(0.2); opacity: 1; }
+        5% { transform: scale(1.25); opacity: 1; }
+        7% { transform: scale(0.92); opacity: 1; }
+        9%, 92% { transform: scale(1); opacity: 1; }
+        94% { transform: scale(1.2); opacity: 1; }
+        96.4% { transform: scale(0.2); opacity: 1; }
+        96.5%, 100% { transform: scale(0); opacity: 0; }
+      }
+
+      /* Tiny dust poof (four soft pixels puffing out and fading) */
+      @keyframes coffee-poof {
+        0%, 2% { transform: scale(0.5); opacity: 0; }
+        3% { transform: scale(0.8); opacity: 0.9; }
+        8%, 93.5% { transform: scale(1.8); opacity: 0; }
+        94.5% { transform: scale(0.8); opacity: 0.9; }
+        99.5%, 100% { transform: scale(1.8); opacity: 0; }
       }
 
       /* Mug tilts towards him for the sip (two gulps), back upright */
@@ -111,9 +153,9 @@
 
       /* Thin steam wisps: rise, drift and fade (paused during the sip) */
       @keyframes coffee-steam-a {
-        0% { opacity: 0; transform: translate(0, 0.5px); }
-        4% { opacity: 0.75; transform: translate(0, 0); }
-        18% { opacity: 0; transform: translate(0.5px, -2.5px); }
+        0%, 6% { opacity: 0; transform: translate(0, 0.5px); }
+        9% { opacity: 0.75; transform: translate(0, 0); }
+        20% { opacity: 0; transform: translate(0.5px, -2.5px); }
         62% { opacity: 0; transform: translate(0, 0.5px); }
         67% { opacity: 0.75; transform: translate(0, 0); }
         82% { opacity: 0; transform: translate(-0.5px, -2.5px); }
@@ -121,12 +163,12 @@
       }
 
       @keyframes coffee-steam-b {
-        0%, 7% { opacity: 0; transform: translate(0, 0.5px); }
-        11% { opacity: 0.6; transform: translate(0, 0); }
+        0%, 9% { opacity: 0; transform: translate(0, 0.5px); }
+        12% { opacity: 0.6; transform: translate(0, 0); }
         22% { opacity: 0; transform: translate(-0.5px, -2.3px); }
         74% { opacity: 0; transform: translate(0, 0.5px); }
         79% { opacity: 0.6; transform: translate(0, 0); }
-        93% { opacity: 0; transform: translate(0.5px, -2.3px); }
+        91% { opacity: 0; transform: translate(0.5px, -2.3px); }
         100% { opacity: 0; transform: translate(0.5px, -2.3px); }
       }
 
@@ -181,12 +223,21 @@
       <!-- Steam wisps (thin, 1px, opacity only) -->
       <rect class="steam-a" x="14" y="5" width="0.5" height="1" fill="#D7D7DC"/>
       <rect class="steam-b" x="15" y="4.5" width="0.5" height="1" fill="#D7D7DC"/>
-      <!-- Tiny mug -->
-      <g class="mug-tilt">
-        <rect x="13.5" y="6.5" width="2" height="2.5" fill="#F4EEE4"/>
-        <rect x="15.5" y="7" width="0.7" height="1.5" fill="#D9CDBE"/>
-        <rect x="13.5" y="6.5" width="2" height="0.5" fill="#6F4A34"/>
-        <rect x="13.5" y="8.5" width="2" height="0.5" fill="#D9CDBE"/>
+      <!-- Tiny mug (pops in/out on the hand) -->
+      <g class="mug-pop">
+        <g class="mug-tilt">
+          <rect x="13.5" y="6.5" width="2" height="2.5" fill="#F4EEE4"/>
+          <rect x="15.5" y="7" width="0.7" height="1.5" fill="#D9CDBE"/>
+          <rect x="13.5" y="6.5" width="2" height="0.5" fill="#6F4A34"/>
+          <rect x="13.5" y="8.5" width="2" height="0.5" fill="#D9CDBE"/>
+        </g>
+      </g>
+      <!-- Dust poof -->
+      <g class="poof" fill="#D7D7DC">
+        <rect x="13" y="6.5" width="0.5" height="0.5"/>
+        <rect x="16" y="6" width="0.5" height="0.5"/>
+        <rect x="12.5" y="8.5" width="0.5" height="0.5"/>
+        <rect x="16.5" y="8.5" width="0.5" height="0.5"/>
       </g>
     </g>
   </g>

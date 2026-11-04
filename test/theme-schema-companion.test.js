@@ -40,6 +40,7 @@ describe("theme companionAnimations block", () => {
       "petting", "content", "tired", "shy", "grumpy", "curious", "greet",
       ...schema.MISCHIEF_ANIMATION_KEYS,
       ...schema.POLISH_ANIMATION_KEYS,
+      ...schema.TRANSITION_ANIMATION_KEYS,
     ]);
     assert.deepStrictEqual(schema.MISCHIEF_ANIMATION_KEYS, [
       "catch", "catchMiss", "pounceLeft", "pounceRight", "fakeNap", "boo",
@@ -57,7 +58,7 @@ describe("theme companionAnimations block", () => {
       "greetLeft", "shyRight", "reachCloseLeft",
       "walkBouncy", "walkTired", "walkCurious",
     ]);
-    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-18), [...schema.POLISH_ANIMATION_KEYS]);
+    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-24, -6), [...schema.POLISH_ANIMATION_KEYS]);
     const block = {};
     for (const key of schema.POLISH_ANIMATION_KEYS) block[key] = { file: `../x/${key}.svg`, duration: 1400 };
     const theme = schema.mergeDefaults(validThemeJson({ companionAnimations: block }), "test", false);
@@ -65,6 +66,19 @@ describe("theme companionAnimations block", () => {
       assert.deepStrictEqual(theme.companionAnimations[key], { files: [`${key}.svg`], duration: 1400 }, key);
     }
     assert.deepStrictEqual(schema.mergeDefaults(validThemeJson(), "test", false).companionAnimations, {});
+  });
+
+  it("exports the intro / outro part keys last (sit, fake nap, petting)", () => {
+    assert.deepStrictEqual(schema.TRANSITION_ANIMATION_KEYS, [
+      "sitDown", "standUp", "fakeNapIn", "fakeNapOut", "pettingIn", "pettingOut",
+    ]);
+    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-6), [...schema.TRANSITION_ANIMATION_KEYS]);
+    const block = {};
+    for (const key of schema.TRANSITION_ANIMATION_KEYS) block[key] = { file: `../x/${key}.svg`, duration: 250 };
+    const theme = schema.mergeDefaults(validThemeJson({ companionAnimations: block }), "test", false);
+    for (const key of schema.TRANSITION_ANIMATION_KEYS) {
+      assert.deepStrictEqual(theme.companionAnimations[key], { files: [`${key}.svg`], duration: 250 }, key);
+    }
   });
 
   it("mischief keys are optional and basenamed", () => {
@@ -160,7 +174,7 @@ describe("theme companionAnimations block", () => {
     assert.ok(warn.mock.calls.length >= 1);
   });
 
-  it("built-in clawd declares all mischief keys", () => {
+  it("built-in clawd declares every companion key", () => {
     const theme = themeLoader.loadTheme("clawd", { strict: true });
     const base = {
       petting: { files: ["clawd-alive-petting.svg"], duration: null },
@@ -192,12 +206,36 @@ describe("theme companionAnimations block", () => {
       toyBall: { files: ["clawd-alive-toy-ball.svg"], duration: 3000 },
       toyYoyo: { files: ["clawd-alive-toy-yoyo.svg"], duration: 3000 },
       toyPlane: { files: ["clawd-alive-toy-plane.svg"], duration: 3000 },
+      catchHigh: { files: ["clawd-alive-catch-high.svg"], duration: 1400 },
+      catchBody: { files: ["clawd-alive-catch-body.svg"], duration: 1600 },
+      catchLow: { files: ["clawd-alive-catch-low.svg"], duration: 1600 },
+      catchLeft: { files: ["clawd-alive-catch-left.svg"], duration: 1600 },
+      catchRight: { files: ["clawd-alive-catch-right.svg"], duration: 1600 },
+      catchMissHigh: { files: ["clawd-alive-catch-miss-high.svg"], duration: 2200 },
+      catchMissBody: { files: ["clawd-alive-catch-miss-body.svg"], duration: 2200 },
+      catchMissLow: { files: ["clawd-alive-catch-miss-low.svg"], duration: 2200 },
+      catchMissLeft: { files: ["clawd-alive-catch-miss-left.svg"], duration: 2200 },
+      catchMissRight: { files: ["clawd-alive-catch-miss-right.svg"], duration: 2200 },
+      pounceStrikeLeft: { files: ["clawd-alive-pounce-strike-left.svg"], duration: 1800 },
+      pounceStrikeRight: { files: ["clawd-alive-pounce-strike-right.svg"], duration: 1800 },
+      greetLeft: { files: ["clawd-alive-greet-left.svg"], duration: 2500 },
+      shyRight: { files: ["clawd-alive-shy-right.svg"], duration: 3000 },
+      reachCloseLeft: { files: ["clawd-alive-reach-close-left.svg"], duration: 3000 },
+      // Roam drives the walk visual for the whole walk; no duration is read.
+      walkBouncy: { files: ["clawd-alive-walk-bouncy.svg"], duration: null },
+      walkTired: { files: ["clawd-alive-walk-tired.svg"], duration: null },
+      walkCurious: { files: ["clawd-alive-walk-curious.svg"], duration: null },
+      // One-shot intro / outro parts: played once for exactly their loop length.
+      sitDown: { files: ["clawd-alive-sit-down.svg"], duration: 600 },
+      standUp: { files: ["clawd-alive-stand-up.svg"], duration: 600 },
+      fakeNapIn: { files: ["clawd-alive-fake-nap-in.svg"], duration: 500 },
+      fakeNapOut: { files: ["clawd-alive-fake-nap-out.svg"], duration: 500 },
+      pettingIn: { files: ["clawd-alive-petting-in.svg"], duration: 250 },
+      pettingOut: { files: ["clawd-alive-petting-out.svg"], duration: 300 },
     };
-    for (const [key, entry] of Object.entries(base)) assert.deepStrictEqual(theme.companionAnimations[key], entry, key);
-    // Polish keys are optional: the theme registers them as their art lands.
+    assert.deepStrictEqual(theme.companionAnimations, base);
     const declared = Object.keys(theme.companionAnimations);
-    assert.deepStrictEqual(declared, schema.COMPANION_ANIMATION_KEYS.filter((key) => declared.includes(key)));
-    for (const key of [...schema.MISCHIEF_ANIMATION_KEYS]) assert.ok(declared.includes(key), key);
+    assert.deepStrictEqual(declared, [...schema.COMPANION_ANIMATION_KEYS]);
     const required = schema.collectRequiredAssetFiles(theme);
     for (const key of declared) {
       const [file] = theme.companionAnimations[key].files;

@@ -1,0 +1,216 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* Walk, bouncy: replaces the roam walk visual while the window moves.
+         0.3 s one-shot intro (wrapper groups, forwards) eases out of the
+         neutral rest pose of clawd-idle-follow.svg (a little springy crouch,
+         eyes turn to the walk direction); then the stride loops on the inner
+         groups (delay 0.3 s): 4 s loop of 8 x 0.5 s hop cycles, the same
+         step cadence as clawd-mini-crabwalk.svg (each leg pair steps once
+         every 0.5 s). Each cycle: preload crouch, spring up (stretch), the
+         leg pairs kick forward one after the other in the air, land with a
+         squash, back to rest. Every loop starts at the rest pose and stays
+         within 1 unit of it, so the walk can be cut at any moment. Arms bob,
+         a quick glance at you, happy "^^" for a few hops.
+         Faces right (the walk direction); the app mirrors it for left. */
+      .intro-body {
+        transform-origin: 7.5px 15px;
+        animation: bw-intro-body 0.3s ease-in-out forwards;
+      }
+      .intro-eyes {
+        animation: bw-intro-eyes 0.3s ease-in-out forwards;
+      }
+      .hop {
+        animation: bw-hop 0.5s 0.3s infinite linear;
+      }
+      .legs-spring {
+        transform-origin: 7.5px 15px;
+        animation: bw-legs-spring 0.5s 0.3s infinite linear;
+      }
+      .leg-a { animation: bw-kick-a 0.5s 0.3s infinite ease-in-out; transform-origin: top center; transform-box: fill-box; }
+      .leg-b { animation: bw-kick-b 0.5s 0.3s infinite ease-in-out; transform-origin: top center; transform-box: fill-box; }
+      .body-spring {
+        transform-origin: 7.5px 13px;
+        animation: bw-body 0.5s 0.3s infinite linear;
+      }
+      .arm-l {
+        transform-origin: 2px 10px;
+        animation: bw-arm-l 0.5s 0.3s infinite ease-in-out;
+      }
+      .arm-r {
+        transform-origin: 13px 10px;
+        animation: bw-arm-r 0.5s 0.3s infinite ease-in-out;
+      }
+      .shadow-hop {
+        transform-origin: 7.5px 15.5px;
+        animation: bw-shadow 0.5s 0.3s infinite linear;
+      }
+      .eyes-look {
+        animation: bw-look 4s 0.3s infinite ease-in-out;
+      }
+      .eyes-normal {
+        animation: bw-eyes-normal 4s 0.3s infinite linear;
+      }
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: bw-blink 4s 0.3s infinite linear;
+      }
+      .eyes-happy {
+        opacity: 0;
+        animation: bw-eyes-happy 4s 0.3s infinite linear;
+      }
+
+      /* --- Intro (one-shot) --- */
+      @keyframes bw-intro-body {
+        0%, 100% { transform: scale(1, 1); }
+        45% { transform: scale(1.05, 0.94); }
+      }
+      @keyframes bw-intro-eyes {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(1.5px, 0); }
+      }
+
+      /* --- Hop cycle (0.5 s): rest, preload, take-off at 24%, apex 52%,
+         touch-down 80%, landing squash 88%, rest --- */
+      @keyframes bw-hop {
+        0%, 24% { transform: translate(0, 0); animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1); }
+        52% { transform: translate(0, -0.75px); animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.3); }
+        80%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Legs compress on the floor (feet stay on the floor line) */
+      @keyframes bw-legs-spring {
+        0% { transform: scaleY(1); animation-timing-function: ease-out; }
+        10% { transform: scaleY(0.82); animation-timing-function: ease-out; }
+        24% { transform: scaleY(1.05); animation-timing-function: ease-in-out; }
+        36%, 80% { transform: scaleY(1); animation-timing-function: ease-out; }
+        88% { transform: scaleY(0.8); animation-timing-function: ease-in-out; }
+        100% { transform: scaleY(1); }
+      }
+
+      /* Body rides the legs: squash on the floor, stretch on take-off */
+      @keyframes bw-body {
+        0% { transform: translate(0, 0) scale(1, 1); animation-timing-function: ease-out; }
+        10% { transform: translate(0, 0.36px) scale(1.06, 0.92); animation-timing-function: ease-out; }
+        24% { transform: translate(0, -0.05px) scale(0.94, 1.07); animation-timing-function: ease-in-out; }
+        40% { transform: translate(0, 0) scale(0.98, 1.03); animation-timing-function: ease-in-out; }
+        66% { transform: translate(0, 0) scale(0.97, 1.04); animation-timing-function: ease-in; }
+        80% { transform: translate(0, 0) scale(1, 1); animation-timing-function: ease-out; }
+        88% { transform: translate(0, 0.3px) scale(1.07, 0.92); animation-timing-function: ease-in-out; }
+        100% { transform: translate(0, 0) scale(1, 1); }
+      }
+
+      /* In the air the pairs kick forward one after the other */
+      @keyframes bw-kick-a {
+        0%, 28% { transform: rotate(0deg) scaleY(1); }
+        44% { transform: rotate(-26deg) scaleY(0.7); }
+        60%, 100% { transform: rotate(0deg) scaleY(1); }
+      }
+      @keyframes bw-kick-b {
+        0%, 44% { transform: rotate(0deg) scaleY(1); }
+        60% { transform: rotate(-26deg) scaleY(0.7); }
+        76%, 100% { transform: rotate(0deg) scaleY(1); }
+      }
+
+      /* Arms lag behind the body: down on the squashes, flick up at the apex */
+      @keyframes bw-arm-l {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        10% { transform: translate(0, 0.3px) rotate(8deg); }
+        24% { transform: translate(0, 0.2px) rotate(4deg); }
+        52% { transform: translate(0, -0.6px) rotate(-18deg); }
+        80% { transform: translate(0, -0.1px) rotate(-4deg); }
+        88% { transform: translate(0, 0.4px) rotate(8deg); }
+      }
+      @keyframes bw-arm-r {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        10% { transform: translate(0, 0.3px) rotate(-8deg); }
+        24% { transform: translate(0, 0.2px) rotate(-4deg); }
+        52% { transform: translate(0, -0.6px) rotate(18deg); }
+        80% { transform: translate(0, -0.1px) rotate(4deg); }
+        88% { transform: translate(0, 0.4px) rotate(-8deg); }
+      }
+
+      /* Shadow: spreads on the squashes, shrinks while airborne */
+      @keyframes bw-shadow {
+        0% { transform: scaleX(1); opacity: 0.5; animation-timing-function: ease-out; }
+        10% { transform: scaleX(1.05); opacity: 0.52; animation-timing-function: ease-out; }
+        24% { transform: scaleX(1); opacity: 0.5; animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1); }
+        52% { transform: scaleX(0.8); opacity: 0.34; animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.3); }
+        80% { transform: scaleX(1); opacity: 0.5; animation-timing-function: ease-out; }
+        88% { transform: scaleX(1.06); opacity: 0.53; animation-timing-function: ease-in-out; }
+        100% { transform: scaleX(1); opacity: 0.5; }
+      }
+
+      /* --- Eyes (relative to the intro's forward look) --- */
+      @keyframes bw-look {
+        0%, 34% { transform: translate(0, 0); }
+        38%, 44% { transform: translate(-1.5px, 0); }
+        48%, 100% { transform: translate(0, 0); }
+      }
+      @keyframes bw-eyes-normal {
+        0%, 61.9% { opacity: 1; }
+        62%, 87.9% { opacity: 0; }
+        88%, 100% { opacity: 1; }
+      }
+      @keyframes bw-eyes-happy {
+        0%, 61.9% { opacity: 0; }
+        62%, 87.9% { opacity: 1; }
+        88%, 100% { opacity: 0; }
+      }
+      @keyframes bw-blink {
+        0%, 20%, 24%, 100% { transform: scaleY(1); }
+        22% { transform: scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow (shrinks while airborne) -->
+  <rect id="ground-shadow" class="shadow-hop" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g class="intro-body">
+    <g class="hop">
+      <!-- Legs -->
+      <g class="legs-spring">
+        <g id="legs" fill="#DE886D">
+          <rect id="outer-left-leg" class="leg-a" x="3" y="13" width="1" height="2"/>
+          <rect id="inner-left-leg" class="leg-b" x="5" y="13" width="1" height="2"/>
+          <rect id="inner-right-leg" class="leg-a" x="9" y="13" width="1" height="2"/>
+          <rect id="outer-right-leg" class="leg-b" x="11" y="13" width="1" height="2"/>
+        </g>
+      </g>
+
+      <!-- Upper Body -->
+      <g class="body-spring">
+        <!-- Left Arm -->
+        <g class="arm-l">
+          <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+        </g>
+        <!-- Right Arm -->
+        <g class="arm-r">
+          <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+        </g>
+        <!-- Torso -->
+        <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+        <g class="intro-eyes">
+          <g class="eyes-look">
+            <g class="eyes-normal">
+              <g class="eyes-blink" fill="#000000">
+                <rect x="4" y="8" width="1" height="2"/>
+                <rect x="10" y="8" width="1" height="2"/>
+              </g>
+            </g>
+            <!-- Happy "^^" -->
+            <g class="eyes-happy" fill="#000000">
+              <rect x="3" y="9" width="1" height="1"/>
+              <rect x="4" y="8" width="1" height="1"/>
+              <rect x="5" y="9" width="1" height="1"/>
+              <rect x="9" y="9" width="1" height="1"/>
+              <rect x="10" y="8" width="1" height="1"/>
+              <rect x="11" y="9" width="1" height="1"/>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

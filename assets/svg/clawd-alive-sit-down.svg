@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 0.6-Second One-Shot — Sit Down (intro of clawd-alive-sit-edge):
+         from the exact rest pose, a little knee-bend anticipation, then he
+         lowers himself onto the ledge (body down 2, legs slip over the edge
+         down 3), lands with a soft squash, hands come down onto the ledge a
+         beat later, eyes drop to look at his dangling feet. The ground
+         shadow fades out (seated on the edge, not on the floor). The last
+         10% holds the exact first frame of clawd-alive-sit-edge. */
+      .body-drop {
+        animation: sd-body-drop 0.6s infinite ease-in-out;
+      }
+
+      .body-squash {
+        transform-origin: 7.5px 15px;
+        animation: sd-body-squash 0.6s infinite ease-in-out;
+      }
+
+      .legs-drop {
+        animation: sd-legs 0.6s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: sd-shadow 0.6s infinite ease-in-out;
+      }
+
+      .arm-l {
+        animation: sd-arm-l 0.6s infinite ease-in-out;
+      }
+
+      .arm-r {
+        animation: sd-arm-r 0.6s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: sd-look 0.6s infinite ease-in-out;
+      }
+
+      .eyes-lid {
+        transform-origin: 7.5px 10px;
+        animation: sd-lid 0.6s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Small bend, lower onto the ledge, overshoot, settle at +2 */
+      @keyframes sd-body-drop {
+        0% { transform: translate(0, 0); }
+        14% { transform: translate(0, 0.3px); }
+        24% { transform: translate(0, 0.1px); }
+        52% { transform: translate(0, 2.4px); }
+        66% { transform: translate(0, 1.85px); }
+        78% { transform: translate(0, 2.05px); }
+        88%, 100% { transform: translate(0, 2px); }
+      }
+
+      @keyframes sd-body-squash {
+        0% { transform: scale(1, 1); }
+        14% { transform: scale(1.04, 0.95); }
+        26% { transform: scale(0.98, 1.03); }
+        52% { transform: scale(1.06, 0.92); }
+        66% { transform: scale(0.99, 1.02); }
+        78% { transform: scale(1.01, 0.99); }
+        88%, 100% { transform: scale(1, 1); }
+      }
+
+      /* Legs slide over the edge, a little swing as they settle */
+      @keyframes sd-legs {
+        0%, 20% { transform: translate(0, 0); }
+        50% { transform: translate(0, 3.3px); }
+        64% { transform: translate(0, 2.85px); }
+        76% { transform: translate(0, 3.1px); }
+        88%, 100% { transform: translate(0, 3px); }
+      }
+
+      @keyframes sd-shadow {
+        0% { transform: scaleX(1); opacity: 0.5; }
+        14% { transform: scaleX(1.04); opacity: 0.5; }
+        48% { transform: scaleX(0.8); opacity: 0.1; }
+        60%, 100% { transform: scaleX(0.8); opacity: 0; }
+      }
+
+      /* Hands follow a beat late and land on the ledge (+2 within the body) */
+      @keyframes sd-arm-l {
+        0%, 30% { transform: translate(0, 0); }
+        44% { transform: translate(0, -0.4px); }
+        64% { transform: translate(0, 2.3px); }
+        76% { transform: translate(0, 1.9px); }
+        86%, 100% { transform: translate(0, 2px); }
+      }
+
+      @keyframes sd-arm-r {
+        0%, 32% { transform: translate(0, 0); }
+        46% { transform: translate(0, -0.4px); }
+        66% { transform: translate(0, 2.3px); }
+        78% { transform: translate(0, 1.9px); }
+        88%, 100% { transform: translate(0, 2px); }
+      }
+
+      /* Eyes lag the drop, then look down at the feet */
+      @keyframes sd-look {
+        0%, 24% { transform: translate(0, 0); }
+        44% { transform: translate(0, -0.3px); }
+        62% { transform: translate(0, 0.6px); }
+        88%, 100% { transform: translate(0, 0.3px); }
+      }
+
+      /* Soft squeeze on the landing */
+      @keyframes sd-lid {
+        0%, 44%, 72%, 100% { transform: scaleY(1); }
+        56% { transform: scaleY(0.5); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow (fades out: he ends up sitting on the edge) -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (slip over the edge) -->
+  <g class="legs-drop">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="11" width="1" height="4"/>
+      <rect x="5" y="11" width="1" height="4"/>
+      <rect x="9" y="11" width="1" height="4"/>
+      <rect x="11" y="11" width="1" height="4"/>
+    </g>
+  </g>
+
+  <!-- Upper Body (lowers onto the ledge) -->
+  <g class="body-drop">
+    <g class="body-squash">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm (ends with the hand on the ledge) -->
+      <g class="arm-l">
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Right Arm (ends with the hand on the ledge) -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Eyes -->
+      <g class="eyes-look">
+        <g class="eyes-lid" fill="#000000">
+          <rect x="4" y="8" width="1" height="2"/>
+          <rect x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

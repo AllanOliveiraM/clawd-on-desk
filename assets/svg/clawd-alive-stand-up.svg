@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 0.6-Second One-Shot — Stand Up (outro of clawd-alive-sit-edge):
+         from the exact first frame of the seated pose, hands press on the
+         ledge (tiny dip), he pushes himself up and the legs swing back under
+         him, a little stretch at the top (tall body, arms up and out, eyes
+         squeezed happily), then drops into a soft squash and settles. The
+         ground shadow fades back in. The last 10% holds the exact rest pose
+         of clawd-idle-follow. */
+      .body-rise {
+        animation: su-body-rise 0.6s infinite ease-in-out;
+      }
+
+      .body-squash {
+        transform-origin: 7.5px 15px;
+        animation: su-body-squash 0.6s infinite ease-in-out;
+      }
+
+      .legs-rise {
+        animation: su-legs 0.6s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: su-shadow 0.6s infinite ease-in-out;
+      }
+
+      .arm-l {
+        animation: su-arm-l 0.6s infinite ease-in-out;
+      }
+
+      .arm-r {
+        animation: su-arm-r 0.6s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: su-look 0.6s infinite ease-in-out;
+      }
+
+      .eyes-lid {
+        transform-origin: 7.5px 10px;
+        animation: su-lid 0.6s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Dip (press), push up past rest, stretch, drop, settle at rest */
+      @keyframes su-body-rise {
+        0% { transform: translate(0, 2px); }
+        12% { transform: translate(0, 2.3px); }
+        40% { transform: translate(0, -0.6px); }
+        54% { transform: translate(0, -0.7px); }
+        68% { transform: translate(0, 0.3px); }
+        80% { transform: translate(0, -0.1px); }
+        90%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes su-body-squash {
+        0% { transform: scale(1, 1); }
+        12% { transform: scale(1.05, 0.94); }
+        32% { transform: scale(0.95, 1.06); }
+        48%, 54% { transform: scale(0.94, 1.08); }
+        68% { transform: scale(1.05, 0.94); }
+        80% { transform: scale(0.99, 1.01); }
+        90%, 100% { transform: scale(1, 1); }
+      }
+
+      /* Legs come back up under him, a beat after the push */
+      @keyframes su-legs {
+        0%, 12% { transform: translate(0, 3px); }
+        38% { transform: translate(0, -0.3px); }
+        50%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes su-shadow {
+        0%, 14% { transform: scaleX(0.8); opacity: 0; }
+        44% { transform: scaleX(0.92); opacity: 0.4; }
+        68% { transform: scaleX(1.06); opacity: 0.52; }
+        84%, 100% { transform: scaleX(1); opacity: 0.5; }
+      }
+
+      /* Hands push off the ledge, swing up and out for the stretch, back */
+      @keyframes su-arm-l {
+        0% { transform: translate(0, 2px); }
+        12% { transform: translate(0, 2.2px); }
+        36% { transform: translate(0, 0); }
+        48%, 56% { transform: translate(0, -1.2px); }
+        70% { transform: translate(0, 0.3px); }
+        82%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes su-arm-r {
+        0% { transform: translate(0, 2px); }
+        12% { transform: translate(0, 2.2px); }
+        36% { transform: translate(0, 0); }
+        48%, 56% { transform: translate(0, -1.2px); }
+        70% { transform: translate(0, 0.3px); }
+        82%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Gaze comes up from the feet to straight ahead */
+      @keyframes su-look {
+        0% { transform: translate(0, 0.3px); }
+        12% { transform: translate(0, 0.5px); }
+        40% { transform: translate(0, -0.3px); }
+        66% { transform: translate(0, 0.2px); }
+        80%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Eyes squeeze shut for the stretch, pop open on the settle */
+      @keyframes su-lid {
+        0%, 36% { transform: scaleY(1); }
+        46%, 56% { transform: scaleY(0.1); }
+        66% { transform: scaleY(1.1); }
+        76%, 100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow (fades back in once he stands) -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (swing back up under the body) -->
+  <g class="legs-rise">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="11" width="1" height="4"/>
+      <rect x="5" y="11" width="1" height="4"/>
+      <rect x="9" y="11" width="1" height="4"/>
+      <rect x="11" y="11" width="1" height="4"/>
+    </g>
+  </g>
+
+  <!-- Upper Body (rises from the ledge) -->
+  <g class="body-rise">
+    <g class="body-squash">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm (starts with the hand on the ledge) -->
+      <g class="arm-l">
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Right Arm (starts with the hand on the ledge) -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Eyes -->
+      <g class="eyes-look">
+        <g class="eyes-lid" fill="#000000">
+          <rect x="4" y="8" width="1" height="2"/>
+          <rect x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

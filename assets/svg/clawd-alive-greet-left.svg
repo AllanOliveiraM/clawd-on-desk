@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* Exact mirror of clawd-alive-greet.svg (whole art flipped around x = 7.5): glances and waves to the LEFT.
+         2.5-Second Loop — Greet: glances to the side, one small wave of the
+         right arm, glances back and blinks. One wave per loop. */
+      .action-body {
+        transform-origin: 7.5px 13px;
+        animation: greet-lean 2.5s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: greet-shadow 2.5s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 13px 10px;
+        animation: greet-wave 2.5s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: greet-look 2.5s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: greet-blink 2.5s infinite linear;
+      }
+
+      /* --- Keyframes --- */
+
+      @keyframes greet-lean {
+        0%, 6%, 86%, 100% { transform: translate(0, 0) rotate(0deg); }
+        16%, 72% { transform: translate(0.5px, 0) rotate(1deg); }
+        44% { transform: translate(0.5px, -0.5px) rotate(1deg); }
+      }
+
+      @keyframes greet-shadow {
+        0%, 6%, 86%, 100% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+        16%, 72% { transform: scaleX(1) translate(0.5px, 0); opacity: 0.5; }
+      }
+
+      /* Arm up, two little side-to-side swings, arm down */
+      @keyframes greet-wave {
+        0%, 12%, 80%, 100% { transform: translate(0, 0) rotate(0deg); }
+        22% { transform: translate(0, -3px) rotate(-20deg); }
+        32% { transform: translate(0, -3.5px) rotate(12deg); }
+        42% { transform: translate(0, -3px) rotate(-20deg); }
+        52% { transform: translate(0, -3.5px) rotate(12deg); }
+        62% { transform: translate(0, -3px) rotate(-10deg); }
+      }
+
+      /* Glance to the side first, back to you while waving, glance again */
+      @keyframes greet-look {
+        0%, 100% { transform: translate(0, 0); }
+        8%, 18% { transform: translate(2px, 0); }
+        26%, 66% { transform: translate(0.5px, 0); }
+        74%, 82% { transform: translate(2px, 0); }
+        90% { transform: translate(0, 0); }
+      }
+
+      @keyframes greet-blink {
+        0%, 90%, 94%, 100% { transform: scaleY(1); }
+        92% { transform: scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Mirrored: everything below is the original art flipped horizontally -->
+  <g transform="translate(15 0) scale(-1 1)">
+    <!-- Ground Shadow -->
+    <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+    <!-- Static Legs -->
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+
+    <!-- Animated Upper Body -->
+    <g class="action-body">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm -->
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      <!-- Right Arm (waves) -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Eyes -->
+      <g class="eyes-look">
+        <g class="eyes-blink" fill="#000000">
+          <rect x="4" y="8" width="1" height="2"/>
+          <rect x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

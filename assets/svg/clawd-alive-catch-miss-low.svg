@@ -1,0 +1,316 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 2.2-Second Loop — Catch miss (low): same reach as catch-low (eyes
+         drop, bows into a crouch, both arms dive down in front and the hands
+         clap between his knees at u 7.5, v 14)... nothing in them. He peeks
+         into his hands, eyes dart after it, arms flail, he rocks back out of
+         the crouch and          lands on his bottom with a bounce, shakes his head (eye wobble),
+         looks away embarrassed with a double blink, scratches his head and
+         stands back up (same tail as clawd-alive-catch-miss.svg). */
+      .body-jump {
+        animation: mlow-jump 2.2s infinite ease-in-out;
+      }
+
+      .body-tilt {
+        transform-origin: 7.5px 15px;
+        animation: mlow-tilt 2.2s infinite ease-in-out;
+      }
+
+      .body-squash {
+        transform-origin: 7.5px 13px;
+        animation: mlow-squash 2.2s infinite ease-in-out;
+      }
+
+      .legs-jump {
+        transform-origin: 7.5px 15px;
+        animation: mlow-legs 2.2s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: mlow-shadow 2.2s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 11px;
+        animation: mlow-arm-l 2.2s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 11px;
+        animation: mlow-arm-r 2.2s infinite ease-in-out;
+      }
+
+      .clap {
+        opacity: 0;
+        animation: mlow-clap 2.2s infinite ease-in-out;
+      }
+
+      .fore-l {
+        transform-origin: 1.5px 10.5px;
+        animation: mlow-fore-l 2.2s infinite ease-in-out;
+      }
+
+      .fore-r {
+        transform-origin: 13.5px 10.5px;
+        animation: mlow-fore-r 2.2s infinite ease-in-out;
+      }
+
+      .fist-l {
+        animation: mlow-fist-l 2.2s infinite ease-in-out;
+      }
+
+      .fist-r {
+        animation: mlow-fist-r 2.2s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: mlow-look 2.2s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: mlow-blink 2.2s infinite ease-in-out;
+      }
+
+      /* --- Keyframes --- */
+
+      @keyframes mlow-jump {
+        0%, 6% { transform: translate(0, 0); }
+        14.5%, 17.5% { transform: translate(0px, 0.9px); }
+        21.8% { transform: translate(0px, 0.8px); }
+        24%, 36% { transform: translate(0px, 0.6px); }
+        41% { transform: translate(0px, 0.2px); }
+        46% { transform: translate(0px, -0.3px); }
+        49% { transform: translate(0px, 2.4px); }
+        55% { transform: translate(0px, -1.2px); }
+        61% { transform: translate(0px, 2.2px); }
+        64%, 88% { transform: translate(0px, 2px); }
+        94% { transform: translate(0px, -0.5px); }
+        100% { transform: translate(0, 0); }
+      }
+
+      @keyframes mlow-tilt {
+        0%, 36% { transform: rotate(0deg); }
+        41% { transform: rotate(-4deg); }
+        46% { transform: rotate(-6deg); }
+        49%, 62% { transform: rotate(0deg); }
+        64.5% { transform: rotate(4deg); }
+        67.5% { transform: rotate(-4deg); }
+        70.5% { transform: rotate(3.5deg); }
+        73.5% { transform: rotate(-3deg); }
+        76.5% { transform: rotate(1.5deg); }
+        79% { transform: rotate(0deg); }
+        83%, 89% { transform: rotate(-2.5deg); }
+        95%, 100% { transform: rotate(0deg); }
+      }
+
+      @keyframes mlow-squash {
+        0%, 6% { transform: scale(1, 1); }
+        14.5%, 17.5% { transform: scale(1.08, 0.88); }
+        21.8% { transform: scale(1.1, 0.88); }
+        24%, 36% { transform: scale(1.06, 0.92); }
+        41% { transform: scale(0.97, 1.04); }
+        46% { transform: scale(0.9, 1.12); }
+        49% { transform: scale(1.2, 0.78); }
+        55% { transform: scale(0.95, 1.06); }
+        61% { transform: scale(1.12, 0.85); }
+        65% { transform: scale(1.04, 0.96); }
+        83%, 88% { transform: scale(1.02, 0.95); }
+        94% { transform: scale(0.96, 1.05); }
+        100% { transform: scale(1, 1); }
+      }
+
+      @keyframes mlow-legs {
+        0%, 6% { transform: translate(0, 0) scale(1, 1); }
+        14.5%, 21.8% { transform: translate(0, 0) scale(1, 0.75); }
+        24%, 36% { transform: translate(0, 0) scale(1, 0.8); }
+        41% { transform: translate(0, 0) scale(1, 0.95); }
+        46% { transform: translate(0px, -0.3px) scale(1, 1.05); }
+        49% { transform: translate(0, 0) scale(1, 0.34); }
+        55% { transform: translate(0px, -1.2px) scale(1, 0.9); }
+        61%, 88% { transform: translate(0, 0) scale(1, 0.34); }
+        94% { transform: translate(0, 0) scale(1, 1.08); }
+        100% { transform: translate(0, 0) scale(1, 1); }
+      }
+
+      @keyframes mlow-shadow {
+        0%, 6% { transform: scaleX(1); opacity: 0.5; }
+        14.5%, 21.8% { transform: scaleX(1.1); opacity: 0.55; }
+        24%, 36% { transform: scaleX(1.06); opacity: 0.53; }
+        41% { transform: scaleX(1); opacity: 0.5; }
+        46% { transform: scaleX(0.94); opacity: 0.47; }
+        49% { transform: scaleX(1.24); opacity: 0.6; }
+        55% { transform: scaleX(0.9); opacity: 0.45; }
+        61% { transform: scaleX(1.18); opacity: 0.58; }
+        65%, 88% { transform: scaleX(1.1); opacity: 0.55; }
+        94% { transform: scaleX(0.97); opacity: 0.5; }
+        100% { transform: scaleX(1); opacity: 0.5; }
+      }
+
+      @keyframes mlow-arm-l {
+        0%, 6% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        14.5%, 17.5% { transform: translate(0px, 0.5px) rotate(-60deg) scale(1, 1); }
+        20% { transform: translate(1px, 0.5px) rotate(0deg) scale(1, 1); }
+        21.8%, 36% { transform: translate(2px, 0.5px) rotate(0deg) scale(1, 1); }
+        40% { transform: translate(0, 0) rotate(-30deg) scale(1, 1); }
+        44% { transform: translate(0px, -0.5px) rotate(-50deg) scale(1, 1.3); }
+        46% { transform: translate(-0.5px, -0.5px) rotate(-45deg) scale(1, 1.2); }
+        49% { transform: translate(-0.5px, 0px) rotate(-40deg) scale(1, 1); }
+        55% { transform: translate(0px, -1.5px) rotate(-20deg) scale(1, 1.4); }
+        61% { transform: translate(0px, 0.5px) rotate(-10deg) scale(1, 1); }
+        65%, 90% { transform: translate(0px, 0.5px) rotate(0deg) scale(1, 1); }
+        96%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      @keyframes mlow-arm-r {
+        0%, 6% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        14.5%, 17.5% { transform: translate(0px, 0.5px) rotate(60deg) scale(1, 1); }
+        20% { transform: translate(-1px, 0.5px) rotate(0deg) scale(1, 1); }
+        21.8%, 36% { transform: translate(-2px, 0.5px) rotate(0deg) scale(1, 1); }
+        40% { transform: translate(0, 0) rotate(30deg) scale(1, 1); }
+        44% { transform: translate(0px, -0.5px) rotate(50deg) scale(1, 1.3); }
+        46% { transform: translate(0.5px, -0.5px) rotate(45deg) scale(1, 1.2); }
+        49% { transform: translate(0.5px, 0px) rotate(40deg) scale(1, 1); }
+        55% { transform: translate(0px, -1.5px) rotate(20deg) scale(1, 1.4); }
+        61% { transform: translate(0px, 0.5px) rotate(10deg) scale(1, 1); }
+        66%, 78% { transform: translate(0px, 0.5px) rotate(0deg) scale(1, 1); }
+        81% { transform: translate(-0.5px, -3px) rotate(-12deg) scale(1, 1.8); }
+        83% { transform: translate(-0.5px, -3.3px) rotate(4deg) scale(1, 1.8); }
+        85% { transform: translate(-0.5px, -3px) rotate(-12deg) scale(1, 1.8); }
+        87% { transform: translate(-0.5px, -3.3px) rotate(4deg) scale(1, 1.8); }
+        89% { transform: translate(-0.5px, -3px) rotate(-8deg) scale(1, 1.8); }
+        94%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      @keyframes mlow-look {
+        0%, 2% { transform: translate(0, 0); }
+        6%, 24% { transform: translate(0px, 1px); }
+        30% { transform: translate(0px, 1.2px); }
+        34% { transform: translate(1.5px, 0.5px); }
+        39% { transform: translate(2px, 0px); }
+        46% { transform: translate(0px, -1px); }
+        48%, 62% { transform: translate(0, 0); }
+        64.5% { transform: translate(1px, 0px); }
+        67.5% { transform: translate(-1px, 0px); }
+        70.5% { transform: translate(1px, 0px); }
+        73.5% { transform: translate(-1px, 0px); }
+        76.5% { transform: translate(0.5px, 0px); }
+        79% { transform: translate(0, 0); }
+        82%, 90% { transform: translate(-1.5px, 0.5px); }
+        96%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes mlow-blink {
+        0%, 2% { transform: scaleY(1); }
+        5% { transform: scaleY(1.2); }
+        10%, 15% { transform: scaleY(1); }
+        17% { transform: scaleY(0.8); }
+        22%, 27% { transform: scaleY(1); }
+        30% { transform: scaleY(1.3); }
+        34%, 44% { transform: scaleY(1.25); }
+        48% { transform: scaleY(1); }
+        50% { transform: scaleY(0.1); }
+        55% { transform: scaleY(1); }
+        62%, 78% { transform: scaleY(0.75); }
+        81% { transform: scaleY(1); }
+        84% { transform: scaleY(0.1); }
+        86% { transform: scaleY(1); }
+        88% { transform: scaleY(0.1); }
+        90%, 100% { transform: scaleY(1); }
+      }
+
+      @keyframes mlow-clap {
+        0%, 17.5% { opacity: 0; }
+        18%, 40% { opacity: 1; }
+        41%, 100% { opacity: 0; }
+      }
+
+      @keyframes mlow-fore-l {
+        0%, 18% { transform: rotate(30.4deg) scale(0.45, 1); }
+        21.8% { transform: rotate(30.4deg) scale(1.04, 1); }
+        24%, 27% { transform: rotate(30.4deg) scale(1, 1); }
+        30% { transform: rotate(30.4deg) scale(0.7, 1); }
+        33% { transform: rotate(30.4deg) scale(0.76, 1); }
+        36% { transform: rotate(30.4deg) scale(0.7, 1); }
+        40%, 100% { transform: rotate(30.4deg) scale(0.45, 1); }
+      }
+
+      @keyframes mlow-fore-r {
+        0%, 18% { transform: rotate(-30.4deg) scale(0.45, 1); }
+        21.8% { transform: rotate(-30.4deg) scale(1.04, 1); }
+        24%, 27% { transform: rotate(-30.4deg) scale(1, 1); }
+        30% { transform: rotate(-30.4deg) scale(0.7, 1); }
+        33% { transform: rotate(-30.4deg) scale(0.76, 1); }
+        36% { transform: rotate(-30.4deg) scale(0.7, 1); }
+        40%, 100% { transform: rotate(-30.4deg) scale(0.45, 1); }
+      }
+
+      @keyframes mlow-fist-l {
+        0%, 18% { transform: translate(-2.75px, -1.612px); }
+        21.8% { transform: translate(0.2px, 0.117px); }
+        24%, 27% { transform: translate(0, 0); }
+        30% { transform: translate(-1.5px, -0.879px); }
+        33% { transform: translate(-1.2px, -0.703px); }
+        36% { transform: translate(-1.5px, -0.879px); }
+        40%, 100% { transform: translate(-2.75px, -1.612px); }
+      }
+
+      @keyframes mlow-fist-r {
+        0%, 18% { transform: translate(2.75px, -1.612px); }
+        21.8% { transform: translate(-0.2px, 0.117px); }
+        24%, 27% { transform: translate(0, 0); }
+        30% { transform: translate(1.5px, -0.879px); }
+        33% { transform: translate(1.2px, -0.703px); }
+        36% { transform: translate(1.5px, -0.879px); }
+        40%, 100% { transform: translate(2.75px, -1.612px); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (fold under him when he sits) -->
+  <g class="legs-jump">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="body-jump">
+    <g class="body-tilt">
+      <g class="body-squash">
+        <!-- Torso -->
+        <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+        <!-- Left Arm -->
+        <g class="arm-l">
+          <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+        </g>
+        <!-- Right Arm -->
+        <g class="arm-r">
+          <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+        </g>
+        <!-- Arms diving down in front, hands clap between the knees -->
+        <g class="clap" fill="#A85A3A">
+          <g class="fore-l"><rect x="1.5" y="10" width="5.6" height="1"/></g>
+          <g class="fore-r"><rect x="7.9" y="10" width="5.6" height="1"/></g>
+          <g class="fist-l"><rect class="fist" x="5.4" y="12.33" width="2.1" height="2.2"/></g>
+          <g class="fist-r"><rect class="fist" x="7.5" y="12.33" width="2.1" height="2.2"/></g>
+        </g>
+        <!-- Eyes -->
+        <g class="eyes-look">
+          <g class="eyes-blink" fill="#000000">
+            <rect x="4" y="8" width="1" height="2"/>
+            <rect x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

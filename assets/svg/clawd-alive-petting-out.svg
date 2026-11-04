@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 0.3-Second One-Shot — Petting Out (outro of clawd-alive-petting):
+         from the exact first frame of the petting loop the "^^" squeezes,
+         the eyes open wide for a beat and settle to normal, with a small
+         stretch of the body as the hand lifts. The last 10% holds the exact
+         rest pose of clawd-idle-follow. */
+      .squish-anim {
+        transform-origin: 7.5px 13px;
+        animation: pto-squish 0.3s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: pto-shadow 0.3s infinite ease-in-out;
+      }
+
+      .eyes-happy {
+        animation: pto-vis-happy 0.3s infinite step-end;
+      }
+
+      .happy-squeeze {
+        transform-origin: 7.5px 9px;
+        animation: pto-happy 0.3s infinite ease-in;
+      }
+
+      .eyes-open {
+        opacity: 0;
+        animation: pto-vis-open 0.3s infinite step-end;
+      }
+
+      .eyes-open-lid {
+        transform-origin: 7.5px 9px;
+        animation: pto-lid 0.3s infinite ease-out;
+      }
+
+      /* --- Keyframes --- */
+
+      @keyframes pto-squish {
+        0% { transform: scale(1, 1); }
+        22% { transform: scale(1.03, 0.96); }
+        50% { transform: scale(0.97, 1.04); }
+        70% { transform: scale(1.01, 0.99); }
+        84%, 100% { transform: scale(1, 1); }
+      }
+
+      @keyframes pto-shadow {
+        0%, 84%, 100% { transform: scaleX(1); opacity: 0.5; }
+        22% { transform: scaleX(1.03); opacity: 0.52; }
+        50% { transform: scaleX(0.97); opacity: 0.48; }
+      }
+
+      @keyframes pto-happy {
+        0% { transform: scale(1, 1); }
+        28%, 100% { transform: scale(1.05, 0.6); }
+      }
+
+      @keyframes pto-vis-happy {
+        0% { opacity: 1; }
+        30% { opacity: 0; }
+      }
+
+      @keyframes pto-vis-open {
+        0% { opacity: 0; }
+        30% { opacity: 1; }
+      }
+
+      @keyframes pto-lid {
+        0%, 30% { transform: scaleY(0.3); }
+        52% { transform: scaleY(1.15); }
+        72%, 100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Legs -->
+  <g id="legs" fill="#DE886D">
+    <rect x="3" y="12" width="1" height="3"/>
+    <rect x="5" y="12" width="1" height="3"/>
+    <rect x="9" y="12" width="1" height="3"/>
+    <rect x="11" y="12" width="1" height="3"/>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="squish-anim">
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <!-- Left Arm -->
+    <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    <!-- Right Arm -->
+    <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    <!-- Happy closed eyes "^^" (as in the petting loop) -->
+    <g class="eyes-happy">
+      <g class="happy-squeeze" fill="#000000">
+        <rect x="3" y="9" width="1" height="1"/>
+        <rect x="4" y="8" width="1" height="1"/>
+        <rect x="5" y="9" width="1" height="1"/>
+        <rect x="9" y="9" width="1" height="1"/>
+        <rect x="10" y="8" width="1" height="1"/>
+        <rect x="11" y="9" width="1" height="1"/>
+      </g>
+    </g>
+    <!-- Open eyes (rest) -->
+    <g class="eyes-open">
+      <g class="eyes-open-lid" fill="#000000">
+        <rect x="4" y="8" width="1" height="2"/>
+        <rect x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>

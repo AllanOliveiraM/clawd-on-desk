@@ -1,0 +1,253 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* Exact mirror of the -left file (whole art flipped around x = 7.5).
+         Notes below describe the unflipped art: its left is the on-screen
+         right, and an art u maps to 15 - u on screen.
+         1.6-Second Loop — Catch (right): eyes snap to something on his right,
+         he cocks back (arm wound up, body leaning away), then a quick side
+         swipe: leans left, the left claw shoots out to about u = -1 at
+         v = 10 and snaps shut on it, pulls the prize in to his chest, happy
+         "^^" squish with the other arm flapping, settles back to rest. */
+      .body-lean {
+        transform-origin: 7.5px 15px;
+        animation: cl-lean 1.6s infinite ease-in-out;
+      }
+
+      .body-squash {
+        transform-origin: 7.5px 13px;
+        animation: cl-squash 1.6s infinite ease-in-out;
+      }
+
+      .legs-squash {
+        transform-origin: 7.5px 15px;
+        animation: cl-legs 1.6s infinite ease-in-out;
+      }
+
+      .leg-1 { animation: cl-leg-1 1.6s infinite ease-in-out; }
+      .leg-4 { animation: cl-leg-4 1.6s infinite ease-in-out; }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: cl-shadow 1.6s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 2px 10px;
+        animation: cl-arm-l 1.6s infinite ease-in-out;
+      }
+
+      .claw-l {
+        transform-origin: 2px 10px;
+        animation: cl-claw-l 1.6s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 13px 10px;
+        animation: cl-arm-r 1.6s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: cl-look 1.6s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: cl-blink 1.6s infinite ease-in-out;
+      }
+
+      .eyes-open {
+        animation: cl-eyes-open 1.6s infinite step-end;
+      }
+
+      .eyes-happy {
+        opacity: 0;
+        animation: cl-eyes-happy 1.6s infinite step-end;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Lean away (wind-up), whip over to the right, hold the reach, come
+         back upright with a little overshoot, happy bounce, rest */
+      @keyframes cl-lean {
+        0%, 5% { transform: translate(0, 0) rotate(0deg); }
+        12%, 15% { transform: translate(0.6px, 0.4px) rotate(4deg); }
+        20% { transform: translate(-0.35px, 0.1px) rotate(-3.5deg); }
+        23%, 29% { transform: translate(-0.3px, 0.1px) rotate(-3deg); }
+        36% { transform: translate(0.3px, 0) rotate(2deg); }
+        42% { transform: translate(0, 0) rotate(-1deg); }
+        48%, 100% { transform: translate(0, 0) rotate(0deg); }
+      }
+
+      /* Stretch into the swipe, squish twice when he has it, settle */
+      @keyframes cl-squash {
+        0%, 5% { transform: scale(1, 1); }
+        12%, 15% { transform: scale(1.06, 0.92); }
+        20% { transform: scale(1.08, 0.95); }
+        29% { transform: scale(1.04, 0.97); }
+        36% { transform: scale(0.96, 1.05); }
+        44% { transform: scale(1.12, 0.86); }
+        51% { transform: scale(0.97, 1.04); }
+        58% { transform: scale(1.1, 0.88); }
+        66% { transform: scale(0.99, 1.01); }
+        74%, 100% { transform: scale(1, 1); }
+      }
+
+      @keyframes cl-legs {
+        0%, 5% { transform: scale(1, 1); }
+        12%, 15% { transform: scale(1, 0.8); }
+        20%, 29% { transform: scale(1, 1); }
+        44% { transform: scale(1, 0.75); }
+        51% { transform: scale(1, 1); }
+        58% { transform: scale(1, 0.8); }
+        66%, 100% { transform: scale(1, 1); }
+      }
+
+      /* Weight shift: outer feet lift as he whips across */
+      @keyframes cl-leg-1 {
+        0%, 12%, 17%, 100% { transform: translate(0, 0); }
+        14.5% { transform: translate(0, -1px); }
+      }
+
+      @keyframes cl-leg-4 {
+        0%, 17%, 27%, 100% { transform: translate(0, 0); }
+        20%, 24% { transform: translate(0, -1px); }
+      }
+
+      @keyframes cl-shadow {
+        0%, 5%, 66%, 100% { transform: translateX(0) scaleX(1); opacity: 0.5; }
+        12%, 15% { transform: translateX(0.3px) scaleX(1.06); opacity: 0.52; }
+        20%, 29% { transform: translateX(-0.5px) scaleX(1.1); opacity: 0.55; }
+        44% { transform: translateX(0) scaleX(1.12); opacity: 0.55; }
+        58% { transform: translateX(0) scaleX(1.08); opacity: 0.53; }
+      }
+
+      /* Left claw: winds up (raised, tucked), shoots out long on the swipe
+         (tip at u = -1, v = 10), pulls the prize in and holds it up by his
+         face during the squish, then lowers back to rest */
+      @keyframes cl-arm-l {
+        0%, 5% { transform: rotate(0deg) scale(1, 1); }
+        12%, 15% { transform: rotate(35deg) scale(0.8, 1); }
+        20% { transform: rotate(5deg) scale(1.15, 1); }
+        23%, 27% { transform: rotate(4deg) scale(1.08, 1); }
+        31% { transform: rotate(15deg) scale(1, 1); }
+        37% { transform: rotate(45deg) scale(1, 1); }
+        44% { transform: rotate(35deg) scale(1, 1); }
+        51% { transform: rotate(48deg) scale(1, 1); }
+        58% { transform: rotate(35deg) scale(1, 1); }
+        66% { transform: rotate(45deg) scale(1, 1); }
+        80% { transform: rotate(10deg) scale(1, 1); }
+        88%, 100% { transform: rotate(0deg) scale(1, 1); }
+      }
+
+      /* The claw tip snaps shut on the catch (thin tip pixel pinches in) */
+      @keyframes cl-claw-l {
+        0%, 19% { opacity: 0; }
+        20%, 23% { opacity: 1; }
+        24%, 100% { opacity: 0; }
+      }
+
+      /* Other arm: braces back on the wind-up, follows through, then flaps
+         happily during the squish */
+      @keyframes cl-arm-r {
+        0%, 5% { transform: rotate(0deg); }
+        12%, 15% { transform: rotate(-12deg); }
+        20%, 27% { transform: rotate(-35deg); }
+        36% { transform: rotate(0deg); }
+        42% { transform: rotate(-40deg); }
+        47% { transform: rotate(5deg); }
+        53% { transform: rotate(-40deg); }
+        58% { transform: rotate(5deg); }
+        64% { transform: rotate(-30deg); }
+        72%, 100% { transform: rotate(0deg); }
+      }
+
+      /* Eyes lead: snap left before the body moves, follow the claw, look
+         at the prize in his claw, come home */
+      @keyframes cl-look {
+        0%, 2% { transform: translate(0, 0); }
+        6%, 27% { transform: translate(-1.5px, 0); }
+        34%, 40% { transform: translate(-1px, -0.5px); }
+        44%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Focus squint on the wind-up, wide on the swipe, blink at the end */
+      @keyframes cl-blink {
+        0%, 5% { transform: scaleY(1); }
+        10%, 15% { transform: scaleY(0.6); }
+        19%, 28% { transform: scaleY(1.2); }
+        34%, 88% { transform: scaleY(1); }
+        91% { transform: scaleY(0.1); }
+        94%, 100% { transform: scaleY(1); }
+      }
+
+      /* Normal eyes swap to happy "^^" from the squish until the settle */
+      @keyframes cl-eyes-open {
+        0% { opacity: 1; }
+        40% { opacity: 0; }
+        82% { opacity: 1; }
+      }
+
+      @keyframes cl-eyes-happy {
+        0% { opacity: 0; }
+        40% { opacity: 1; }
+        82% { opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <!-- Mirrored: everything below is the -left art flipped horizontally -->
+  <g transform="translate(15 0) scale(-1 1)">
+
+    <!-- Ground Shadow -->
+    <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+    <!-- Legs -->
+    <g class="legs-squash">
+      <g id="legs" fill="#DE886D">
+        <g class="leg-1"><rect x="3" y="12" width="1" height="3"/></g>
+        <rect x="5" y="12" width="1" height="3"/>
+        <rect x="9" y="12" width="1" height="3"/>
+        <g class="leg-4"><rect x="11" y="12" width="1" height="3"/></g>
+      </g>
+    </g>
+
+    <!-- Animated Upper Body -->
+    <g class="body-lean">
+      <g class="body-squash">
+        <!-- Torso -->
+        <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+        <!-- Left Arm (swipes out) -->
+        <g class="arm-l">
+          <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+          <!-- Pinch notch at the claw tip, only on the snap -->
+          <g class="claw-l">
+            <rect x="0" y="9.8" width="0.5" height="0.4" fill="#000000" opacity="0.35"/>
+          </g>
+        </g>
+        <!-- Right Arm -->
+        <g class="arm-r">
+          <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+        </g>
+        <!-- Eyes -->
+        <g class="eyes-open">
+          <g class="eyes-look">
+            <g class="eyes-blink" fill="#000000">
+              <rect x="4" y="8" width="1" height="2"/>
+              <rect x="10" y="8" width="1" height="2"/>
+            </g>
+          </g>
+        </g>
+        <!-- Satisfied "^^" eyes after the catch -->
+        <g class="eyes-happy" fill="#000000">
+          <rect x="3" y="9" width="1" height="1"/>
+          <rect x="4" y="8" width="1" height="1"/>
+          <rect x="5" y="9" width="1" height="1"/>
+          <rect x="9" y="9" width="1" height="1"/>
+          <rect x="10" y="8" width="1" height="1"/>
+          <rect x="11" y="9" width="1" height="1"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

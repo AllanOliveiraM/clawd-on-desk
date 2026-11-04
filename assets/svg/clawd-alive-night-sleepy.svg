@@ -6,7 +6,10 @@
          close, arms droop, a little drift to the side), then he catches
          himself with a quick jolt back up (eyes pop wide, arms flick), shakes
          it off with a double blink, and the lids start getting heavy again.
-         Stays standing, eyes never stay shut, no "z": not the sleep sequence. */
+         Stays standing, eyes never stay shut, no "z": not the sleep sequence.
+         Starts and ends in the exact rest pose of clawd-idle-follow: the
+         lids grow heavy and the body slumps over the first ~10%, and he
+         straightens back up over the last ~10%. */
       .action-body {
         transform-origin: 7.5px 13px;
         animation: sleepy-body 3s infinite ease-in-out;
@@ -46,7 +49,8 @@
       /* Slow nod down (sinks, squashes, drifts), quick jolt up (stretch),
          wobble back, slump again little by little */
       @keyframes sleepy-body {
-        0%, 4% { transform: translate(0, 0.2px) rotate(0deg) scale(1.02, 0.97); }
+        0% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        9% { transform: translate(0, 0.2px) rotate(0deg) scale(1.02, 0.97); }
         16% { transform: translate(0, 0.4px) rotate(0.5deg) scale(1.03, 0.95); }
         30% { transform: translate(0.2px, 0.7px) rotate(1.5deg) scale(1.05, 0.91); }
         38% { transform: translate(0.3px, 0.9px) rotate(2deg) scale(1.06, 0.89); }
@@ -57,8 +61,8 @@
         55% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
         70% { transform: translate(0, 0.1px) rotate(0deg) scale(1.01, 0.98); }
         84% { transform: translate(-0.1px, 0.4px) rotate(-0.8deg) scale(1.03, 0.95); }
-        92% { transform: translate(0, 0.3px) rotate(-0.3deg) scale(1.025, 0.96); }
-        100% { transform: translate(0, 0.2px) rotate(0deg) scale(1.02, 0.97); }
+        91% { transform: translate(0, 0.3px) rotate(-0.3deg) scale(1.025, 0.96); }
+        100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
       }
 
       @keyframes sleepy-legs {
@@ -67,7 +71,8 @@
       }
 
       @keyframes sleepy-shadow {
-        0%, 4%, 92%, 100% { transform: scaleX(1.02) translate(0, 0); opacity: 0.5; }
+        0%, 100% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+        9%, 91% { transform: scaleX(1.02) translate(0, 0); opacity: 0.5; }
         38%, 40% { transform: scaleX(1.06) translate(0.3px, 0); opacity: 0.55; }
         43% { transform: scaleX(0.95) translate(0, 0); opacity: 0.45; }
         55%, 70% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
@@ -76,7 +81,8 @@
 
       /* Arms hang heavier as he nods, flick out on the jolt */
       @keyframes sleepy-arm-l {
-        0%, 4%, 100% { transform: translate(0.2px, 0.5px) rotate(-4deg); }
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        9%, 92% { transform: translate(0.2px, 0.5px) rotate(-4deg); }
         38%, 40% { transform: translate(0.6px, 1.6px) rotate(-12deg); }
         43% { transform: translate(-0.6px, -1px) rotate(10deg); }
         48% { transform: translate(0, 0.2px) rotate(-2deg); }
@@ -85,7 +91,8 @@
       }
 
       @keyframes sleepy-arm-r {
-        0%, 4%, 100% { transform: translate(-0.2px, 0.5px) rotate(4deg); }
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        9%, 92% { transform: translate(-0.2px, 0.5px) rotate(4deg); }
         38%, 40% { transform: translate(-0.6px, 1.6px) rotate(12deg); }
         43% { transform: translate(0.6px, -1px) rotate(-10deg); }
         48% { transform: translate(0, 0.2px) rotate(2deg); }
@@ -95,7 +102,8 @@
 
       /* Gaze sinks with the nod; after the jolt a quick little head shake */
       @keyframes sleepy-look {
-        0%, 4%, 100% { transform: translate(0, 0.3px); }
+        0%, 100% { transform: translate(0, 0); }
+        9%, 91% { transform: translate(0, 0.3px); }
         38%, 40% { transform: translate(0, 1px); }
         43% { transform: translate(0, -0.3px); }
         48% { transform: translate(-0.5px, 0); }
@@ -108,7 +116,8 @@
       /* Heavy lids: half-closed, slowly sliding shut during the nod, pop
          wide on the jolt, double blink, then heavy again */
       @keyframes sleepy-lid {
-        0%, 4%, 100% { transform: scaleY(0.5); }
+        0%, 100% { transform: scaleY(1); }
+        9% { transform: scaleY(0.5); }
         20% { transform: scaleY(0.4); }
         32% { transform: scaleY(0.2); }
         38%, 40.5% { transform: scaleY(0.1); }
@@ -121,7 +130,7 @@
         66% { transform: scaleY(0.8); }
         76% { transform: scaleY(0.55); }
         86% { transform: scaleY(0.3); }
-        93% { transform: scaleY(0.5); }
+        92% { transform: scaleY(0.55); }
       }
     </style>
   </defs>

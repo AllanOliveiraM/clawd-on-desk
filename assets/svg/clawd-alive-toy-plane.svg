@@ -140,11 +140,12 @@
         78% { transform: rotate(0deg); }
         100% { transform: rotate(0deg); }
       }
-      /* Appears in his hands, fades out near the right edge of the view */
+      /* Appears in his hands; fades out as it glides away, fully gone
+         before its centre passes x 21.7 (nose at the window edge) */
       @keyframes pl-prop-fade {
         0% { opacity: 0; }
-        4%, 66% { opacity: 1; }
-        76%, 100% { opacity: 0; }
+        4%, 46% { opacity: 1; }
+        53%, 100% { opacity: 0; }
       }
 
       /* Sheet: fold, fold, then swapped for the plane with a little pop */

@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 0.5-Second One-Shot — Fake Nap Out (outro of clawd-alive-fake-nap):
+         from the exact first frame of the fake nap (flat-line eyes, arms
+         tucked behind the back) he takes a little breath in, the lines
+         shrink and the eyes open, a quick blink, arms swing back out to
+         the sides and he settles. The last 10% holds the exact rest pose of
+         clawd-idle-follow. */
+      .action-body {
+        transform-origin: 7.5px 15px;
+        animation: fno-body 0.5s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: fno-shadow 0.5s infinite ease-in-out;
+      }
+
+      .arm-l {
+        animation: fno-arm-l 0.5s infinite ease-in-out;
+      }
+
+      .arm-r {
+        animation: fno-arm-r 0.5s infinite ease-in-out;
+      }
+
+      .eyes-shut {
+        animation: fno-vis-shut 0.5s infinite step-end;
+      }
+
+      .line-l {
+        transform-origin: 4.5px 9.5px;
+        animation: fno-line 0.5s infinite ease-in;
+      }
+
+      .line-r {
+        transform-origin: 10.5px 9.5px;
+        animation: fno-line 0.5s infinite ease-in;
+      }
+
+      .eyes-open {
+        opacity: 0;
+        animation: fno-vis-open 0.5s infinite step-end;
+      }
+
+      .eyes-open-lid {
+        transform-origin: 7.5px 10px;
+        animation: fno-lid 0.5s infinite ease-out;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Breath in (stretch), squash as the arms come out, settle */
+      @keyframes fno-body {
+        0% { transform: scale(1, 1); }
+        22% { transform: scale(0.97, 1.04); }
+        50% { transform: scale(1.03, 0.97); }
+        68% { transform: scale(0.99, 1.01); }
+        84%, 100% { transform: scale(1, 1); }
+      }
+
+      @keyframes fno-shadow {
+        0%, 84%, 100% { transform: scaleX(1); opacity: 0.5; }
+        22% { transform: scaleX(0.97); opacity: 0.48; }
+        50% { transform: scaleX(1.03); opacity: 0.52; }
+      }
+
+      /* Arms swing back out from behind, overshoot, settle */
+      @keyframes fno-arm-l {
+        0%, 18% { transform: translate(1px, 0); }
+        44% { transform: translate(0, -0.4px); }
+        60% { transform: translate(0, 0.15px); }
+        74%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes fno-arm-r {
+        0%, 20% { transform: translate(-1px, 0); }
+        46% { transform: translate(0, -0.4px); }
+        62% { transform: translate(0, 0.15px); }
+        76%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Flat lines narrow... */
+      @keyframes fno-line {
+        0%, 8% { transform: scaleX(1); }
+        22% { transform: scaleX(0.5); }
+        100% { transform: scaleX(0.5); }
+      }
+
+      @keyframes fno-vis-shut {
+        0% { opacity: 1; }
+        22% { opacity: 0; }
+      }
+
+      /* ...the eyes open from the line, then a quick blink */
+      @keyframes fno-vis-open {
+        0% { opacity: 0; }
+        22% { opacity: 1; }
+      }
+
+      @keyframes fno-lid {
+        0%, 22% { transform: scaleY(0.5); }
+        36% { transform: scaleY(1.1); }
+        46% { transform: scaleY(1); }
+        56% { transform: scaleY(0.1); }
+        68%, 100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Legs -->
+  <g id="legs" fill="#DE886D">
+    <rect x="3" y="12" width="1" height="3"/>
+    <rect x="5" y="12" width="1" height="3"/>
+    <rect x="9" y="12" width="1" height="3"/>
+    <rect x="11" y="12" width="1" height="3"/>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="action-body">
+    <!-- Arms first so the torso covers them while tucked -->
+    <g class="arm-l">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <g class="arm-r">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <!-- Eyes shut: flat lines (as in the fake nap) -->
+    <g class="eyes-shut" fill="#000000">
+      <g class="line-l"><rect x="3.5" y="9" width="2" height="1"/></g>
+      <g class="line-r"><rect x="9.5" y="9" width="2" height="1"/></g>
+    </g>
+    <!-- Open eyes (rest) -->
+    <g class="eyes-open">
+      <g class="eyes-open-lid" fill="#000000">
+        <rect x="4" y="8" width="1" height="2"/>
+        <rect x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>

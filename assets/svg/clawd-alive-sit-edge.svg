@@ -133,9 +133,6 @@
     </style>
   </defs>
 
-  <!-- Ground Shadow (hidden while seated: he sits on the edge, not on the floor) -->
-  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
-
   <!-- Legs dangling over the edge -->
   <g id="legs" fill="#DE886D">
     <g class="leg-a1"><rect x="3" y="14" width="1" height="4"/></g>

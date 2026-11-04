@@ -1,0 +1,265 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 1.4-Second Loop — Catch (high): eyes snap up to something hovering
+         just over his head, quick crouch, small hop with both arms shooting
+         up, elbows up high, forearms swing down and the fists slap shut right above
+         his head
+         (clasp centre at u 7.5, v 4.5) as he lands. Holds the prize with a
+         happy "^^" wiggle, then lowers the arms and settles. */
+      .body-jump {
+        animation: high-jump 1.4s infinite ease-in-out;
+      }
+
+      .body-squash {
+        transform-origin: 7.5px 13px;
+        animation: high-squash 1.4s infinite ease-in-out;
+      }
+
+      .legs-jump {
+        transform-origin: 7.5px 15px;
+        animation: high-legs 1.4s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: high-shadow 1.4s infinite ease-in-out;
+      }
+
+      .arm-l {
+        transform-origin: 1px 11px;
+        animation: high-arm-l 1.4s infinite ease-in-out;
+      }
+
+      .arm-r {
+        transform-origin: 14px 11px;
+        animation: high-arm-r 1.4s infinite ease-in-out;
+      }
+
+      .fore-l {
+        opacity: 0;
+        transform-origin: 1.5px 1.5px;
+        animation: high-fore-l 1.4s infinite ease-in-out;
+      }
+
+      .fore-r {
+        opacity: 0;
+        transform-origin: 13.5px 1.5px;
+        animation: high-fore-r 1.4s infinite ease-in-out;
+      }
+
+      .eyes-look {
+        animation: high-look 1.4s infinite ease-in-out;
+      }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: high-blink 1.4s infinite ease-in-out;
+      }
+
+      .eyes-open {
+        animation: high-eyes-open 1.4s infinite step-end;
+      }
+
+      .eyes-happy {
+        opacity: 0;
+        animation: high-eyes-happy 1.4s infinite step-end;
+      }
+
+      /* --- Keyframes --- */
+
+      /* Dip, small hop, land right on the clap, tiny rebound, hold */
+      @keyframes high-jump {
+        0%, 6% { transform: translate(0, 0); }
+        14%, 18% { transform: translate(0, 1.2px); }
+        25% { transform: translate(0, -1.4px); }
+        31% { transform: translate(0, -2px); }
+        37% { transform: translate(0, -0.9px); }
+        42% { transform: translate(0, 0); }
+        46% { transform: translate(0, 0.2px); }
+        51% { transform: translate(0, -0.3px); }
+        56%, 100% { transform: translate(0, 0); }
+      }
+
+      /* Squash and stretch at the base; happy side wiggle while holding */
+      @keyframes high-squash {
+        0%, 6% { transform: scale(1, 1) rotate(0deg); }
+        14% { transform: scale(1.12, 0.86) rotate(0deg); }
+        18% { transform: scale(1.14, 0.84) rotate(0deg); }
+        25% { transform: scale(0.9, 1.1) rotate(0deg); }
+        31% { transform: scale(0.97, 1.03) rotate(0deg); }
+        37% { transform: scale(0.98, 1.02) rotate(0deg); }
+        42% { transform: scale(1, 1) rotate(0deg); }
+        46% { transform: scale(1.05, 0.95) rotate(0deg); }
+        51% { transform: scale(0.98, 1.02) rotate(0deg); }
+        56% { transform: scale(1, 1) rotate(0deg); }
+        61% { transform: scale(1.02, 0.98) rotate(3deg); }
+        67% { transform: scale(1, 1) rotate(-3deg); }
+        73% { transform: scale(1.02, 0.98) rotate(2deg); }
+        78% { transform: scale(1, 1) rotate(0deg); }
+        88% { transform: scale(1.04, 0.96) rotate(0deg); }
+        94%, 100% { transform: scale(1, 1) rotate(0deg); }
+      }
+
+      @keyframes high-legs {
+        0%, 6% { transform: translate(0, 0) scale(1, 1); }
+        14%, 18% { transform: translate(0, 0) scale(1, 0.67); }
+        25% { transform: translate(0, -0.8px) scale(1, 1.12); }
+        31% { transform: translate(0, -1.6px) scale(1, 1); }
+        37% { transform: translate(0, -0.7px) scale(1, 1); }
+        42% { transform: translate(0, 0) scale(1, 1); }
+        46% { transform: translate(0, 0) scale(1, 0.85); }
+        51%, 84% { transform: translate(0, 0) scale(1, 1); }
+        88% { transform: translate(0, 0) scale(1, 0.9); }
+        94%, 100% { transform: translate(0, 0) scale(1, 1); }
+      }
+
+      @keyframes high-shadow {
+        0%, 6%, 56%, 100% { transform: scaleX(1); opacity: 0.5; }
+        14%, 18% { transform: scaleX(1.12); opacity: 0.55; }
+        31% { transform: scaleX(0.78); opacity: 0.36; }
+        42% { transform: scaleX(1); opacity: 0.5; }
+        46% { transform: scaleX(1.08); opacity: 0.54; }
+        88% { transform: scaleX(1.05); opacity: 0.52; }
+      }
+
+      /* Upper arms: wind down in the crouch, shoot straight up beside the
+         head, hold the arch, come back down */
+      @keyframes high-arm-l {
+        0%, 6% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        14%, 18% { transform: translate(0, 0.5px) rotate(-30deg) scale(1, 1); }
+        25% { transform: translate(0.3px, -1.2px) rotate(-6deg) scale(1, 3.4); }
+        31% { transform: translate(0.5px, -1.6px) rotate(-2deg) scale(1, 4.7); }
+        37%, 80% { transform: translate(0.5px, -1.5px) rotate(0deg) scale(1, 4.5); }
+        86% { transform: translate(0.3px, -1px) rotate(0deg) scale(1, 2.6); }
+        92% { transform: translate(0, 0.3px) rotate(-12deg) scale(1, 1); }
+        97%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      @keyframes high-arm-r {
+        0%, 6% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        14%, 18% { transform: translate(0, 0.5px) rotate(30deg) scale(1, 1); }
+        25% { transform: translate(-0.3px, -1.2px) rotate(6deg) scale(1, 3.4); }
+        31% { transform: translate(-0.5px, -1.6px) rotate(2deg) scale(1, 4.7); }
+        37%, 80% { transform: translate(-0.5px, -1.5px) rotate(0deg) scale(1, 4.5); }
+        86% { transform: translate(-0.3px, -1px) rotate(0deg) scale(1, 2.6); }
+        92% { transform: translate(0, 0.3px) rotate(12deg) scale(1, 1); }
+        97%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+
+      /* Forearms: open wide at the top of the hop, slap shut on the landing
+         (overshoot), hold, fold away before the arms come down */
+      @keyframes high-fore-l {
+        0%, 27% { opacity: 0; transform: rotate(-60deg) scale(1, 1); }
+        29% { opacity: 1; transform: rotate(-64deg) scale(1, 1); }
+        35% { opacity: 1; transform: rotate(-52deg) scale(1, 1); }
+        39% { opacity: 1; transform: rotate(-8deg) scale(1, 1); }
+        42% { opacity: 1; transform: rotate(30deg) scale(1, 1); }
+        46%, 62% { opacity: 1; transform: rotate(26.57deg) scale(1, 1); }
+        65% { opacity: 1; transform: rotate(28.5deg) scale(1, 1); }
+        69%, 79% { opacity: 1; transform: rotate(26.57deg) scale(1, 1); }
+        84% { opacity: 1; transform: rotate(40deg) scale(0.4, 1); }
+        85%, 100% { opacity: 0; transform: rotate(40deg) scale(0.2, 1); }
+      }
+
+      @keyframes high-fore-r {
+        0%, 27% { opacity: 0; transform: rotate(60deg) scale(1, 1); }
+        29% { opacity: 1; transform: rotate(64deg) scale(1, 1); }
+        35% { opacity: 1; transform: rotate(52deg) scale(1, 1); }
+        39% { opacity: 1; transform: rotate(8deg) scale(1, 1); }
+        42% { opacity: 1; transform: rotate(-30deg) scale(1, 1); }
+        46%, 62% { opacity: 1; transform: rotate(-26.57deg) scale(1, 1); }
+        65% { opacity: 1; transform: rotate(-28.5deg) scale(1, 1); }
+        69%, 79% { opacity: 1; transform: rotate(-26.57deg) scale(1, 1); }
+        84% { opacity: 1; transform: rotate(-40deg) scale(0.4, 1); }
+        85%, 100% { opacity: 0; transform: rotate(-40deg) scale(0.2, 1); }
+      }
+
+      /* Eyes snap up first (lead the body) and stay on it */
+      @keyframes high-look {
+        0% { transform: translate(0, 0); }
+        4%, 44% { transform: translate(0, -1.5px); }
+        90%, 100% { transform: translate(0, 0); }
+      }
+
+      @keyframes high-blink {
+        0%, 2% { transform: scaleY(1); }
+        4% { transform: scaleY(1.2); }
+        14%, 18% { transform: scaleY(0.75); }
+        25%, 40% { transform: scaleY(1.15); }
+        44%, 92% { transform: scaleY(1); }
+        95% { transform: scaleY(0.1); }
+        98%, 100% { transform: scaleY(1); }
+      }
+
+      @keyframes high-eyes-open {
+        0% { opacity: 1; }
+        44% { opacity: 0; }
+        88% { opacity: 1; }
+      }
+
+      @keyframes high-eyes-happy {
+        0% { opacity: 0; }
+        44% { opacity: 1; }
+        88% { opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Legs (hop a little less than the body) -->
+  <g class="legs-jump">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="12" width="1" height="3"/>
+      <rect x="5" y="12" width="1" height="3"/>
+      <rect x="9" y="12" width="1" height="3"/>
+      <rect x="11" y="12" width="1" height="3"/>
+    </g>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="body-jump">
+    <g class="body-squash">
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      <!-- Left Arm (upper arm, stretches up beside the head) -->
+      <g class="arm-l">
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Right Arm -->
+      <g class="arm-r">
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <!-- Forearms: elbows up high, hands swing down and meet just above the
+           head (heart over the head), fists clasp at u 7.5, v 4.5 -->
+      <g class="fore-l" fill="#DE886D">
+        <rect x="1.5" y="0.85" width="6.7" height="1.3"/>
+        <rect class="fist" x="7.3" y="0.6" width="1.8" height="1.8"/>
+      </g>
+      <g class="fore-r" fill="#DE886D">
+        <rect x="6.8" y="0.85" width="6.7" height="1.3"/>
+        <rect class="fist" x="5.9" y="0.6" width="1.8" height="1.8"/>
+      </g>
+      <!-- Eyes (locked on the thing above) -->
+      <g class="eyes-open">
+        <g class="eyes-look">
+          <g class="eyes-blink" fill="#000000">
+            <rect x="4" y="8" width="1" height="2"/>
+            <rect x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+      </g>
+      <!-- Satisfied "^^" eyes while holding the catch -->
+      <g class="eyes-happy" fill="#000000">
+        <rect x="3" y="9" width="1" height="1"/>
+        <rect x="4" y="8" width="1" height="1"/>
+        <rect x="5" y="9" width="1" height="1"/>
+        <rect x="9" y="9" width="1" height="1"/>
+        <rect x="10" y="8" width="1" height="1"/>
+        <rect x="11" y="9" width="1" height="1"/>
+      </g>
+    </g>
+  </g>
+</svg>

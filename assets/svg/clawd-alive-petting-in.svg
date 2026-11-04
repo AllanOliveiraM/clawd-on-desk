@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      /* 0.25-Second One-Shot — Petting In (intro of clawd-alive-petting):
+         from the exact rest pose the eyes squeeze shut under the first pat
+         and pop into the happy "^^", with a little squish of the body. The
+         last 10% holds the exact first frame of clawd-alive-petting. */
+      .squish-anim {
+        transform-origin: 7.5px 13px;
+        animation: pti-squish 0.25s infinite ease-in-out;
+      }
+
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: pti-shadow 0.25s infinite ease-in-out;
+      }
+
+      .eyes-open {
+        animation: pti-vis-open 0.25s infinite step-end;
+      }
+
+      .eyes-open-lid {
+        transform-origin: 7.5px 9px;
+        animation: pti-lid 0.25s infinite ease-in;
+      }
+
+      .eyes-happy {
+        opacity: 0;
+        animation: pti-vis-happy 0.25s infinite step-end;
+      }
+
+      .happy-pop {
+        transform-origin: 7.5px 9px;
+        animation: pti-happy 0.25s infinite ease-out;
+      }
+
+      /* --- Keyframes --- */
+
+      @keyframes pti-squish {
+        0% { transform: scale(1, 1); }
+        40% { transform: scale(1.04, 0.94); }
+        66% { transform: scale(0.99, 1.01); }
+        86%, 100% { transform: scale(1, 1); }
+      }
+
+      @keyframes pti-shadow {
+        0%, 86%, 100% { transform: scaleX(1); opacity: 0.5; }
+        40% { transform: scaleX(1.04); opacity: 0.52; }
+      }
+
+      @keyframes pti-lid {
+        0% { transform: scaleY(1); }
+        36%, 100% { transform: scaleY(0.2); }
+      }
+
+      @keyframes pti-vis-open {
+        0% { opacity: 1; }
+        38% { opacity: 0; }
+      }
+
+      @keyframes pti-vis-happy {
+        0% { opacity: 0; }
+        38% { opacity: 1; }
+      }
+
+      @keyframes pti-happy {
+        0%, 38% { transform: scale(1, 0.6); }
+        62% { transform: scale(1.05, 1.15); }
+        82%, 100% { transform: scale(1, 1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Legs -->
+  <g id="legs" fill="#DE886D">
+    <rect x="3" y="12" width="1" height="3"/>
+    <rect x="5" y="12" width="1" height="3"/>
+    <rect x="9" y="12" width="1" height="3"/>
+    <rect x="11" y="12" width="1" height="3"/>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="squish-anim">
+    <!-- Torso -->
+    <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <!-- Left Arm -->
+    <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    <!-- Right Arm -->
+    <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    <!-- Open eyes (rest) -->
+    <g class="eyes-open">
+      <g class="eyes-open-lid" fill="#000000">
+        <rect x="4" y="8" width="1" height="2"/>
+        <rect x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+    <!-- Happy closed eyes "^^" -->
+    <g class="eyes-happy">
+      <g class="happy-pop" fill="#000000">
+        <rect x="3" y="9" width="1" height="1"/>
+        <rect x="4" y="8" width="1" height="1"/>
+        <rect x="5" y="9" width="1" height="1"/>
+        <rect x="9" y="9" width="1" height="1"/>
+        <rect x="10" y="8" width="1" height="1"/>
+        <rect x="11" y="9" width="1" height="1"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -636,6 +636,12 @@ const POLISH_ANIMATION_KEYS = Object.freeze([
   "walkBouncy", "walkTired", "walkCurious",
 ]);
 
+// Clawd Alive one-shot intro / outro parts of the held scenes (sit on the edge,
+// fake nap, petting). All optional: a scene without one plays its loop alone.
+const TRANSITION_ANIMATION_KEYS = Object.freeze([
+  "sitDown", "standUp", "fakeNapIn", "fakeNapOut", "pettingIn", "pettingOut",
+]);
+
 // Optional Clawd Alive visuals. Each known key maps to { files, duration };
 // unknown keys and entries without a usable file are dropped. Accepts both the
 // authored shape ({ file } / { files }) and the already-normalized shape.
@@ -643,6 +649,7 @@ const COMPANION_ANIMATION_KEYS = Object.freeze([
   "petting", "content", "tired", "shy", "grumpy", "curious", "greet",
   ...MISCHIEF_ANIMATION_KEYS,
   ...POLISH_ANIMATION_KEYS,
+  ...TRANSITION_ANIMATION_KEYS,
 ]);
 
 function normalizeCompanionAnimations(value) {
@@ -1888,6 +1895,7 @@ module.exports = {
   COMPANION_ANIMATION_KEYS,
   MISCHIEF_ANIMATION_KEYS,
   POLISH_ANIMATION_KEYS,
+  TRANSITION_ANIMATION_KEYS,
   normalizeCompanionAnimations,
   DEFAULT_SOUNDS,
   DEFAULT_TIMINGS,

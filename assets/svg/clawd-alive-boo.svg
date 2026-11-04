@@ -5,7 +5,9 @@
          arms tucked), a tiny dip, then POPS up with both arms thrown wide
          open, eyes huge, body stretched, a little "rawr" tremble at the top,
          drops with a squash and settles into a grin-like "^^" squint with
-         three little giggle bobs. No text, no "!" icon. */
+         three little giggle bobs, then the squint relaxes and the eyes reopen
+         to the neutral rest eyes over the last ~10% (ends in the exact rest
+         pose of clawd-idle-follow). No text, no "!" icon. */
       .body-jump {
         animation: boo-jump 1.4s infinite ease-in-out;
       }
@@ -164,27 +166,35 @@
         0% { opacity: 0; }
         11% { opacity: 1; }
         47% { opacity: 0; }
+        93% { opacity: 1; }
       }
 
       @keyframes boo-vis-grin {
         0% { opacity: 0; }
         47% { opacity: 1; }
+        93% { opacity: 0; }
       }
 
-      /* Eyes pop open huge and shrink back a little */
+      /* Eyes pop open huge and shrink back a little; at the end they reopen
+         (from a squint) to the neutral rest eyes */
       @keyframes boo-eye-wide {
         0%, 11% { transform: scale(1, 0.4); }
         15% { transform: scale(1.7, 1.55); }
         20%, 32% { transform: scale(1.5, 1.4); }
         42% { transform: scale(1.2, 1.1); }
-        47%, 100% { transform: scale(1, 1); }
+        47%, 92.9% { transform: scale(1, 1); }
+        93% { transform: scale(1, 0.25); }
+        97.5% { transform: scale(1, 1.1); }
+        99%, 100% { transform: scale(1, 1); }
       }
 
-      /* Grin squint squeezes on each giggle */
+      /* Grin squint squeezes on each giggle, then relaxes shut before the
+         neutral eyes reopen */
       @keyframes boo-grin {
         0%, 47% { transform: scale(1, 1) translate(0, 0); }
         57%, 65%, 73% { transform: scale(1.05, 0.85) translate(0, 0.2px); }
-        61%, 69%, 78%, 100% { transform: scale(1, 1) translate(0, 0); }
+        61%, 69%, 78%, 88% { transform: scale(1, 1) translate(0, 0); }
+        93%, 100% { transform: scale(1.05, 0.5) translate(0, 0.2px); }
       }
     </style>
   </defs>
