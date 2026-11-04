@@ -35,6 +35,9 @@ const ALL_FILES = Object.freeze([...WORK_FILES, ...JUGGLE_FILES]);
 // The headset (trio) and the rubber duck on his head (juggle chaos) already
 // occupy the head, like the headphones sprite: no hat on those two.
 const HATLESS = new Set(["clawd-alive-work-trio.svg", "clawd-alive-juggle-chaos.svg"]);
+// The work chaos tier hops and flips, so it hides both accessories to keep the
+// click area from widening.
+const ACCESSORIES_HIDDEN = new Set(["clawd-alive-work-chaos.svg"]);
 
 function readRaw() {
   return JSON.parse(fs.readFileSync(path.join(ROOT, "themes", "clawd", "theme.json"), "utf8"));
@@ -108,7 +111,7 @@ test("every work escalation file is registered like the original working sprites
     assert.ok(fs.existsSync(path.join(ROOT, "assets", "svg", file)), `${file} asset`);
     assert.ok(raw.rendering.objectChannelFiles.includes(file), `${file} object channel`);
     assert.strictEqual(raw.rendering.discreteSampling[file], 24, `${file} sampling`);
-    if (HATLESS.has(file)) {
+    if (HATLESS.has(file) || ACCESSORIES_HIDDEN.has(file)) {
       assert.deepStrictEqual(head[file], { visibility: "hidden" }, `${file} head`);
     } else {
       assert.deepStrictEqual(head[file], {
@@ -117,11 +120,17 @@ test("every work escalation file is registered like the original working sprites
       }, `${file} head`);
       assert.ok(headEnvelopes[file], `${file} head envelope`);
     }
-    assert.deepStrictEqual(mouth[file], {
-      staticFrame: torsoMouth,
-      followTarget: { id: "torso", frame: torsoMouth },
-    }, `${file} mouth`);
-    assert.ok(mouthEnvelopes[file], `${file} mouth envelope`);
+    if (ACCESSORIES_HIDDEN.has(file)) {
+      assert.deepStrictEqual(mouth[file], { visibility: "hidden" }, `${file} mouth`);
+      assert.strictEqual(mouthEnvelopes[file], undefined, `${file} mouth envelope`);
+      assert.strictEqual(headEnvelopes[file], undefined, `${file} head envelope`);
+    } else {
+      assert.deepStrictEqual(mouth[file], {
+        staticFrame: torsoMouth,
+        followTarget: { id: "torso", frame: torsoMouth },
+      }, `${file} mouth`);
+      assert.ok(mouthEnvelopes[file], `${file} mouth envelope`);
+    }
     assert.ok(theme._capabilities.accessories);
   }
   for (const file of WORK_FILES) {

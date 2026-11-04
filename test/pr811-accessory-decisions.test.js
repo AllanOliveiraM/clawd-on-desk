@@ -86,7 +86,6 @@ const VISIBLE_MOUTH_FILES = Object.freeze([
   "clawd-alive-work-trio.svg",
   "clawd-alive-work-control-room.svg",
   "clawd-alive-work-swamped.svg",
-  "clawd-alive-work-chaos.svg",
   "clawd-alive-juggle-laptops.svg",
   "clawd-alive-juggle-chaos.svg",
 ]);
@@ -100,6 +99,8 @@ const HIDDEN_MOUTH_FILES = Object.freeze([
   "clawd-collapse-sleep.svg",
   // The dreamy collapse follows the collapse sprite it replaces.
   "clawd-alive-collapse-sleep-twitch.svg",
+  // The work chaos tier hops and flips; its hat/cigarette sweep would widen the click area.
+  "clawd-alive-work-chaos.svg",
   "clawd-working-sweeping.svg",
   "clawd-error.svg",
   "clawd-happy.svg",

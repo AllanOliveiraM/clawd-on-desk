@@ -1541,19 +1541,7 @@
           }
         },
         "clawd-alive-work-chaos.svg": {
-          "staticFrame": {
-            "cx": 7.5,
-            "baseY": 6.5,
-            "width": 16
-          },
-          "followTarget": {
-            "id": "torso",
-            "frame": {
-              "cx": 7.5,
-              "baseY": 6.5,
-              "width": 16
-            }
-          }
+          "visibility": "hidden"
         },
         "clawd-alive-juggle-laptops.svg": {
           "staticFrame": {
@@ -2905,19 +2893,7 @@
           }
         },
         "clawd-alive-work-chaos.svg": {
-          "staticFrame": {
-            "cx": 14,
-            "baseY": 13,
-            "width": 5
-          },
-          "followTarget": {
-            "id": "torso",
-            "frame": {
-              "cx": 14,
-              "baseY": 13,
-              "width": 5
-            }
-          }
+          "visibility": "hidden"
         },
         "clawd-alive-juggle-laptops.svg": {
           "staticFrame": {
