@@ -2067,3 +2067,95 @@ test("shy's petting answer has no intro or outro", () => {
   assert.equal(env.sends.length, 1);
   assert.equal(env.restores, 1);
 });
+
+// ---- polish integration: review minors ----
+
+test("a petting session started behind a closed gate shows its visual once the gate opens", () => {
+  const env = setup();
+  env.mode = "none";
+  env.runtime.configure(ON);
+  env.gate = false; // e.g. mid-walk
+  env.runtime.handleGesture("pet-start");
+  env.runtime.handleGesture("pet-continue");
+  assert.equal(env.sends.length, 0);
+  env.gate = true;
+  env.runtime.handleGesture("pet-continue");
+  assert.deepEqual(env.sends.map((s) => s.file), ["petting.svg"]);
+  env.commitLast();
+  env.runtime.handleGesture("pet-continue"); // already showing: no re-send
+  assert.equal(env.sends.length, 1);
+});
+
+test("a discarded art-anchored walk plays in place within reach of its spot, else spends", () => {
+  // sitEdge spot for a 100 px pet: y = 1000 - 89.2 (ledge v 15).
+  const run = (y) => {
+    const env = setup();
+    env.theme = geoTheme(["sitEdge"]);
+    env.runtime.configure(MON);
+    tickUntilBeat(env, 200000);
+    const args = { ...BAND_ARGS, bounds: { x: 300, y, width: 100, height: 100 } };
+    assert.equal(env.runtime.pickRoamTarget(args).mischief, "sitEdge");
+    env.runtime.onPreferredTargetDiscarded(); // roam: closer than its minimum walk
+    return env;
+  };
+  const near = run(1000 - 89.2 - 12); // beyond the 5 px art tolerance, within reach
+  assert.deepEqual(near.sends.map((s) => s.file), ["sitEdge.svg"]);
+  const far = run(1000 - 89.2 - 40);
+  assert.equal(far.sends.length, 0);
+  assert.equal(far.runtime.getRoamDelayMs(false, 8000), 15600, "spent: no pending walk");
+});
+
+test("the pounce zone uses the short pounce's paw when there is no strike art", () => {
+  // Short pounce paw (u -6.5, v 10.5): x 459.4 at y 476.15 in the 100 px window.
+  const petBounds = { x: 450, y: 400, width: 100, height: 100 };
+  const petRect = { x: 475.35, y: 434.15, width: 49.3, height: 34.8 };
+  const at = (x, y) => ({ x, y, petRect, overPet: false, petBounds });
+  const run = (keys, x, y) => {
+    const env = setup();
+    env.mode = "none";
+    env.theme = geoTheme(keys);
+    env.runtime.configure({ ...MON, personality: "playful" });
+    tickWithCursor(env, at(x, y), 3000);
+    return env.sends.map((send) => send.file);
+  };
+  const SHORT = ["pounceLeft", "pounceRight"];
+  assert.deepEqual(run([...SHORT, "pounceStrikeLeft", "pounceStrikeRight"], 455, 476), ["pounceStrikeLeft.svg"]);
+  assert.deepEqual(run(SHORT, 455, 476), [], "beyond the short paw");
+  assert.deepEqual(run(SHORT, 462, 476), ["pounceLeft.svg"]);
+  assert.deepEqual(run(SHORT, 539, 476), ["pounceRight.svg"]);
+  assert.deepEqual(run(SHORT, 545, 476), [], "beyond the mirrored short paw (540.6)");
+});
+
+test("art geometry is computed once per theme, size and file", () => {
+  const hitGeometry = require("../src/hit-geometry");
+  const original = hitGeometry.getAssetRectScreen;
+  let calls = 0;
+  hitGeometry.getAssetRectScreen = (...args) => {
+    calls += 1;
+    return original(...args);
+  };
+  try {
+    const petBounds = { x: 450, y: 400, width: 100, height: 100 };
+    const petRect = { x: 475.35, y: 434.15, width: 49.3, height: 34.8 };
+    const env = setup();
+    env.mode = "none";
+    env.theme = geoTheme(["pounceLeft", "pounceRight"]);
+    env.runtime.configure({ ...MON, personality: "playful" });
+    env.runtime.tick({ x: 100, y: 100, petRect, overPet: false, petBounds });
+    const first = calls;
+    assert.ok(first > 0);
+    for (let i = 0; i < 20; i += 1) {
+      env.clock.advance(250);
+      env.runtime.tick({ x: 100 + i, y: 100, petRect, overPet: false, petBounds });
+    }
+    assert.equal(calls, first, "same theme and size: cached");
+    env.runtime.tick({ x: 100, y: 100, petRect, overPet: false, petBounds: { ...petBounds, width: 120, height: 120 } });
+    assert.ok(calls > first, "a new size measures again");
+    const resized = calls;
+    env.theme = geoTheme(["pounceLeft", "pounceRight"]); // theme switch (new object)
+    env.runtime.tick({ x: 100, y: 100, petRect, overPet: false, petBounds: { ...petBounds, width: 120, height: 120 } });
+    assert.ok(calls > resized, "a new theme object measures again");
+  } finally {
+    hitGeometry.getAssetRectScreen = original;
+  }
+});

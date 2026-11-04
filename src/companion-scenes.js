@@ -175,6 +175,10 @@ const REACH_CLOSE_INSET_Y = 0.4;
 // Arrival tolerance of an art-anchored walk: the anchor (fingertip, hands,
 // ledge, hand tip) may end this fraction of the pet width off its spot.
 const SPOT_TOLERANCE_RATIO = 0.05;
+// A walk roam will not take (closer than its minimum walk) still plays in
+// place when the anchor is this close to its spot: the pet cannot get any
+// closer, and the mime still reads at that offset.
+const SPOT_REACH_TOLERANCE_RATIO = 0.15;
 // Same sideways overhang the rest clamp allows (clampToScreenVisual, 0.25 w).
 const SCREEN_SIDE_OVERHANG_RATIO = 0.25;
 
@@ -404,7 +408,9 @@ module.exports = {
   REACH_CLOSE_INSET_Y,
   SIT_EDGE_MAX_MS,
   SPOT_TOLERANCE_RATIO,
+  SPOT_REACH_TOLERANCE_RATIO,
   partDurationMs,
+  sided,
   buildScene,
   createScenePlayer,
   mischiefAvailable,

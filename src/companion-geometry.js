@@ -22,6 +22,9 @@ const POKE_FINGERTIP = Object.freeze({ u: -5.5, v: 10 });
 // (artist report: lands at ~53% of the 1800 ms loop, holds until ~72%; the
 // right file mirrors it to u 24.0). Tune here if the art changes.
 const POUNCE_STRIKE_TIP = Object.freeze({ u: -9.0, v: 9.6 });
+// clawd-alive-pounce-left.svg (short pounce, the fallback without strike art):
+// where the paw pats after the lunge (~66-73% of the 2400 ms loop).
+const POUNCE_SHORT_TIP = Object.freeze({ u: -6.5, v: 10.5 });
 // clawd-alive-wall-push-left.svg: the line of the pushing hands.
 const WALL_PUSH_HANDS_U = -2.5;
 // clawd-alive-wall-peek-left.svg: the edge the pet peeks around.
@@ -75,17 +78,24 @@ function firstFile(theme, key) {
 
 // Art helper for one theme and window size. Every method answers null when the
 // theme cannot place the art (no viewBox / layout, missing key, no size): the
-// callers then keep their whole-window fallback.
+// callers then keep their whole-window fallback. The layout of each file is
+// measured once per helper, so keep one helper per (theme, size).
 function createArt(theme, size) {
   const W = size && isNum(size.width) && size.width > 0 ? size.width : 0;
   const H = size && isNum(size.height) && size.height > 0 ? size.height : 0;
+  const frames = new Map();
 
-  function frame(file) {
+  function measure(file) {
     if (!theme || !file || !W || !H) return null;
     const rect = hitGeometry.getAssetRectScreen(theme, { x: 0, y: 0, width: W, height: H }, "idle", file);
     const vb = hitGeometry.resolveViewBox(theme, "idle", file);
     if (!rect || !vb || !(rect.w > 0) || !(rect.h > 0) || !(vb.width > 0) || !(vb.height > 0)) return null;
     return { rect, vb };
+  }
+
+  function frame(file) {
+    if (!frames.has(file)) frames.set(file, measure(file));
+    return frames.get(file);
   }
 
   function centerU(file) {
@@ -129,6 +139,7 @@ function createArt(theme, size) {
 module.exports = {
   POKE_FINGERTIP,
   POUNCE_STRIKE_TIP,
+  POUNCE_SHORT_TIP,
   WALL_PUSH_HANDS_U,
   WALL_PEEK_EDGE_U,
   SIT_EDGE_LEDGE_V,

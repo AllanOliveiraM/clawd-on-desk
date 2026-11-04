@@ -39,11 +39,12 @@ const {
   mischiefAvailable,
   walkTarget,
   walkEdgeDistance,
+  sided,
   SPOT_TOLERANCE_RATIO,
+  SPOT_REACH_TOLERANCE_RATIO,
 } = require("./companion-scenes");
-const { createArt, POUNCE_STRIKE_TIP } = require("./companion-geometry");
+const { createArt, POUNCE_STRIKE_TIP, POUNCE_SHORT_TIP } = require("./companion-geometry");
 
-const sided = (base, side) => base + (side === "left" ? "Left" : "Right");
 // The cursor counts as at the strike's arm height within this fraction of H.
 const POUNCE_TIP_TOLERANCE_RATIO = 0.15;
 
@@ -78,6 +79,7 @@ const WALK_BOUNCY_CONTENT_CHANCE = 0.25; // other personalities, contentment abo
 const WALK_BOUNCY_CONTENT_THRESHOLD = 75;
 const WALK_CURIOUS_CHANCE = 0.35;
 const LONG_SLEEP_MS = 600000;
+const ART_CACHE_MAX = 8; // (theme, window size) helpers kept for the geometry
 
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -145,6 +147,8 @@ function createCompanionRuntime(options = {}) {
   // the margin band soon: one short pause, then one normal roam target.
   let returnWalk = false;
   let breatherUntil = 0; // roam holds until then after a visual / petting ended
+  // Art geometry helpers per (theme id, W, H); each one measures a file once.
+  const artCache = new Map();
 
   const memoryOn = () => config.enabled && config.memory;
   const autonomous = () => config.enabled && config.autonomy;
@@ -178,6 +182,22 @@ function createCompanionRuntime(options = {}) {
   function availableKeys(theme) {
     const anims = companionAnimations(theme);
     return new Set(Object.keys(anims).filter((key) => animationFor(key, theme)));
+  }
+
+  // Cached companion-geometry helper: the layout math runs once per theme
+  // object, window size and file instead of on every cursor sample.
+  function artFor(theme, size) {
+    const W = size && isNum(size.width) ? size.width : 0;
+    const H = size && isNum(size.height) ? size.height : 0;
+    if (!theme || typeof theme !== "object") return createArt(theme, size);
+    const id = typeof theme._id === "string" ? theme._id : "";
+    const key = `${id}|${theme._variantId || ""}|${W}|${H}`;
+    const hit = artCache.get(key);
+    if (hit && hit.theme === theme) return hit.art;
+    if (artCache.size >= ART_CACHE_MAX) artCache.clear();
+    const art = createArt(theme, size);
+    artCache.set(key, { theme, art });
+    return art;
   }
 
   function beatDuration(anim) {
@@ -424,19 +444,23 @@ function createCompanionRuntime(options = {}) {
   function withPounceZone(cursor) {
     const b = cursor && cursor.petBounds;
     if (!b || ![b.x, b.y, b.width, b.height].every(isNum)) return cursor;
-    const art = createArt(getTheme(), { width: b.width, height: b.height });
-    const keyFor = (side) => (art.has(sided("pounceStrike", side)) ? sided("pounceStrike", side) : sided("pounce", side));
-    const leftKey = keyFor("left");
-    const rightKey = keyFor("right");
-    const left = art.point(leftKey, POUNCE_STRIKE_TIP.u, POUNCE_STRIKE_TIP.v);
-    const right = art.point(rightKey, art.mirrorU(rightKey, POUNCE_STRIKE_TIP.u), POUNCE_STRIKE_TIP.v);
+    const art = artFor(getTheme(), { width: b.width, height: b.height });
+    // The strike's hand tip, or the short pounce's paw when only that art exists.
+    const tipOf = (side) => {
+      const strike = sided("pounceStrike", side);
+      const key = art.has(strike) ? strike : sided("pounce", side);
+      const tip = key === strike ? POUNCE_STRIKE_TIP : POUNCE_SHORT_TIP;
+      return art.point(key, side === "left" ? tip.u : art.mirrorU(key, tip.u), tip.v);
+    };
+    const left = tipOf("left");
+    const right = tipOf("right");
     if (!left || !right) return cursor;
     return {
       ...cursor,
       pounceZone: {
         leftX: b.x + left.x,
         rightX: b.x + right.x,
-        tipY: b.y + left.y,
+        tipY: b.y + (left.y + right.y) / 2,
         tolY: POUNCE_TIP_TOLERANCE_RATIO * b.height,
       },
     };
@@ -616,7 +640,7 @@ function createCompanionRuntime(options = {}) {
       const artSize = size && isNum(size.width) && isNum(size.height)
         ? size
         : (bounds && isNum(bounds.width) && isNum(bounds.height) ? { width: bounds.width, height: bounds.height } : null);
-      const art = createArt(getTheme(), artSize);
+      const art = artFor(getTheme(), artSize);
       const spot = walkTarget(walk, { area, bounds, size, platform: getPlatform(), art, random });
       if (spot && spot.spot) {
         // Art-anchored (Ruling P4): walk the window to the exact spot; past the
@@ -707,10 +731,16 @@ function createCompanionRuntime(options = {}) {
     return walk.spot ? SPOT_TOLERANCE_RATIO * walk.petWidth : walk.petWidth;
   }
 
+  // A discarded walk cannot get any closer: an art-anchored one still plays
+  // in place within the art's reach of its spot.
+  function discardTolerance(walk) {
+    return walk.spot ? SPOT_REACH_TOLERANCE_RATIO * walk.petWidth : walk.petWidth;
+  }
+
   // Roam did not use the proposed target (too close, or holding): the explore
   // cell must not be credited on the next arrival. A mischief walk discarded
-  // because the pet is already there plays its scene in place; otherwise it
-  // spends its cooldown.
+  // because the pet is already (close enough to) there plays its scene in
+  // place; otherwise it spends its cooldown.
   function onPreferredTargetDiscarded() {
     if (disposed) return;
     pendingWalkCell = null;
@@ -720,7 +750,7 @@ function createCompanionRuntime(options = {}) {
     pendingWalk = null;
     if (!walk) return;
     const distance = walkEdgeDistance(walk, { area: walk.area, bounds: walk.bounds, goal: walk.goal, platform: getPlatform() });
-    const played = mischiefOn() && autonomous() && getIdleMode() === "roam" && distance <= arrivalTolerance(walk)
+    const played = mischiefOn() && autonomous() && getIdleMode() === "roam" && distance <= discardTolerance(walk)
       && startScene(walk.id, { side: walk.side, variant: walk.variant });
     if (!played) spendWalk(walk);
   }
@@ -890,10 +920,10 @@ function createCompanionRuntime(options = {}) {
     }
     noteEvent("pet");
     armPetTimer();
-    if (!petSession) {
-      petSession = true;
-      startPetVisual();
-    }
+    petSession = true;
+    // Also on a later stroke: a session that began behind a closed gate (e.g.
+    // mid-walk) shows its visual once the gate opens. No-op while it shows.
+    startPetVisual();
   }
 
   // Roam's isCompanionPlaying gate: true from the send of any companion
