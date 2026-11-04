@@ -95,6 +95,8 @@ let petPollTimer = null;
 let hoverDwellTimer = null;
 let hoverEntryX = 0;
 let hoverEntryY = 0;
+// At most one hover-dwell per entry: set when it fires, cleared on the next entry.
+let hoverDwellFired = false;
 let hoverLastX = 0;
 let hoverLastY = 0;
 // Set when a dwell was sent; cleared once hover-move goes out or on the next entry.
@@ -154,31 +156,44 @@ function handlePetHoverMove(e) {
     && Math.hypot(e.clientX - hoverMoveX, e.clientY - hoverMoveY) > HOVER_DWELL_SLOP_PX) {
     sendHoverMoveOnce();
   }
-  if (hoverDwellTimer !== null
-    && Math.hypot(e.clientX - hoverEntryX, e.clientY - hoverEntryY) > HOVER_DWELL_SLOP_PX) {
-    cancelHoverDwell();
-  }
   const out = petDetector.feed(e.clientX, e.clientY);
   if (out) sendPetGesture(out);
-  if (petDetector.isActive()) schedulePetPoll();
+  if (petDetector.isActive()) {
+    cancelHoverDwell();
+    schedulePetPoll();
+  } else if (!hoverDwellFired) {
+    // "Still for 1200 ms": any drift past the slop restarts the countdown from
+    // the new spot; a dwell cancelled by petting re-arms on the next movement.
+    if (hoverDwellTimer === null
+      || Math.hypot(e.clientX - hoverEntryX, e.clientY - hoverEntryY) > HOVER_DWELL_SLOP_PX) {
+      armHoverDwell(e.clientX, e.clientY);
+    }
+  }
+}
+
+function armHoverDwell(x, y) {
+  cancelHoverDwell();
+  hoverEntryX = x;
+  hoverEntryY = y;
+  hoverDwellTimer = setTimeout(() => {
+    hoverDwellTimer = null;
+    if (!petGesturesAllowed()) return;
+    hoverDwellFired = true;
+    sendPetGesture("hover-dwell");
+    hoverMoveArmed = true;
+    hoverMoveX = hoverLastX;
+    hoverMoveY = hoverLastY;
+  }, HOVER_DWELL_MS);
 }
 
 area.addEventListener("pointerenter", (e) => {
   cancelHoverDwell();
   hoverMoveArmed = false;
   if (!petGesturesAllowed()) return;
-  hoverEntryX = e.clientX;
-  hoverEntryY = e.clientY;
+  hoverDwellFired = false;
   hoverLastX = e.clientX;
   hoverLastY = e.clientY;
-  hoverDwellTimer = setTimeout(() => {
-    hoverDwellTimer = null;
-    if (!petGesturesAllowed()) return;
-    sendPetGesture("hover-dwell");
-    hoverMoveArmed = true;
-    hoverMoveX = hoverLastX;
-    hoverMoveY = hoverLastY;
-  }, HOVER_DWELL_MS);
+  armHoverDwell(e.clientX, e.clientY);
 });
 
 area.addEventListener("pointerleave", () => {

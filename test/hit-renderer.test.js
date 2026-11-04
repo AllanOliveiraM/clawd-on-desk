@@ -641,11 +641,63 @@ describe("hit-renderer pet gestures", () => {
     assert.strictEqual(liveTimers(h, 1200).length, 0);
     h.pointerenter({ clientX: 50, clientY: 50 });
     h.pointermove({ clientX: 55, clientY: 50, buttons: 0 });
-    assert.strictEqual(liveTimers(h, 1200).length, 0);
+    // Drift restarts the countdown from the new spot (it no longer dies).
+    assert.strictEqual(liveTimers(h, 1200).length, 1);
     h.pointerenter({ clientX: 50, clientY: 50 });
     h.fireTimer((t) => t.ms === 1200);
     // The leave after the first dwell reports one hover-move (mischief catch).
     assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-move", "hover-dwell"]);
+  });
+
+  it("dwell fires after the cursor settles even if it drifted after entering", () => {
+    const h = gestureHarness();
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    h.pointermove({ clientX: 110, clientY: 100, buttons: 0 });
+    assert.strictEqual(liveTimers(h, 1200).length, 1);
+    assert.ok(h.fireTimer((t) => t.ms === 1200));
+    assert.deepStrictEqual(gestures(h), ["hover-dwell"]);
+  });
+
+  it("continuous small drifts under the slop still fire", () => {
+    const h = gestureHarness();
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    for (const x of [101, 102, 101, 103, 102]) h.pointermove({ clientX: x, clientY: 100, buttons: 0 });
+    assert.strictEqual(liveTimers(h, 1200).length, 1);
+    assert.ok(h.fireTimer((t) => t.ms === 1200));
+    assert.deepStrictEqual(gestures(h), ["hover-dwell"]);
+  });
+
+  it("moving keeps postponing the dwell", () => {
+    const h = gestureHarness();
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    for (let i = 1; i <= 6; i++) {
+      h.clock.now += 500;
+      h.pointermove({ clientX: 100 + i * 10, clientY: 100, buttons: 0 });
+      assert.strictEqual(liveTimers(h, 1200).length, 1, "exactly one live countdown");
+    }
+    assert.deepStrictEqual(gestures(h), []);
+    assert.ok(h.fireTimer((t) => t.ms === 1200));
+    assert.deepStrictEqual(gestures(h), ["hover-dwell"]);
+  });
+
+  it("only one dwell per entry", () => {
+    const h = gestureHarness();
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    h.fireTimer((t) => t.ms === 1200);
+    h.pointermove({ clientX: 101, clientY: 100, buttons: 0 });
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+    h.pointermove({ clientX: 140, clientY: 100, buttons: 0 });
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-move"]);
+  });
+
+  it("no dwell while petting is active", () => {
+    const h = gestureHarness();
+    startPetting(h);
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+    h.pointermove({ clientX: 100, clientY: 100, buttons: 0 });
+    assert.strictEqual(liveTimers(h, 1200).length, 0);
+    assert.deepStrictEqual(gestures(h), ["pet-start"]);
   });
 
   it("hover-move is sent once after a dwell", () => {
