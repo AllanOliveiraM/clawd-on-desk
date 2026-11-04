@@ -391,3 +391,51 @@ it("the test-mode menu info feature-checks the runtime debug API", () => {
   assert.ok(info.includes('typeof _companion.debugPlay === "function"'));
   assert.ok(info.includes('if (!companionEnabled) return { companionEnabled: false };'));
 });
+
+it("the runtime gets the test-mode gate reasons and the roam interrupt", () => {
+  function harness() {
+    const h = companionHarness({ companionEnabled: true });
+    Object.assign(h.ctx, {
+      doNotDisturb: false,
+      _mini: { getMiniMode: () => false, getMiniTransitioning: () => false },
+      _perm: { hasVisiblePermissionBubbles: () => false },
+      anySessionInProgress: () => false,
+      win: { isDestroyed: () => false, isVisible: () => true },
+      petWindowRuntime: {
+        isDragLocked: () => false, isSettingsSizePreviewActive: () => false, isPetEffectivelyHidden: () => false,
+      },
+      menuOpen: true, // the item is clicked from the menu itself
+      idlePaused: true,
+    });
+    h.ctx._state.isSettingsPreviewVisual = () => false;
+    return h;
+  }
+  assert.equal(harness().runtimeOptions.getDebugBlockReason(), null);
+  for (const [close, expected] of [
+    [(c) => { c.doNotDisturb = true; }, "dnd"],
+    [(c) => { c._mini.getMiniTransitioning = () => true; }, "mini"],
+    [(c) => { c._perm.hasVisiblePermissionBubbles = () => true; }, "permission"],
+    [(c) => { c.anySessionInProgress = () => true; }, "agent-busy"],
+    [(c) => { c.petWindowRuntime.isDragLocked = () => true; }, "agent-busy"],
+    [(c) => { c.win.isVisible = () => false; }, "agent-busy"],
+  ]) {
+    const h = harness();
+    close(h.ctx);
+    assert.equal(h.runtimeOptions.getDebugBlockReason(), expected);
+  }
+  const h = harness();
+  let cancels = 0;
+  h.ctx._roam.cancelRoam = () => { cancels += 1; };
+  h.runtimeOptions.interruptRoam();
+  assert.equal(cancels, 1);
+});
+
+it("the tick trusts the cursor only through the XWayland window check", () => {
+  const tickCtx = slice("const _tickCtx = {", 'const _tick = require("./tick")');
+  assert.ok(tickCtx.includes("isCursorTrusted: (point) => _cursorTrust.isTrusted(point),"));
+  const trust = slice("// ── Clawd Alive: XWayland cursor trust", "const _tickCtx = {");
+  assert.match(trust, /enabled: require\("\.\/linux-ozone"\)\.isXWaylandSession\(\{/);
+  assert.match(trust, /ozonePlatform: app\.commandLine\.getSwitchValue\("ozone-platform"\),/);
+  assert.match(trust, /BrowserWindow\.getAllWindows\(\)\n\s+\.filter\(\(w\) => w && !w\.isDestroyed\(\) && w\.isVisible\(\) && !w\.isMinimized\(\)\)\n\s+\.map\(\(w\) => w\.getBounds\(\)\),/);
+  assert.ok(!/setInterval|setTimeout/.test(trust), "no polling");
+});

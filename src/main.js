@@ -6090,6 +6090,21 @@ function isPetGesturesEnabled(snapshot) {
   const config = readCompanionConfig(snapshot);
   return config.enabled && config.interactions;
 }
+// Clawd Alive test mode: why the pet cannot play a test animation right now
+// (runtime debugPlay re-checks this on every play). isPetFreeForIdle minus
+// the context menu (the item is clicked from it), the click-reaction pause
+// and the doze guard; agents, permissions, DND and mini always win, and the
+// runtime adds the sleep flow from the logical state.
+function getCompanionDebugBlockReason() {
+  if (doNotDisturb) return "dnd";
+  if (_mini.getMiniMode() || _mini.getMiniTransitioning()) return "mini";
+  if (_perm.hasVisiblePermissionBubbles()) return "permission";
+  if (anySessionInProgress()) return "agent-busy";
+  if (!win || win.isDestroyed() || (typeof win.isVisible === "function" && !win.isVisible())) return "agent-busy";
+  if (petWindowRuntime.isDragLocked() || petWindowRuntime.isSettingsSizePreviewActive()) return "agent-busy";
+  if (petWindowRuntime.isPetEffectivelyHidden() || _state.isSettingsPreviewVisual()) return "agent-busy";
+  return null;
+}
 const _companion = require("./companion-runtime").createCompanionRuntime({
   getTheme: () => getActiveTheme(),
   getCurrentState: () => _state.getCurrentState(),
@@ -6107,6 +6122,11 @@ const _companion = require("./companion-runtime").createCompanionRuntime({
   isOtherIdleVisualPlaying: () => _idleActivity.isAnimating(),
   // Mischief: the close-button corner is top left on macOS.
   getPlatform: () => process.platform,
+  // Test mode (debugCatalog / debugPlay, called by the pet menu).
+  getDebugBlockReason: getCompanionDebugBlockReason,
+  // A test walk: stop a walk in progress and re-arm roam's pause, so the
+  // pending walk starts at roam's shortest pause.
+  interruptRoam: () => _roam.cancelRoam(),
   getDisplayWorkArea: (displayId) => {
     try {
       const display = screen.getAllDisplays().find((d) => d.id === displayId);
