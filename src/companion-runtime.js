@@ -69,6 +69,12 @@ const EDGE_WALKS = new Set(["reachClose", "wall", "sitEdge"]); // skip roam's ma
 const IDLE_QUEUE_MAX_WAIT_MS = 60000; // welcome / stretch wait this long for the gate
 const PENDING_WALK_MAX_MS = 120000; // a walk the roam never asked for (or cut) is dropped
 const LONG_WORK_MS = 600000;
+// Walk variant chances per walk (Ruling P6).
+const WALK_TIRED_CHANCE = 0.6; // energy below REST_ENERGY_THRESHOLD
+const WALK_BOUNCY_PLAYFUL_CHANCE = 0.4;
+const WALK_BOUNCY_CONTENT_CHANCE = 0.25; // other personalities, contentment above the threshold
+const WALK_BOUNCY_CONTENT_THRESHOLD = 75;
+const WALK_CURIOUS_CHANCE = 0.35;
 const LONG_SLEEP_MS = 600000;
 
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
@@ -513,6 +519,32 @@ function createCompanionRuntime(options = {}) {
     return roamDelayMs(isFirst, baseMs, traits, state.mood);
   }
 
+  // ---- roam walk variants (Rulings P5/P6) ----
+
+  // Asked by roam once per walk, just before it shows its walk visual: a
+  // companion walk file that replaces the theme's roam visual for this walk,
+  // or null for the original. Rolls only when the variant's art exists, so a
+  // theme without it (or the feature off) behaves exactly as before.
+  function pickWalkVisual() {
+    if (disposed || !config.enabled) return null;
+    const theme = getTheme();
+    const roll = (key, chance) => {
+      const entry = companionAnimations(theme)[key];
+      if (!(chance > 0) || !entry || !Array.isArray(entry.files) || entry.files.length === 0) return null;
+      if (!(random() < chance)) return null;
+      const anim = animationFor(key, theme);
+      return anim ? anim.file : null;
+    };
+    advanceMood();
+    if (state.mood.energy < REST_ENERGY_THRESHOLD) return roll("walkTired", WALK_TIRED_CHANCE);
+    const bouncy = config.personality === "playful"
+      ? WALK_BOUNCY_PLAYFUL_CHANCE
+      : (state.mood.contentment > WALK_BOUNCY_CONTENT_THRESHOLD ? WALK_BOUNCY_CONTENT_CHANCE : 0);
+    const bounce = roll("walkBouncy", bouncy);
+    if (bounce) return bounce;
+    return config.personality === "curious" ? roll("walkCurious", WALK_CURIOUS_CHANCE) : null;
+  }
+
   // ---- roam targets (3x3 visit grid per display, memory only) ----
 
   function cellOf(area, cx, cy) {
@@ -925,6 +957,7 @@ function createCompanionRuntime(options = {}) {
     chooseIdleActivity,
     getRoamDelayMs,
     pickRoamTarget,
+    pickWalkVisual,
     noteEvent,
     handleGesture,
     noteDragEnd,

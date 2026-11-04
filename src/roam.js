@@ -35,6 +35,7 @@
 //     a mischief proposal may carry {spot, overhang}: the exact top-left the
 //     art needs and how far it may hang past the work area (no fence only;
 //     the gap then reported is the distance to that spot), and
+//     ctx.pickWalkVisual() may name a walk-variant file for one walk, and
 //     ctx.isCompanionPlaying() holds walks while a companion beat owns the
 //     visual. Hook failures never break the scheduling chain.
 
@@ -162,6 +163,16 @@ module.exports = function initRoam(ctx) {
       baseMs * ROAM_DELAY_MAX_FACTOR,
       Math.max(baseMs * ROAM_DELAY_MIN_FACTOR, value),
     ));
+  }
+
+  function resolveWalkVisual() {
+    if (typeof ctx.pickWalkVisual !== "function") return null;
+    try {
+      const file = ctx.pickWalkVisual();
+      return typeof file === "string" && file ? file : null;
+    } catch {
+      return null;
+    }
   }
 
   // Clawd Alive: optional preferred target for unconstrained walks. Returns
@@ -739,8 +750,13 @@ module.exports = function initRoam(ctx) {
     // This ensures the pet shows a walk animation (if the theme provides one)
     // or at least the idle SVG via fallback, instead of being "dragged" in
     // whatever frozen pose the previous state left it in.
+    // Clawd Alive (Rulings P5/P6): the companion may swap the walk visual
+    // for this walk only (same "roam" state, normal visual pipeline). Axis-
+    // constrained walks and any unusable answer keep the original call.
     if (typeof ctx.applyState === "function") {
-      ctx.applyState("roam");
+      const walkVisual = axis ? null : resolveWalkVisual();
+      if (walkVisual) ctx.applyState("roam", walkVisual);
+      else ctx.applyState("roam");
     }
 
     roamActive = true;

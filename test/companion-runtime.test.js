@@ -1662,6 +1662,58 @@ test("the return walk is dropped on disable, reset, mischief off and mode change
   });
 });
 
+// ---- polish: roam walk variants (Rulings P5/P6) ----
+
+function walkEnv({ personality = "balanced", energy = 70, contentment = 55, keys = ["walkBouncy", "walkTired", "walkCurious"], cfg = {} } = {}) {
+  const loaded = {
+    state: { mood: { energy, contentment, familiarity: 0 }, label: "neutral", streak: null, lastAdvanceAt: null, lastInteractionAt: null },
+    restSpot: null,
+  };
+  const env = setup({ loaded });
+  env.theme = themeWith([...ALL_KEYS, ...keys]);
+  env.runtime.configure({ ...ON, personality, ...cfg });
+  return env;
+}
+
+test("walk variants: tired when low on energy, bouncy for playful or content pets, curious for curious", () => {
+  const cases = [
+    [{ energy: 20 }, 0.59, "walkTired.svg"],
+    [{ energy: 20 }, 0.61, null],
+    [{ energy: 20, personality: "playful" }, 0.61, null, "a tired pet does not bounce"],
+    [{ personality: "playful" }, 0.39, "walkBouncy.svg"],
+    [{ personality: "playful" }, 0.41, null],
+    [{ contentment: 80 }, 0.24, "walkBouncy.svg"],
+    [{ contentment: 80 }, 0.26, null],
+    [{ contentment: 60 }, 0.01, null],
+    [{ personality: "curious" }, 0.34, "walkCurious.svg"],
+    [{ personality: "curious" }, 0.36, null],
+    [{ personality: "calm" }, 0.01, null],
+    [{ energy: 20, keys: ["walkBouncy"] }, 0.01, null, "missing art: original walk"],
+    [{ personality: "playful", keys: [] }, 0.01, null],
+    [{ personality: "playful", cfg: { enabled: false } }, 0.01, null, "feature off"],
+  ];
+  for (const [opts, roll, file, label] of cases) {
+    const env = walkEnv(opts);
+    env.randomValue = roll;
+    assert.equal(env.runtime.pickWalkVisual(), file, label || `${JSON.stringify(opts)} @ ${roll}`);
+  }
+});
+
+test("walk variants never consume randomness without their art or with the feature off", () => {
+  for (const [opts] of [[{ keys: [] }], [{ personality: "playful", cfg: { enabled: false } }], [{ energy: 20, keys: ["walkCurious"] }]]) {
+    let rolls = 0;
+    const env = walkEnv(opts);
+    const rt = createCompanionRuntime({
+      getTheme: () => env.theme,
+      random: () => { rolls += 1; return 0.01; },
+      store: fakeStore(),
+    });
+    rt.configure({ ...ON, memory: false, ...(opts.cfg || {}) });
+    rt.pickWalkVisual();
+    assert.equal(rolls, 0, JSON.stringify(opts));
+  }
+});
+
 test("mischief off reproduces the 40b54948 golden runs exactly", () => {
   // Golden produced by test/fixtures/companion-alive-script.js against the
   // pre-mischief runtime (40b54948); every new input is fed, mischief is off.

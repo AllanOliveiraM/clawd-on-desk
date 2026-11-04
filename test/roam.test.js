@@ -3542,6 +3542,49 @@ describe("roam companion hooks", () => {
     assert.deepStrictEqual(clampCalls, ["none"]);
   });
 
+  it("a companion walk variant replaces the roam visual through applyState", () => {
+    const answers = ["walk-bouncy.svg", null, 42, "boom", ""];
+    const applied = [];
+    let asked = 0;
+    const ctx = makeCtx({
+      pickWalkVisual: () => {
+        asked += 1;
+        const next = answers.shift();
+        if (next === "boom") throw new Error("boom");
+        return next;
+      },
+    });
+    ctx.applyState = (...args) => { applied.push(args); ctx.setCurrentState(args[0]); };
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam);
+    for (let i = 0; i < 4; i += 1) {
+      mock.timers.tick(4000);
+      finishWalk(roam);
+    }
+    assert.equal(asked, 5);
+    assert.deepStrictEqual(applied, [["roam", "walk-bouncy.svg"], ["roam"], ["roam"], ["roam"], ["roam"]]);
+    roam.setEnabled(false);
+  });
+
+  it("axis-constrained walks never ask for a walk variant", () => {
+    let asked = 0;
+    const ctx = makeCtx({ pickWalkVisual: () => { asked += 1; return "walk-bouncy.svg"; } });
+    const applied = [];
+    ctx.applyState = (...args) => { applied.push(args); ctx.setCurrentState(args[0]); };
+    const roam = roamModule(ctx);
+    roam.setConstrainAxis(true);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam);
+    assert.equal(asked, 0);
+    assert.deepStrictEqual(applied, [["roam"]]);
+    roam.setEnabled(false);
+  });
+
   it("onWalkFinished is not reported for a cancelled walk and a throwing hook keeps the chain", () => {
     let reports = 0;
     const ctx = makeCtx({ onWalkFinished: () => { reports += 1; throw new Error("boom"); } });

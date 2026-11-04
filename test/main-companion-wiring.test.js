@@ -215,6 +215,7 @@ it("roam ctx isIdleActivityPlaying includes companion", () => {
   assert.ok(roamCtx.includes("getRoamDelayMs: (isFirst, baseMs) => _companion.getRoamDelayMs(isFirst, baseMs),"));
   assert.ok(roamCtx.includes("pickPreferredTarget: (args) => _companion.pickRoamTarget(args),"));
   assert.ok(roamCtx.includes("onWalkFinished: (info) => _companion.noteWalkFinished(info),"));
+  assert.ok(roamCtx.includes("pickWalkVisual: () => _companion.pickWalkVisual(),"));
 });
 
 it("idle activities, tick and settings IPC reach the companion", () => {

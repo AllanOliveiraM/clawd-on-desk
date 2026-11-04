@@ -5863,6 +5863,7 @@ const _roamCtx = {
   pickPreferredTarget: (args) => _companion.pickRoamTarget(args),
   onWalkFinished: (info) => _companion.noteWalkFinished(info),
   onPreferredTargetDiscarded: () => _companion.onPreferredTargetDiscarded(),
+  pickWalkVisual: () => _companion.pickWalkVisual(),
   get miniTransitioning() { return _mini.getMiniTransitioning(); },
   applyState: (state, svgOverride, opts) => _state.applyState(state, svgOverride, opts),
   setState: (state, svgOverride, opts) => _state.setState(state, svgOverride, opts),
