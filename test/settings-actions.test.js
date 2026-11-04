@@ -3846,3 +3846,17 @@ it("issue #1316: a platform rebuild preserves the original source nonce and dead
     assert.strictEqual(JSON.stringify(profile), original);
   }
 });
+
+describe("settings actions gap hunting: companion", () => {
+  it("companionPersonality rejects prototype keys and objects (item 20)", () => {
+    for (const bad of ["__proto__", "toString", "constructor", "hasOwnProperty", {}, [], ["balanced"]]) {
+      assert.strictEqual(updateRegistry.companionPersonality(bad).status, "error", String(bad));
+    }
+  });
+
+  it("child companion flags are settable while the master switch is off (item 20)", () => {
+    for (const key of ["companionAutonomy", "companionInteractions", "companionMischief", "companionMemory"]) {
+      assert.strictEqual(updateRegistry[key](false).status, "ok", key);
+    }
+  });
+});

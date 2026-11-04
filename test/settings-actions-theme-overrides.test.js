@@ -366,3 +366,36 @@ test("restore defaults clears companion overrides", () => {
   assert.strictEqual(result.commit.themeOverrides.clawd, undefined);
   assert.deepStrictEqual(calls, [{ themeId: "clawd", variantId: null, overrideMap: null }]);
 });
+
+// ── gap hunting (settings): companion command edges ──
+test("companion command partial resets keep the other half", () => {
+  const snapshot = { theme: "clawd", themeOverrides: { clawd: { companionAnimations: {
+    greet: { file: "g.svg", sourceThemeId: "calico", durationMs: 1800 },
+  } } } };
+  const fileNull = themeOverrideCommands.setAnimationOverride(
+    { themeId: "clawd", slotType: "companion", companionKey: "greet", file: null }, companionDeps(snapshot));
+  assert.strictEqual(fileNull.status, "ok", fileNull.message);
+  assert.deepStrictEqual(fileNull.commit.themeOverrides.clawd.companionAnimations, { greet: { durationMs: 1800 } });
+  const durNull = themeOverrideCommands.setAnimationOverride(
+    { themeId: "clawd", slotType: "companion", companionKey: "greet", durationMs: null }, companionDeps(snapshot));
+  assert.deepStrictEqual(durNull.commit.themeOverrides.clawd.companionAnimations, { greet: { file: "g.svg", sourceThemeId: "calico" } });
+  // key absent from the theme's override map: resetting is deterministic and leaves nothing behind
+  const absent = themeOverrideCommands.setAnimationOverride(
+    { themeId: "clawd", slotType: "companion", companionKey: "boo", file: null, durationMs: null },
+    companionDeps({ theme: "clawd", themeOverrides: {} }));
+  assert.strictEqual(absent.status, "ok", absent.message);
+  assert.strictEqual(absent.noop, true);
+  assert.strictEqual(absent.commit, undefined);
+});
+
+test("companion command duration boundaries", () => {
+  const run = (durationMs, companionKey = "greet") => themeOverrideCommands.setAnimationOverride(
+    { themeId: "clawd", slotType: "companion", companionKey, durationMs }, companionDeps({ theme: "clawd", themeOverrides: {} }));
+  assert.strictEqual(run(100).status, "ok");
+  assert.strictEqual(run(8000).status, "ok");
+  for (const bad of [99, 8001, NaN, Infinity, "500", -1]) assert.strictEqual(run(bad).status, "error", String(bad));
+  assert.strictEqual(run(0).status, "error");
+  assert.strictEqual(run(1500, "fetchExitLeft").status, "ok");
+  assert.strictEqual(run(1500, "searchMouse").status, "ok");
+  assert.strictEqual(run(1500, "petting").status, "error");
+});

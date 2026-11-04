@@ -1258,3 +1258,52 @@ test("every Clawd Alive animation the clawd theme declares has a Settings card",
     harness.cleanup();
   }
 });
+
+// ── gap hunting (settings): Clawd Alive card edges ──
+test("Clawd Alive cards: empty, single-key and full companion themes", () => {
+  const { COMPANION_OVERRIDE_SECTIONS, COMPANION_NO_DURATION_KEYS } = require("../src/companion-override-slots");
+  const ids = (harness) => harness.runtime.buildAnimationOverrideSections().filter((s) => s.group === "companion");
+
+  const empty = createRuntimeHarness({ activeThemeFactory: (root) => makeTheme(root, { companionAnimations: {}, _baseCompanionAnimations: {} }) });
+  try {
+    assert.deepStrictEqual(ids(empty), []);
+  } finally { empty.cleanup(); }
+
+  const fetchOnly = createRuntimeHarness({
+    activeThemeFactory: (root) => makeTheme(root, {
+      companionAnimations: { fetchExitLeft: { files: ["idle.svg"], duration: 1200 } },
+      _baseCompanionAnimations: { fetchExitLeft: { files: ["idle.svg"], duration: 1200 } },
+    }),
+  });
+  try {
+    const sections = ids(fetchOnly);
+    assert.deepStrictEqual(sections.map((s) => s.id), ["companionFetch"]);
+    assert.strictEqual(sections[0].cards.length, 1);
+    assert.strictEqual(sections[0].cards[0].supportsDuration, true);
+  } finally { fetchOnly.cleanup(); }
+
+  const all = {};
+  for (const spec of COMPANION_OVERRIDE_SECTIONS) for (const key of spec.keys) all[key] = { files: ["idle.svg"], duration: 1000 };
+  const full = createRuntimeHarness({ activeThemeFactory: (root) => makeTheme(root, { companionAnimations: all, _baseCompanionAnimations: all }) });
+  try {
+    const sections = ids(full).filter((s) => s.id !== "companionWork");
+    assert.deepStrictEqual(sections.map((s) => s.id), COMPANION_OVERRIDE_SECTIONS.map((s) => s.id));
+    for (const card of sections.flatMap((s) => s.cards)) {
+      assert.strictEqual(card.supportsDuration, !COMPANION_NO_DURATION_KEYS.has(card.companionKey), card.companionKey);
+    }
+    const byKey = Object.fromEntries(sections.flatMap((s) => s.cards).map((c) => [c.companionKey, c]));
+    assert.strictEqual(byKey.fetchExitLeft.supportsDuration, true);
+    assert.strictEqual(byKey.catchHigh.supportsDuration, true);
+    assert.strictEqual(byKey.petting.supportsDuration, false);
+  } finally { full.cleanup(); }
+});
+
+test("companionWorkCardLabelKey never throws on odd input", () => {
+  const { companionWorkCardLabelKey } = require("../src/companion-override-slots");
+  for (const input of ["", null, undefined, 42, "a/b/c.svg", "***.svg", "..", "clawd-alive-.svg"]) {
+    assert.doesNotThrow(() => companionWorkCardLabelKey(input), String(input));
+    assert.strictEqual(typeof companionWorkCardLabelKey(input), "string");
+  }
+  assert.strictEqual(companionWorkCardLabelKey(""), "animCompanion");
+  assert.strictEqual(companionWorkCardLabelKey("a/b/clawd-alive-work-coffee.svg"), "animCompanionWorkCoffee");
+});
