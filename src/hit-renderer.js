@@ -481,5 +481,7 @@ document.addEventListener("contextmenu", (e) => {
   e.preventDefault();
   endPetGestures();
   if (isDragging) stopDrag();
-  window.hitAPI.showContextMenu();
+  // Clawd Alive test mode: Shift + right-click unlocks the "Test animations"
+  // submenu in packaged builds; main decides whether it actually shows.
+  window.hitAPI.showContextMenu({ shiftKey: e.shiftKey === true });
 });

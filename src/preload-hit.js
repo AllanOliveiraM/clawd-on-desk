@@ -40,7 +40,9 @@ contextBridge.exposeInMainWorld("hitAPI", {
   dragLock: (locked) => ipcRenderer.send("drag-lock", locked),
   dragMove: () => ipcRenderer.send("drag-move"),
   dragEnd: () => ipcRenderer.send("drag-end"),
-  showContextMenu: () => ipcRenderer.send("show-context-menu"),
+  showContextMenu: (options) => ipcRenderer.send("show-context-menu", {
+    shiftKey: !!(options && options.shiftKey === true),
+  }),
   focusTerminal: () => ipcRenderer.send("focus-terminal"),
   // OS file drop (#459). File → absolute path must resolve here in the
   // preload: Electron ≥32 removed File.path from the renderer, and

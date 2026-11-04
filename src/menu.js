@@ -28,6 +28,10 @@ const SIZES = {
 // i18n string pool + translator factory live in src/i18n.js so the future
 // settings panel can share them. menu.js binds the translator to ctx.lang.
 const { createTranslator } = require("./i18n");
+const {
+  shouldShowCompanionTestMenu,
+  buildCompanionTestMenuItem,
+} = require("./companion-test-menu");
 
 // Concatenate menu groups into one Electron template, inserting exactly one
 // separator between non-empty groups. Empty groups are dropped entirely so no
@@ -407,8 +411,22 @@ module.exports = function initMenu(ctx) {
     return ctx.contextMenuOwner;
   }
 
+  // Clawd Alive test mode: a test item clicked while the menu is still open
+  // would hit the companion gate (menuOpen), so it waits for the close
+  // callback. Electron fires the item click on either side of that callback,
+  // hence both paths.
+  let afterMenuClose = null;
+  function runAfterMenuClose(fn) {
+    if (ctx.menuOpen) {
+      afterMenuClose = fn;
+      return;
+    }
+    fn();
+  }
+
   function popupMenuAt(menu) {
     if (ctx.menuOpen) return;
+    afterMenuClose = null;
     const owner = ensureContextMenuOwner();
     if (!owner) return;
 
@@ -453,6 +471,9 @@ module.exports = function initMenu(ctx) {
             }
           }
         }
+        const pending = afterMenuClose;
+        afterMenuClose = null;
+        if (pending) pending();
       },
     });
   }
@@ -498,7 +519,34 @@ module.exports = function initMenu(ctx) {
     ctx.flushRuntimeStateToPrefs();
   }
 
-  function buildContextMenu() {
+  // Spec 2026-11-04 §2: null unless this right-click qualifies for the test
+  // submenu (dev build, or Shift in a packaged build; companionEnabled). Any
+  // failure falls back to the plain menu.
+  function buildCompanionTestGroup(options) {
+    if (!options || typeof ctx.getCompanionTestMenu !== "function") return [];
+    try {
+      const isPackaged = typeof ctx.isAppPackaged === "function"
+        ? ctx.isAppPackaged() !== false
+        : app.isPackaged !== false;
+      const info = ctx.getCompanionTestMenu();
+      if (!info || !shouldShowCompanionTestMenu({
+        isPackaged,
+        shiftKey: options.shiftKey === true,
+        companionEnabled: info.companionEnabled === true,
+      })) return [];
+      return [buildCompanionTestMenuItem({
+        catalog: info.catalog,
+        gateReason: info.gateReason || null,
+        play: info.play,
+        runAfterMenuClose,
+      })];
+    } catch (err) {
+      console.warn("Clawd: test animations menu failed:", err && err.message);
+      return [];
+    }
+  }
+
+  function buildContextMenu(options = null) {
     // Grouped as state / work / display / app / quit and joined with a single
     // separator between non-empty groups (see joinGroups). This replaced a flat
     // list that wrapped almost every item in its own separator, and it moves the
@@ -591,13 +639,18 @@ module.exports = function initMenu(ctx) {
       { label: t("quit"), click: () => requestAppQuit() },
     ];
 
-    const template = joinGroups([stateGroup, workGroup, displayGroup, appGroup, quitGroup]);
+    // Empty (and dropped by joinGroups) outside test mode, so the plain menu
+    // stays byte-identical.
+    const testGroup = buildCompanionTestGroup(options);
+
+    const template = joinGroups([stateGroup, workGroup, displayGroup, testGroup, appGroup, quitGroup]);
     ctx.contextMenu = Menu.buildFromTemplate(template);
   }
 
-  function showPetContextMenu() {
+  // options: { shiftKey } from the hit window's contextmenu event.
+  function showPetContextMenu(options = null) {
     if (!ctx.win || ctx.win.isDestroyed()) return;
-    buildContextMenu();
+    buildContextMenu({ shiftKey: !!(options && options.shiftKey === true) });
     popupMenuAt(ctx.contextMenu);
   }
 

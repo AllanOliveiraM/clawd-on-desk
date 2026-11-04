@@ -140,7 +140,11 @@ function registerPetInteractionIpc(options = {}) {
     disposers.push(() => ipcMain.removeListener(channel, listener));
   }
 
-  on("show-context-menu", showContextMenu);
+  // Clawd Alive test mode: the hit window forwards Shift; only a strict
+  // boolean survives, so a malformed payload is a plain right-click.
+  on("show-context-menu", (event, payload) => showContextMenu(event, {
+    shiftKey: !!payload && typeof payload === "object" && payload.shiftKey === true,
+  }));
   on("drag-move", () => moveWindowForDrag());
   on("pet-visual-ready", (event) => recoverVisiblePetAfterRendererLoad(event));
   on("pet-visual-settled", (event, payload) => settleVisual(event, payload));

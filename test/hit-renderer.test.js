@@ -68,7 +68,7 @@ function createHarness({ isMac = false, sendState = {}, detector = false } = {})
         dragLock: (v) => apiCalls.push(["dragLock", v]),
         dragMove: () => apiCalls.push(["dragMove"]),
         dragEnd: () => apiCalls.push(["dragEnd"]),
-        showContextMenu: () => apiCalls.push(["showContextMenu"]),
+        showContextMenu: (...args) => apiCalls.push(["showContextMenu", ...args]),
         focusTerminal: () => apiCalls.push(["focusTerminal"]),
         exitMiniMode: () => apiCalls.push(["exitMiniMode"]),
         showDashboard: () => apiCalls.push(["showDashboard"]),
@@ -489,8 +489,11 @@ describe("hit-renderer stranded drag release", () => {
 });
 
 describe("hit-renderer context menu during drag (#1260)", () => {
-  function contextmenu(h) {
-    h.context.document._dispatch("contextmenu", { preventDefault() {} });
+  // The renderer runs in its own vm realm; normalize its objects for deepStrictEqual.
+  const plain = (value) => JSON.parse(JSON.stringify(value));
+
+  function contextmenu(h, extra = {}) {
+    h.context.document._dispatch("contextmenu", { preventDefault() {}, ...extra });
   }
 
   it("ends an active drag through the normal stop path BEFORE showing the menu", () => {
@@ -545,7 +548,29 @@ describe("hit-renderer context menu during drag (#1260)", () => {
   it("plain right-click without a drag shows the menu with no lock traffic", () => {
     const h = createHarness();
     contextmenu(h);
-    assert.deepStrictEqual(h.apiCalls, [["showContextMenu"]]);
+    assert.deepStrictEqual(plain(h.apiCalls), [["showContextMenu", { shiftKey: false }]]);
+  });
+
+  // Clawd Alive test mode (spec 2026-11-04 §2): Shift + right-click is
+  // forwarded so a packaged build can show the test submenu.
+  it("forwards Shift on the context menu request as a strict boolean", () => {
+    const h = createHarness();
+    contextmenu(h, { shiftKey: true });
+    contextmenu(h, { shiftKey: "yes" });
+    assert.deepStrictEqual(plain(h.apiCalls), [
+      ["showContextMenu", { shiftKey: true }],
+      ["showContextMenu", { shiftKey: false }],
+    ]);
+  });
+
+  it("macOS Ctrl-click still reaches the context menu (no Shift)", () => {
+    const h = createHarness({ isMac: true });
+    h.pointerdown({ ctrlKey: true });
+    h.pointerup({ ctrlKey: true, clientX: 100 });
+    contextmenu(h, { ctrlKey: true });
+    const menuCalls = h.apiCalls.filter((c) => c[0] === "showContextMenu");
+    assert.deepStrictEqual(plain(menuCalls), [["showContextMenu", { shiftKey: false }]]);
+    assert.ok(!h.apiCalls.some((c) => c[0] === "showDashboard"));
   });
 });
 

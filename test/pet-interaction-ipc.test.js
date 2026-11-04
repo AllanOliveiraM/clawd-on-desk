@@ -51,7 +51,7 @@ function createHarness(overrides = {}) {
   const ipcMain = new FakeIpcMain();
   const runtime = registerPetInteractionIpc({
     ipcMain,
-    showContextMenu: (event) => calls.push(["showContextMenu", event.sender]),
+    showContextMenu: (event, options) => calls.push(["showContextMenu", event.sender, options]),
     moveWindowForDrag: () => calls.push(["moveWindowForDrag"]),
     setIdlePaused: (value) => calls.push(["setIdlePaused", value]),
     isMiniTransitioning: () => state.miniTransitioning,
@@ -222,6 +222,26 @@ test("pet interaction IPC delegates pet-interaction:reveal-session-hud to reveal
   ]);
 });
 
+// Clawd Alive test mode (spec 2026-11-04 §2): only a strict boolean shiftKey
+// survives the IPC boundary; anything else reads as a plain right-click.
+test("pet interaction IPC validates the context menu shiftKey", () => {
+  const { ipcMain, calls } = createHarness();
+  ipcMain.send("show-context-menu", { shiftKey: true });
+  ipcMain.send("show-context-menu", { shiftKey: "true" });
+  ipcMain.send("show-context-menu", { shiftKey: 1 });
+  ipcMain.send("show-context-menu", null);
+  ipcMain.send("show-context-menu", "shift");
+  ipcMain.send("show-context-menu");
+  assert.deepStrictEqual(calls.filter((c) => c[0] === "showContextMenu").map((c) => c[2]), [
+    { shiftKey: true },
+    { shiftKey: false },
+    { shiftKey: false },
+    { shiftKey: false },
+    { shiftKey: false },
+    { shiftKey: false },
+  ]);
+});
+
 test("pet interaction IPC delegates menu, drag move, reaction pause, and renderer relays", () => {
   const { ipcMain, calls, state } = createHarness();
 
@@ -238,7 +258,7 @@ test("pet interaction IPC delegates menu, drag move, reaction pause, and rendere
   ipcMain.send("play-click-reaction", "click.svg", 900);
 
   assert.deepStrictEqual(calls, [
-    ["showContextMenu", "sender-web-contents"],
+    ["showContextMenu", "sender-web-contents", { shiftKey: false }],
     ["moveWindowForDrag"],
     ["setIdlePaused", true],
     ["setIdlePaused", false],

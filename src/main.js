@@ -4836,6 +4836,10 @@ const _menuCtx = {
   ensureUserThemesDir: () => themeLoader.ensureUserThemesDir(),
   openSettingsWindow: (options) => settingsWindowRuntime.open(options),
   showTutorial: () => _tutorial.open(),
+  // Clawd Alive test mode (spec 2026-11-04 §2). Feature-checked so the menu
+  // works before and after the runtime grows debugCatalog/debugPlay.
+  isAppPackaged: () => app.isPackaged === true,
+  getCompanionTestMenu: () => getCompanionTestMenuInfo(),
 };
 const _menu = require("./menu")(_menuCtx);
 const { t, buildContextMenu, buildTrayMenu, rebuildAllMenus, createTray,
@@ -5494,7 +5498,7 @@ function createWindow() {
 
   registerPetInteractionIpc({
     ipcMain,
-    showContextMenu: (event) => showPetContextMenu(event),
+    showContextMenu: (_event, options) => showPetContextMenu(options),
     moveWindowForDrag: () => moveWindowForDrag(),
     setIdlePaused: (value) => { idlePaused = !!value; },
     setLowPowerIdlePaused,
@@ -6068,6 +6072,29 @@ try {
   }
 } catch (err) {
   console.warn("Clawd: companion subscribeKey failed:", err && err.message);
+}
+
+// Clawd Alive test mode: the data behind the pet menu's "Test animations"
+// submenu. The menu-time gate mirrors the spec's blockers (agents,
+// permissions, DND, mini); the runtime re-checks everything on play.
+const { resolveCompanionTestGate } = require("./companion-test-menu");
+function getCompanionTestMenuInfo() {
+  const companionEnabled = _settingsController.get("companionEnabled") === true;
+  if (!companionEnabled) return { companionEnabled: false };
+  const catalog = typeof _companion.debugCatalog === "function" ? _companion.debugCatalog() : [];
+  return {
+    companionEnabled,
+    catalog,
+    gateReason: resolveCompanionTestGate({
+      agentBusy: anySessionInProgress(),
+      permission: _perm.hasVisiblePermissionBubbles(),
+      dnd: doNotDisturb,
+      mini: _mini.getMiniMode() || _mini.getMiniTransitioning(),
+    }),
+    play: (id, opts) => (typeof _companion.debugPlay === "function"
+      ? _companion.debugPlay(id, opts)
+      : { ok: false, reason: "disabled" }),
+  };
 }
 
 // Convenience getters for mini state (used throughout main.js)
