@@ -225,6 +225,11 @@ it("state ctx asks the companion for the dreamy sleep visual", () => {
   assert.ok(stateCtx.includes("pickSleepVisual: (state, options) => _companion.pickSleepVisual(state, options),"));
 });
 
+it("state ctx asks the companion for the work escalation visual", () => {
+  const stateCtx = slice("const _stateCtx = {", 'const _state = require("./state")');
+  assert.ok(stateCtx.includes("pickWorkVisual: (state, info) => _companion.pickWorkVisual(state, info),"));
+});
+
 it("idle activities, tick and settings IPC reach the companion", () => {
   const controller = slice('const _idleActivity = require("./idle-activity")', "\n});");
   assert.ok(controller.includes("chooser: (args) => _companion.chooseIdleActivity(args),"));

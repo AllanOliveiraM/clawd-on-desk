@@ -80,6 +80,7 @@ const WALK_BOUNCY_CONTENT_THRESHOLD = 75;
 const WALK_CURIOUS_CHANCE = 0.35;
 // Dreamy sleep: chance per real sleep that it twitches its legs (owner decision).
 const SLEEP_TWITCH_CHANCE = 0.35;
+const WORK_VARIANT_CHANCE = 0.35;
 const LONG_SLEEP_MS = 600000;
 const ART_CACHE_MAX = 8; // (theme, window size) helpers kept for the geometry
 
@@ -620,6 +621,51 @@ function createCompanionRuntime(options = {}) {
     return hit ? sleepFile(theme, "sleepTwitch") : null;
   }
 
+  // ---- work escalation ladder ----
+
+  // Asked by the state machine whenever it resolves the working / juggling
+  // tier visual (not DND, previews, mini, display hints or explicit files): a
+  // file from theme.companionWorkTiers for the current count, or null for the
+  // theme's own tier file. A tier with variants shows one ~35% of the time.
+  // The choice holds while the tier and the state's episode (bumped by the
+  // state machine when the pet leaves working / juggling) stay the same, so
+  // repeated working events never flicker between files.
+  const workPicks = new Map(); // "working" | "juggling" -> { episode, tier, file }
+  function workTierFor(theme, group, count) {
+    const block = theme && theme.companionWorkTiers;
+    const tiers = block && typeof block === "object" && Array.isArray(block[group]) ? block[group] : [];
+    let best = null;
+    for (const tier of tiers) {
+      if (!tier || typeof tier !== "object" || !isNum(tier.minSessions) || tier.minSessions > count) continue;
+      if (!best || tier.minSessions > best.minSessions) best = tier;
+    }
+    return best;
+  }
+  function pickWorkVisual(state, info) {
+    if (disposed || !config.enabled) {
+      workPicks.clear();
+      return null;
+    }
+    if ((state !== "working" && state !== "juggling") || !info || typeof info !== "object") return null;
+    const count = state === "working" ? info.sessions : info.subagents;
+    if (!isNum(count)) return null;
+    const tier = workTierFor(getTheme(), state, count);
+    if (!tier) {
+      workPicks.delete(state);
+      return null;
+    }
+    const held = workPicks.get(state);
+    if (held && held.tier === tier && held.episode === info.episode) return held.file;
+    const files = Array.isArray(tier.files) ? tier.files.filter((f) => typeof f === "string" && f) : [];
+    const variants = Array.isArray(tier.variants) ? tier.variants.filter((f) => typeof f === "string" && f) : [];
+    const pickOne = (list) => (list.length === 1 ? list[0] : pickFrom(list, random));
+    let file = null;
+    if (variants.length > 0 && random() < WORK_VARIANT_CHANCE) file = pickOne(variants);
+    else if (files.length > 0) file = pickOne(files);
+    workPicks.set(state, { tier, episode: info.episode, file });
+    return file;
+  }
+
   // ---- roam targets (3x3 visit grid per display, memory only) ----
 
   function cellOf(area, cx, cy) {
@@ -1070,6 +1116,7 @@ function createCompanionRuntime(options = {}) {
     pickRoamTarget,
     pickWalkVisual,
     pickSleepVisual,
+    pickWorkVisual,
     noteEvent,
     handleGesture,
     noteDragEnd,

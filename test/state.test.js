@@ -1599,6 +1599,125 @@ describe("Clawd Alive dreamy sleep (pickSleepVisual)", () => {
   });
 });
 
+describe("Clawd Alive work escalation (pickWorkVisual)", () => {
+  let api, ctx, calls, answer;
+
+  function build(overrides = {}) {
+    if (api) api.cleanup();
+    calls = [];
+    ctx = makeCtx({
+      pickWorkVisual: (...args) => { calls.push(args); return typeof answer === "function" ? answer(...args) : answer; },
+      ...overrides,
+    });
+    api = require("../src/state")(ctx);
+  }
+
+  beforeEach(() => {
+    answer = "clawd-alive-work-coffee.svg";
+    api = null;
+    build();
+  });
+  afterEach(() => {
+    api.cleanup();
+    api = null;
+  });
+
+  it("working asks with the session count and base tier file; logical state stays working", () => {
+    api.sessions.set("s1", rawSession("working"));
+    api.sessions.set("s2", rawSession("thinking"));
+    const svg = api.getSvgOverride("working");
+    assert.strictEqual(svg, "clawd-alive-work-coffee.svg");
+    assert.strictEqual(calls.length, 1);
+    const [state, info] = calls[0];
+    assert.strictEqual(state, "working");
+    assert.strictEqual(info.sessions, 2);
+    assert.strictEqual(info.subagents, 0);
+    assert.strictEqual(info.baseFile, "clawd-headphones-groove.svg");
+    assert.strictEqual(typeof info.episode, "number");
+    api.setState("working", svg);
+    assert.strictEqual(api.getCurrentState(), "working");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-work-coffee.svg");
+  });
+
+  it("executing that reuses the working art asks as working", () => {
+    api.sessions.set("s1", rawSession("executing"));
+    api.getSvgOverride("executing");
+    if (calls.length) assert.strictEqual(calls[0][0], "working");
+  });
+
+  it("juggling asks with the live subagent count", () => {
+    api.sessions.set("s1", rawSession("juggling"));
+    api.sessions.set("s2", rawSession("juggling"));
+    api.sessions.set("s3", rawSession("juggling"));
+    assert.strictEqual(api.getSvgOverride("juggling"), "clawd-alive-work-coffee.svg");
+    const [state, info] = calls[0];
+    assert.strictEqual(state, "juggling");
+    assert.strictEqual(info.subagents, 3);
+    assert.strictEqual(info.baseFile, "clawd-working-juggling.svg");
+  });
+
+  it("no hook, null, throwing or non-string answers keep today's tier files", () => {
+    for (const hook of [undefined, () => null, () => { throw new Error("boom"); }, () => 42, () => ""]) {
+      build({ pickWorkVisual: hook });
+      api.sessions.set("s1", rawSession("working"));
+      api.sessions.set("s2", rawSession("working"));
+      api.sessions.set("s3", rawSession("working"));
+      assert.strictEqual(api.getSvgOverride("working"), "clawd-working-building.svg");
+      api.sessions.clear();
+      api.sessions.set("j1", rawSession("juggling"));
+      assert.strictEqual(api.getSvgOverride("juggling"), "clawd-headphones-groove.svg");
+    }
+  });
+
+  it("the episode holds while the pet stays in working and changes after it leaves", () => {
+    api.sessions.set("s1", rawSession("working"));
+    api.setState("working", api.getSvgOverride("working"), { bypassMinDisplay: true });
+    api.setState("working", api.getSvgOverride("working"), { bypassMinDisplay: true });
+    api.sessions.set("s2", rawSession("working"));
+    api.setState("working", api.getSvgOverride("working"), { bypassMinDisplay: true });
+    const working = calls.map(([, info]) => info.episode);
+    assert.strictEqual(new Set(working).size, 1, "same episode while working");
+    api.applyState("idle");
+    api.getSvgOverride("working");
+    assert.notStrictEqual(calls[calls.length - 1][1].episode, working[0], "re-entry is a new episode");
+    const reentry = calls[calls.length - 1][1].episode;
+    api.applyState("working", api.getSvgOverride("working"));
+    api.getSvgOverride("working");
+    assert.strictEqual(calls[calls.length - 1][1].episode, reentry, "applying the entry keeps the episode");
+    api.applyState("juggling");
+    api.getSvgOverride("working");
+    assert.notStrictEqual(calls[calls.length - 1][1].episode, reentry, "juggling in between ends the episode");
+  });
+
+  it("a session display hint wins and never asks", () => {
+    api.sessions.set("s1", rawSession("working", { displayHint: "claude-design" }));
+    assert.strictEqual(api.getSvgOverride("working"), "clawd-designing.svg");
+    assert.strictEqual(calls.length, 0);
+  });
+
+  it("DND never asks", () => {
+    ctx.doNotDisturb = true;
+    api.sessions.set("s1", rawSession("working"));
+    assert.strictEqual(api.getSvgOverride("working"), "clawd-working-typing.svg");
+    assert.strictEqual(calls.length, 0);
+  });
+
+  it("previews, explicit files and mini keep their own visuals", () => {
+    api.sessions.set("s1", rawSession("working"));
+    api.applyState("working", undefined, { settingsPreview: true });
+    assert.strictEqual(api.getCurrentSvg(), "clawd-working-typing.svg", "preview");
+    api.applyState("idle");
+    api.applyState("working", "clawd-working-building.svg");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-working-building.svg", "explicit");
+    assert.strictEqual(calls.length, 0);
+    build({ miniMode: true });
+    api.sessions.set("s1", rawSession("working"));
+    api.applyState("working", api.getSvgOverride("working"));
+    assert.strictEqual(api.getCurrentState(), "mini-working");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-mini-typing.svg");
+  });
+});
+
 describe("wake poll behavior", () => {
   let api, ctx, fakeCursor;
 

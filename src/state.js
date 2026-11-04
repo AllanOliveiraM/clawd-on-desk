@@ -922,6 +922,19 @@ function resolveSleepVariant(state, svgOverride, options) {
   return sleepVariantSvg;
 }
 
+// Clawd Alive work escalation: the companion holds its ladder pick per
+// working / juggling episode. The episode ends when the pet leaves that state
+// group, so re-entering re-rolls while repeated working events never do.
+let workEpisode = 0;
+function workVisualGroup(state) {
+  if (state === "working" || state === "executing") return "working";
+  return state === "juggling" ? "juggling" : null;
+}
+function getPickWorkVisual() {
+  if (ctx.doNotDisturb || typeof ctx.pickWorkVisual !== "function") return null;
+  return (state, info) => ctx.pickWorkVisual(state, { ...info, episode: workEpisode });
+}
+
 function applyState(state, svgOverride, options = {}) {
   const applyOptions = normalizeApplyStateOptions(state, options);
   // Phase 3b: user-disabled oneshot state — skip visual + sound, fall back to
@@ -964,6 +977,9 @@ function applyState(state, svgOverride, options = {}) {
 
   previousState = currentState;
   currentState = state;
+  if (workVisualGroup(previousState) && workVisualGroup(previousState) !== workVisualGroup(state)) {
+    workEpisode += 1;
+  }
   stableVisualPicker.retainOnly(getVisualState(state, STATE_SVGS));
   displayRevision += 1;
   currentVisualSource = applyOptions.settingsPreview === true
@@ -4266,6 +4282,7 @@ function getSvgOverride(state) {
     theme,
     stateSvgs: STATE_SVGS,
     pickVisualFile: stableVisualPicker.pick,
+    pickWorkVisual: getPickWorkVisual(),
   });
 }
 

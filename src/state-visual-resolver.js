@@ -173,27 +173,48 @@ function getPickVisualFile(options) {
   return typeof options.pickVisualFile === "function" ? options.pickVisualFile : pickFirstFile;
 }
 
+// Clawd Alive work escalation: options.pickWorkVisual (the companion hook) may
+// swap the theme's tier file for a ladder file; null / invalid / a throwing
+// hook keeps the theme's own tier file.
+function pickWorkVisualFile(options, state, sessions, subagents, baseFile) {
+  if (typeof options.pickWorkVisual !== "function") return baseFile;
+  try {
+    const file = options.pickWorkVisual(state, {
+      sessions: sessions ?? countActiveSessionsByStates(
+        options.sessions,
+        new Set(["working", "executing", "thinking", "juggling"])
+      ),
+      subagents: subagents ?? countLiveSubagents(options.sessions),
+      baseFile,
+    });
+    if (typeof file === "string" && file) return file;
+  } catch {}
+  return baseFile;
+}
+
 function getWorkingSvg(options = {}) {
   const count = countActiveSessionsByStates(
     options.sessions,
     new Set(["working", "executing", "thinking", "juggling"])
   );
   const stateSvgs = options.stateSvgs;
-  return getPickVisualFile(options)("working", selectTieredStateFiles(
+  const baseFile = getPickVisualFile(options)("working", selectTieredStateFiles(
     options.theme && options.theme.workingTiers,
     count,
     stateSvgs.working
   ));
+  return pickWorkVisualFile(options, "working", count, null, baseFile);
 }
 
 function getJugglingSvg(options = {}) {
   const count = countLiveSubagents(options.sessions);
   const stateSvgs = options.stateSvgs;
-  return getPickVisualFile(options)("juggling", selectTieredStateFiles(
+  const baseFile = getPickVisualFile(options)("juggling", selectTieredStateFiles(
     options.theme && options.theme.jugglingTiers,
     count,
     stateSvgs.juggling
   ));
+  return pickWorkVisualFile(options, "juggling", null, count, baseFile);
 }
 
 function getWinningSessionDisplayHint(sessions, targetState, displayHintMap = {}) {

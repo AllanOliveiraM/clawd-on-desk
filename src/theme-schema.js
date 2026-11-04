@@ -672,6 +672,37 @@ function normalizeCompanionAnimations(value) {
   return out;
 }
 
+// Optional Clawd Alive work escalation ladder (companion only). Each group is a
+// list of { minSessions, files, variants } sorted by minSessions descending;
+// files / variants are basenamed, invalid tiers dropped. A tier may carry only
+// variants: without its own files it keeps the theme's working / juggling tier.
+const COMPANION_WORK_TIER_GROUPS = Object.freeze(["working", "juggling"]);
+
+function normalizeTierFileList(value) {
+  return (Array.isArray(value) ? value : [])
+    .filter((file) => typeof file === "string")
+    .map(basenameOnly)
+    .filter((file) => typeof file === "string" && file.length > 0);
+}
+
+function normalizeCompanionWorkTiers(value) {
+  const out = { working: [], juggling: [] };
+  if (!isPlainObject(value)) return out;
+  for (const group of COMPANION_WORK_TIER_GROUPS) {
+    const tiers = Array.isArray(value[group]) ? value[group] : [];
+    for (const tier of tiers) {
+      if (!isPlainObject(tier)) continue;
+      if (typeof tier.minSessions !== "number" || !Number.isFinite(tier.minSessions) || tier.minSessions < 1) continue;
+      const files = normalizeTierFileList(Array.isArray(tier.files) ? tier.files : [tier.file]);
+      const variants = normalizeTierFileList(tier.variants);
+      if (files.length === 0 && variants.length === 0) continue;
+      out[group].push({ minSessions: Math.floor(tier.minSessions), files, variants });
+    }
+    out[group].sort((a, b) => b.minSessions - a.minSessions);
+  }
+  return out;
+}
+
 function addVisualUsage(out, stateFamily, file, source) {
   const safe = basenameOnly(file);
   if (!safe) return;
@@ -751,6 +782,14 @@ function projectThemeVisualUsages(cfg) {
   )) {
     for (const file of entry.files) {
       addVisualUsage(usages, `companion:${key}`, file, `companionAnimations.${key}`);
+    }
+  }
+  const workTiers = normalizeCompanionWorkTiers(cfg && cfg.companionWorkTiers);
+  for (const group of COMPANION_WORK_TIER_GROUPS) {
+    for (const tier of workTiers[group]) {
+      for (const file of [...tier.files, ...tier.variants]) {
+        addVisualUsage(usages, `companion:workTiers.${group}`, file, `companionWorkTiers.${group}`);
+      }
     }
   }
   for (const [hint, file] of Object.entries((cfg && cfg.displayHintMap) || {})) {
@@ -1801,6 +1840,8 @@ function mergeDefaults(raw, themeId, isBuiltin) {
 
   // companionAnimations (optional; files are basenamed by the normalizer)
   theme.companionAnimations = normalizeCompanionAnimations(raw.companionAnimations);
+  // companionWorkTiers (optional Clawd Alive work escalation ladder)
+  theme.companionWorkTiers = normalizeCompanionWorkTiers(raw.companionWorkTiers);
 
   // workingTiers / jugglingTiers — auto sort descending by minSessions
   if (theme.workingTiers) {
@@ -1899,6 +1940,7 @@ module.exports = {
   POLISH_ANIMATION_KEYS,
   TRANSITION_ANIMATION_KEYS,
   normalizeCompanionAnimations,
+  normalizeCompanionWorkTiers,
   DEFAULT_SOUNDS,
   DEFAULT_TIMINGS,
   DEFAULT_HITBOXES,

@@ -2555,6 +2555,9 @@ const _stateCtx = {
   // Clawd Alive dreamy sleep: may swap the collapse / sleeping visual for one
   // sleep (null = original; state.js guards the call, _companion is created later).
   pickSleepVisual: (state, options) => _companion.pickSleepVisual(state, options),
+  // Clawd Alive work escalation: may swap the working / juggling tier visual
+  // (null = the theme's tier file; state.js guards the call).
+  pickWorkVisual: (state, info) => _companion.pickWorkVisual(state, info),
   isAgentEnabled: (agentId) => _runtimeAgentGate.isAgentEnabled(agentId),
   hasAnyEnabledAgent: () => _runtimeAgentGate.hasAnyEnabledAgent(),
 };
