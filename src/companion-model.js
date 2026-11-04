@@ -128,6 +128,8 @@ function applyEvent(state, event, traits, now) {
   const kind = event && event.kind;
   if (!EVENT_KINDS.includes(kind)) return advanced;
 
+  // A non-finite clock leaves every timestamp (and the streak) as it was.
+  const timed = isNum(now);
   const prev = advanced.streak;
   const count = prev && prev.kind === kind && now - prev.at < STREAK_WINDOW_MS && now >= prev.at
     ? prev.count + 1
@@ -160,8 +162,8 @@ function applyEvent(state, event, traits, now) {
     ...advanced,
     mood,
     label: moodLabel(mood, advanced.label),
-    streak: { kind, count, at: now },
-    lastInteractionAt: INTERACTION_KINDS.has(kind) ? now : advanced.lastInteractionAt,
+    streak: timed ? { kind, count, at: now } : advanced.streak,
+    lastInteractionAt: timed && INTERACTION_KINDS.has(kind) ? now : advanced.lastInteractionAt,
   };
 }
 

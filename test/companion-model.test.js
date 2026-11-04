@@ -158,3 +158,19 @@ test("walk costs 0.5 energy with diminishing returns inside the streak window", 
   s = applyEvent(s, { kind: "walk" }, traits, T0);
   assert.ok(Math.abs(before - s.mood.energy - 0.075) < 1e-9);
 });
+
+test("applyEvent with a non-finite now keeps the timestamps unchanged", () => {
+  const base = stateWith({}, { lastAdvanceAt: T0, lastInteractionAt: T0 - 5, streak: { kind: "pet", count: 2, at: T0 - 10 } });
+  for (const bad of [NaN, Infinity, undefined, null, "x"]) {
+    const out = applyEvent(base, { kind: "pet" }, getTraits("balanced"), bad);
+    assert.equal(out.lastAdvanceAt, T0, String(bad));
+    assert.equal(out.lastInteractionAt, T0 - 5, String(bad));
+    assert.ok(Number.isFinite(out.streak.at), String(bad));
+    assert.equal(out.streak.at, T0 - 10);
+    assert.ok(Object.values(out.mood).every(Number.isFinite));
+  }
+  const fresh = applyEvent(createInitialState(), { kind: "pet" }, getTraits("balanced"), NaN);
+  assert.equal(fresh.lastInteractionAt, null);
+  assert.equal(fresh.lastAdvanceAt, null);
+  assert.ok(fresh.streak === null || Number.isFinite(fresh.streak.at));
+});

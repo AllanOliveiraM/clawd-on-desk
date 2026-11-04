@@ -131,3 +131,37 @@ test("beatDelayMs stays within bounds", () => {
     }
   }
 });
+
+test("the chooser never returns a zero-weight intent at the random extremes", () => {
+  const args = { traits: getTraits("balanced"), state: stateWith({ energy: 80 }), mode: "roam", available: new Set(["content", "curious"]), cooldownUntil: {}, now: NOW };
+  const w = intentWeights(args);
+  const positive = INTENTS.filter((i) => w[i] > 0);
+  const last = positive[positive.length - 1];
+  for (const r of [0.9999999, 1, 5, NaN, undefined]) {
+    const got = chooseIntent({ ...args, random: () => r });
+    assert.equal(got, last, String(r));
+    assert.ok(w[got] > 0);
+  }
+  assert.equal(chooseIntent({ ...args, random: () => 0 }), positive[0]);
+  assert.equal(chooseIntent({ ...args, random: () => -1 }), positive[0]);
+});
+
+test("cumulative boundaries are deterministic: a hit on the edge goes to the next intent", () => {
+  const args = { traits: getTraits("balanced"), state: stateWith({ energy: 80 }), mode: "roam", available: new Set(["content", "curious"]), cooldownUntil: {}, now: NOW };
+  const w = intentWeights(args);
+  const positive = INTENTS.filter((i) => w[i] > 0);
+  const total = positive.reduce((s, i) => s + w[i], 0);
+  let acc = 0;
+  for (let i = 0; i < positive.length - 1; i += 1) {
+    acc += w[positive[i]];
+    const edge = acc / total;
+    assert.equal(chooseIntent({ ...args, random: () => edge }), positive[i + 1], `edge after ${positive[i]}`);
+    assert.equal(chooseIntent({ ...args, random: () => edge - 1e-9 }), positive[i]);
+  }
+});
+
+test("a cooled-down intent is skipped even for the last-weight fallback", () => {
+  const args = { traits: getTraits("balanced"), state: stateWith({ energy: 80 }), mode: "roam", available: new Set(["content", "curious"]), now: NOW, random: () => 0.9999999 };
+  assert.equal(chooseIntent({ ...args, cooldownUntil: { curious: NOW + 1 } }), "content");
+  assert.equal(chooseIntent({ ...args, cooldownUntil: { curious: NOW + 1, content: NOW + 1 } }), "observe");
+});

@@ -203,3 +203,41 @@ describe("companion store", () => {
     assert.deepStrictEqual(fs.readdirSync(dir), []);
   });
 });
+
+describe("companion store load clamps", () => {
+  let dir, file, tm;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-store-"));
+    file = path.join(dir, "companion-state.json");
+    tm = makeTimers();
+  });
+  afterEach(() => { fs.rmSync(dir, { recursive: true, force: true }); });
+
+  it("future timestamps are clamped to now and a streak is never loaded", () => {
+    fs.writeFileSync(file, JSON.stringify({
+      version: 1,
+      mood: { energy: 50, contentment: 50, familiarity: 10 },
+      label: "neutral",
+      lastAdvanceAt: 9e12,
+      lastInteractionAt: 8e12,
+      streak: { kind: "pet", count: 5, at: 900 },
+      restSpot: null,
+    }));
+    const store = createCompanionStore({ filePath: file, now: () => 1000, setTimeout: tm.setTimeout, clearTimeout: tm.clearTimeout });
+    const { state } = store.load();
+    assert.strictEqual(state.lastAdvanceAt, 1000);
+    assert.strictEqual(state.lastInteractionAt, 1000);
+    assert.strictEqual(state.streak, null);
+  });
+
+  it("past timestamps are kept as they are", () => {
+    fs.writeFileSync(file, JSON.stringify({
+      version: 1, mood: { energy: 50, contentment: 50, familiarity: 10 }, label: "neutral",
+      lastAdvanceAt: 400, lastInteractionAt: 300,
+    }));
+    const store = createCompanionStore({ filePath: file, now: () => 1000, setTimeout: tm.setTimeout, clearTimeout: tm.clearTimeout });
+    const { state } = store.load();
+    assert.strictEqual(state.lastAdvanceAt, 400);
+    assert.strictEqual(state.lastInteractionAt, 300);
+  });
+});
