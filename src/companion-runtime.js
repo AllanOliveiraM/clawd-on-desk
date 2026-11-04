@@ -243,7 +243,8 @@ function createCompanionRuntime(options = {}) {
       // loop, and so does a closed gate (the session itself stays for mood).
       playing = null;
       if (!stillOurs) return;
-      if (canPlay()) play("petting", attempt.file, attempt.duration);
+      const loop = attempt.loop || { file: attempt.file, duration: attempt.duration };
+      if (canPlay()) play("petting", loop.file, loop.duration, null, { phase: "loop", loop, outro: attempt.outro });
       else restoreIdleVisual();
       return;
     }
@@ -252,8 +253,8 @@ function createCompanionRuntime(options = {}) {
     if (attempt.kind === "beat" && autonomous()) scheduleBeat();
   }
 
-  function play(kind, file, duration, scene = null) {
-    const attempt = { kind, file, duration, visualGeneration: null, committed: false, scene };
+  function play(kind, file, duration, scene = null, extra = null) {
+    const attempt = { ...extra, kind, file, duration, visualGeneration: null, committed: false, scene };
     playing = attempt;
     const onLogicalSettlement = (settlement) => {
       if (playing !== attempt) return;
@@ -350,9 +351,15 @@ function createCompanionRuntime(options = {}) {
     returnWalk = false;
   }
 
-  function syncNap() {
+  // The pet counts as napping from lying down until it starts getting up.
+  function napScene() {
     const scene = scenes.current();
-    const napNow = !!(scene && scene.id === "fakeNap" && !scene.switched && isAnimating());
+    const part = scene && scene.parts[scene.index];
+    return scene && scene.id === "fakeNap" && !scene.switched && part && part.key !== "fakeNapOut" ? scene : null;
+  }
+
+  function syncNap() {
+    const napNow = !!(napScene() && isAnimating());
     if (napNow !== napping) {
       napping = napNow;
       brain.setNapping(napNow);
@@ -360,8 +367,7 @@ function createCompanionRuntime(options = {}) {
   }
 
   function tryBoo() {
-    const scene = scenes.current();
-    if (!scene || scene.id !== "fakeNap" || scene.switched) return;
+    if (!napScene()) return;
     if (!(random() < clamp(reactWeight("boo", config.personality), 0, 1))) return;
     scenes.event("boo");
   }
@@ -785,12 +791,22 @@ function createCompanionRuntime(options = {}) {
     }
   }
 
+  // The session's end eases out (pettingOut) while our petting visual still
+  // owns the screen and the gate is open; otherwise idle comes back directly.
   function endPetSession() {
     clearPetTimer();
     if (!petSession) return;
     petSession = false;
     startBreather();
-    if (playing && playing.kind === "petting") stopPlayback(true);
+    if (!playing || playing.kind !== "petting" || playing.phase === "out") return;
+    const outro = playing.outro ? animationFor("pettingOut", getTheme()) : null;
+    if (outro && isAnimating() && canPlay() && getCurrentState() === "idle") {
+      clearPlayTimer();
+      playing = null;
+      play("petting", outro.file, partDurationMs(outro, true), null, { phase: "out" });
+      return;
+    }
+    stopPlayback(true);
   }
 
   function armPetTimer() {
@@ -801,18 +817,24 @@ function createCompanionRuntime(options = {}) {
     }, PETTING_INACTIVITY_MS);
   }
 
+  // Petting eases in (pettingIn, one-shot) then loops the petting file; the
+  // shy answer plays alone. A stroke during the outro starts over.
   function startPetVisual() {
     if (!canPlay() || getCurrentState() !== "idle") return;
-    if (playing && playing.kind === "petting") return;
+    if (playing && playing.kind === "petting" && playing.phase !== "out") return;
     const theme = getTheme();
     const shyAnswer = config.personality === "shy" && state.mood.familiarity < SHY_FAMILIARITY_THRESHOLD
       ? animationFor("shy", theme)
       : null;
     const anim = shyAnswer || animationFor("petting", theme);
     if (!anim) return;
+    const loop = { file: anim.file, duration: anim.duration ?? PETTING_DEFAULT_DURATION_MS };
+    const intro = shyAnswer ? null : animationFor("pettingIn", theme);
+    const outro = !shyAnswer;
     // Petting takes the visual right away, so a beat/hover needs no restore.
     if (playing) stopPlayback(false);
-    play("petting", anim.file, anim.duration ?? PETTING_DEFAULT_DURATION_MS);
+    if (intro) play("petting", intro.file, partDurationMs(intro, true), null, { phase: "in", loop, outro });
+    else play("petting", loop.file, loop.duration, null, { phase: "loop", loop, outro });
   }
 
   // Hover answer facing the cursor: with the cursor on the pet's left half a

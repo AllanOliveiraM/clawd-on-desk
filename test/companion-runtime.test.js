@@ -1848,3 +1848,222 @@ test("mischief off reproduces the 40b54948 golden runs exactly", () => {
     assert.deepEqual(runScript(createCompanionRuntime, script), { ...result, answers }, JSON.stringify(script));
   }
 });
+
+// ---- polish integration: one-shot intro / outro parts ----
+
+function timedTheme(durations) {
+  const companionAnimations = {};
+  for (const [key, duration] of Object.entries(durations)) {
+    companionAnimations[key] = { files: [`${key}.svg`], duration };
+  }
+  return { states: { idle: ["idle.svg"] }, companionAnimations };
+}
+
+// Commits every send and records [file, time first seen] of the sends from
+// index `from` on, until `ms` passed.
+function recordCommitting(env, ms, from = 0, step = 50) {
+  const seen = [];
+  let next = from;
+  for (let t = 0; t <= ms; t += step) {
+    while (next < env.sends.length) {
+      const send = env.sends[next];
+      next += 1;
+      seen.push([send.file, env.clock.now()]);
+      if (send === env.sends[env.sends.length - 1]) env.commitLast();
+    }
+    env.clock.advance(step);
+  }
+  return seen;
+}
+
+function startSitEdge(theme) {
+  const env = setup();
+  env.theme = theme;
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  assert.equal(env.runtime.pickRoamTarget(ROAM_ARGS).mischief, "sitEdge");
+  env.runtime.noteWalkFinished({ preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 0 });
+  return env;
+}
+
+test("sit-edge sits down, loops the sit for 15 s, then stands up", () => {
+  const env = startSitEdge(timedTheme({ sitEdge: 2000, sitDown: 600, standUp: 600 }));
+  assert.equal(env.sends[0].file, "sitDown.svg");
+  env.commitLast();
+  env.clock.advance(599);
+  assert.equal(env.sends.length, 1, "the one-shot plays its own 600 ms, not the 1 s scene floor");
+  env.clock.advance(1);
+  assert.equal(env.sends[1].file, "sitEdge.svg");
+  const t0 = env.clock.now();
+  const log = recordCommitting(env, 17000, 1);
+  const files = log.map(([file]) => file);
+  assert.deepEqual(files, [...new Array(8).fill("sitEdge.svg"), "standUp.svg"]);
+  assert.equal(log[8][1] - t0, 15000, "stand up right when the sit loop reaches maxMs");
+  assert.equal(env.restores, 1);
+  assert.equal(env.runtime.isAnimating(), false);
+  assert.equal(env.clock.pendingTimers, 0);
+});
+
+test("sit-edge without its intro or outro keeps the parts it has", () => {
+  const noDown = startSitEdge(timedTheme({ sitEdge: 2000, standUp: 600 }));
+  const a = recordCommitting(noDown, 17000).map(([file]) => file);
+  assert.deepEqual(a, [...new Array(8).fill("sitEdge.svg"), "standUp.svg"]);
+  const noUp = startSitEdge(timedTheme({ sitEdge: 2000, sitDown: 600 }));
+  const b = recordCommitting(noUp, 17000).map(([file]) => file);
+  assert.deepEqual(b, ["sitDown.svg", ...new Array(8).fill("sitEdge.svg")]);
+  assert.equal(noUp.restores, 1);
+});
+
+test("a state change during the sit-down part kills the whole sit-edge scene", () => {
+  const env = startSitEdge(timedTheme({ sitEdge: 2000, sitDown: 600, standUp: 600 }));
+  env.commitLast();
+  env.state = "working";
+  env.clock.advance(20000);
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.restores, 0);
+  assert.equal(env.clock.pendingTimers, 0);
+});
+
+function startFakeNap(theme) {
+  const env = setup();
+  env.theme = theme;
+  env.runtime.configure({ ...MON, personality: "playful" });
+  tickUntilBeat(env);
+  return env;
+}
+
+test("fake nap lies down, naps, and gets up at maxMs", () => {
+  const env = startFakeNap(timedTheme({ fakeNap: 3000, fakeNapIn: 500, fakeNapOut: 500, boo: 1400 }));
+  assert.equal(env.sends[0].file, "fakeNapIn.svg");
+  const t0 = env.clock.now();
+  const log = recordCommitting(env, 22000);
+  const files = log.map(([file]) => file);
+  assert.equal(files[0], "fakeNapIn.svg");
+  assert.equal(files[1], "fakeNap.svg");
+  assert.equal(log[1][1] - t0, 500, "the intro plays its own 500 ms");
+  assert.equal(files[files.length - 1], "fakeNapOut.svg");
+  assert.ok(files.slice(1, -1).every((file) => file === "fakeNap.svg"));
+  assert.equal(log[log.length - 1][1] - log[1][1], 20000, "nap-out right at the loop's maxMs");
+  assert.equal(env.restores, 1);
+  assert.equal(env.runtime.isAnimating(), false);
+});
+
+test("boo during the fake nap jumps straight up without the nap-out", () => {
+  const env = startFakeNap(timedTheme({ fakeNap: 3000, fakeNapIn: 500, fakeNapOut: 500, boo: 1400 }));
+  env.commitLast();
+  env.clock.advance(500);
+  assert.equal(env.sends[1].file, "fakeNap.svg");
+  env.commitLast();
+  env.runtime.tick(sample(1200, 550)); // far away: keeps napping
+  env.clock.advance(250);
+  env.runtime.tick(sample(650, 550)); // sneaks up
+  assert.equal(env.sends[2].file, "boo.svg");
+  env.commitLast();
+  env.clock.advance(5000);
+  assert.deepEqual(env.sends.map((s) => s.file), ["fakeNapIn.svg", "fakeNap.svg", "boo.svg"]);
+  assert.equal(env.restores, 1);
+  assert.equal(env.clock.pendingTimers, 0);
+});
+
+const PET_PARTS = { petting: null, pettingIn: 250, pettingOut: 300 };
+
+test("petting eases in, loops while stroked and eases out when the session ends", () => {
+  const env = setup();
+  env.mode = "none";
+  env.theme = timedTheme(PET_PARTS);
+  env.runtime.configure(ON);
+  env.runtime.handleGesture("pet-start");
+  assert.deepEqual(env.sends.map((s) => s.file), ["pettingIn.svg"]);
+  env.commitLast();
+  env.clock.advance(249);
+  assert.equal(env.sends.length, 1, "the intro plays its own 250 ms");
+  env.clock.advance(1);
+  assert.equal(env.sends[1].file, "petting.svg");
+  env.commitLast();
+  env.runtime.handleGesture("pet-continue");
+  env.clock.advance(2000);
+  assert.equal(env.sends[2].file, "petting.svg", "the loop re-sends the loop file, not the intro");
+  env.commitLast();
+  env.runtime.handleGesture("pet-end");
+  assert.equal(env.sends[3].file, "pettingOut.svg");
+  assert.equal(env.restores, 0, "the outro takes over without a restore in between");
+  assert.equal(env.runtime.holdsRoam(), true);
+  env.commitLast();
+  env.clock.advance(300);
+  assert.equal(env.restores, 1);
+  assert.equal(env.runtime.isAnimating(), false);
+  assert.equal(env.clock.pendingTimers, 0);
+  assert.equal(env.sends.length, 4);
+});
+
+test("petting outro also follows the inactivity end and the intro itself", () => {
+  const idle = setup();
+  idle.mode = "none";
+  idle.theme = timedTheme(PET_PARTS);
+  idle.runtime.configure(ON);
+  idle.runtime.handleGesture("pet-start");
+  runCommitting(idle, 3000, 50);
+  assert.equal(idle.sends[idle.sends.length - 1].file, "pettingOut.svg", "inactivity end eases out");
+
+  const quick = setup();
+  quick.mode = "none";
+  quick.theme = timedTheme(PET_PARTS);
+  quick.runtime.configure(ON);
+  quick.runtime.handleGesture("pet-start");
+  quick.commitLast();
+  quick.runtime.handleGesture("pet-end"); // still in the intro
+  assert.deepEqual(quick.sends.map((s) => s.file), ["pettingIn.svg", "pettingOut.svg"]);
+  quick.commitLast();
+  quick.clock.advance(300);
+  assert.equal(quick.restores, 1);
+  assert.equal(quick.clock.pendingTimers, 0);
+});
+
+test("a new stroke during the petting outro starts petting again", () => {
+  const env = setup();
+  env.mode = "none";
+  env.theme = timedTheme(PET_PARTS);
+  env.runtime.configure(ON);
+  env.runtime.handleGesture("pet-start");
+  env.commitLast();
+  env.runtime.handleGesture("pet-end");
+  env.commitLast();
+  env.runtime.handleGesture("pet-start");
+  assert.equal(env.sends[2].file, "pettingIn.svg");
+  env.commitLast();
+  env.clock.advance(250);
+  assert.equal(env.sends[3].file, "petting.svg");
+  assert.equal(env.restores, 0);
+});
+
+test("petting outro is skipped when the gate closed or the visual was replaced", () => {
+  for (const close of ["gate", "generation"]) {
+    const env = setup();
+    env.mode = "none";
+    env.theme = timedTheme(PET_PARTS);
+    env.runtime.configure(ON);
+    env.runtime.handleGesture("pet-start");
+    env.commitLast();
+    env.clock.advance(250);
+    env.commitLast();
+    if (close === "gate") env.gate = false;
+    else env.generation += 1;
+    env.runtime.handleGesture("pet-end");
+    assert.equal(env.sends.length, 2, close);
+    assert.equal(env.restores, close === "gate" ? 1 : 0, close);
+    assert.equal(env.clock.pendingTimers, 0, close);
+  }
+});
+
+test("shy's petting answer has no intro or outro", () => {
+  const env = setup();
+  env.mode = "none";
+  env.theme = timedTheme({ ...PET_PARTS, shy: 3000 });
+  env.runtime.configure({ ...ON, personality: "shy" });
+  env.runtime.handleGesture("pet-start");
+  assert.deepEqual(env.sends.map((s) => s.file), ["shy.svg"]);
+  env.commitLast();
+  env.runtime.handleGesture("pet-end");
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.restores, 1);
+});

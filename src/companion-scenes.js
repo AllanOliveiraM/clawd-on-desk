@@ -3,7 +3,9 @@
 // src/companion-scenes.js — multi-part scene player for the Clawd Alive
 // "mischief" layer.
 //
-// A scene is a list of parts { key, file, duration, loop?, maxMs? }. Every part
+// A scene is a list of parts { key, file, duration, loop?, maxMs?, once? }. A
+// `once` part is a one-shot intro / outro played exactly for its own length;
+// an `optional` part without art is left out of the scene. Every part
 // (and every iteration of a looping part) is a fresh send through the
 // runtime's own play() protocol: send -> committed settlement -> duration ->
 // next part. Each send is a new visual generation, so a newer visual, a state
@@ -24,6 +26,8 @@ const {
 const SCENE_DEFAULT_DURATION_MS = 3500;
 const SCENE_MIN_DURATION_MS = 1000;
 const SCENE_MAX_DURATION_MS = 8000;
+// One-shot intro / outro parts may be much shorter than a scene part.
+const ONE_SHOT_MIN_DURATION_MS = 100;
 const FAKE_NAP_MAX_MS = 20000;
 const SIT_EDGE_MAX_MS = 15000;
 
@@ -33,10 +37,10 @@ const REACTIVE_SCENES = new Set(["catch", "pounce"]);
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-function partDurationMs(anim) {
-  const duration = anim && Number.isFinite(anim.duration) && anim.duration > 0
-    ? anim.duration
-    : SCENE_DEFAULT_DURATION_MS;
+function partDurationMs(anim, once = false) {
+  const authored = anim && Number.isFinite(anim.duration) && anim.duration > 0;
+  if (once && authored) return clamp(anim.duration, ONE_SHOT_MIN_DURATION_MS, SCENE_MAX_DURATION_MS);
+  const duration = authored ? anim.duration : SCENE_DEFAULT_DURATION_MS;
   return clamp(duration, SCENE_MIN_DURATION_MS, SCENE_MAX_DURATION_MS);
 }
 
@@ -69,9 +73,23 @@ function sceneSpec(id, opts, hasKey, random) {
     case "poke":
       return { parts: [{ key: sided("poke", opts.side) }] };
     case "fakeNap":
-      return { parts: [{ key: "fakeNap", loop: true, maxMs: FAKE_NAP_MAX_MS }], on: { boo: [{ key: "boo" }] } };
+      // Lie down, nap, get up; a boo jumps straight up (no nap-out).
+      return {
+        parts: [
+          { key: "fakeNapIn", once: true, optional: true },
+          { key: "fakeNap", loop: true, maxMs: FAKE_NAP_MAX_MS },
+          { key: "fakeNapOut", once: true, optional: true },
+        ],
+        on: { boo: [{ key: "boo" }] },
+      };
     case "sitEdge":
-      return { parts: [{ key: "sitEdge", loop: true, maxMs: SIT_EDGE_MAX_MS }] };
+      return {
+        parts: [
+          { key: "sitDown", once: true, optional: true },
+          { key: "sitEdge", loop: true, maxMs: SIT_EDGE_MAX_MS },
+          { key: "standUp", once: true, optional: true },
+        ],
+      };
     case "wall": {
       // An art-anchored walk fixed push or peek when it was planned.
       if (typeof opts.variant === "string" && hasKey(opts.variant)) return { parts: [{ key: opts.variant }] };
@@ -95,6 +113,7 @@ function sceneSpec(id, opts, hasKey, random) {
 }
 
 // Resolves every part to a file. Returns null when a main part has no art;
+// an optional part without art is left out (the scene keeps its other parts);
 // an event whose parts have no art is simply dropped (fake nap without boo
 // just ends at maxMs).
 function buildScene(id, opts, resolve, random) {
@@ -106,8 +125,12 @@ function buildScene(id, opts, resolve, random) {
     const out = [];
     for (const part of list) {
       const anim = resolve(part.key);
-      if (!anim) return null;
-      out.push({ ...part, file: anim.file, duration: partDurationMs(anim) });
+      if (!anim) {
+        if (part.optional) continue;
+        return null;
+      }
+      const { optional, ...rest } = part;
+      out.push({ ...rest, file: anim.file, duration: partDurationMs(anim, !!part.once) });
     }
     return out;
   };
