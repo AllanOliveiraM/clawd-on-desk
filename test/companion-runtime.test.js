@@ -864,6 +864,63 @@ test("shy hover still plays shy", () => {
   assert.equal(env.sends.length, 1);
 });
 
+test("hover catch plays the bucket's catch and miss, falling back to the plain keys", () => {
+  const BUCKET_KEYS = ["catchLeft", "catchMissLeft", "catchHigh"];
+  const env = setup();
+  env.mode = "none";
+  env.theme = themeWith([...ALL_KEYS, ...MISCHIEF_KEYS, ...BUCKET_KEYS]);
+  env.runtime.configure(MON);
+  env.runtime.handleGesture("hover-dwell", { bucket: "left", side: "left" });
+  assert.equal(env.sends[0].file, "catchLeft.svg");
+  env.commitLast();
+  env.runtime.handleGesture("hover-move");
+  assert.equal(env.sends[1].file, "catchMissLeft.svg");
+  env.commitLast();
+  env.clock.advance(100000);
+  // High has a catch but no miss art: the miss falls back to catchMiss.
+  env.runtime.handleGesture("hover-dwell", { bucket: "high", side: "right" });
+  assert.equal(env.sends[2].file, "catchHigh.svg");
+  env.commitLast();
+  env.runtime.handleGesture("hover-move");
+  assert.equal(env.sends[3].file, "catchMiss.svg");
+  env.commitLast();
+  env.clock.advance(100000);
+  // No bucket art at all (or no bucket info): the plain pair.
+  for (const info of [{ bucket: "low", side: "left" }, undefined, { bucket: "bogus" }]) {
+    const before = env.sends.length;
+    env.runtime.handleGesture("hover-dwell", info);
+    assert.equal(env.sends[before].file, "catch.svg", JSON.stringify(info));
+    env.commitLast();
+    env.runtime.handleGesture("hover-move");
+    assert.equal(env.sends[before + 1].file, "catchMiss.svg");
+    env.commitLast();
+    env.clock.advance(100000);
+  }
+});
+
+test("hover greet and shy face the cursor side, falling back to the originals", () => {
+  const cases = [
+    ["playful", { side: "left", bucket: "body" }, ["greetLeft"], "greetLeft.svg"],
+    ["playful", { side: "right", bucket: "body" }, ["greetLeft"], "greet.svg"],
+    ["playful", { side: "left", bucket: "body" }, [], "greet.svg"],
+    ["shy", { side: "left", bucket: "body" }, ["shyRight"], "shyRight.svg"],
+    ["shy", { side: "right", bucket: "body" }, ["shyRight"], "shy.svg"],
+    ["shy", { side: "left", bucket: "body" }, [], "shy.svg"],
+    ["playful", undefined, ["greetLeft"], "greet.svg"],
+  ];
+  for (const [personality, info, extra, file] of cases) {
+    for (const mischief of [false, true]) {
+      const env = setup();
+      env.mode = "none";
+      env.theme = themeWith([...ALL_KEYS, ...extra]);
+      env.runtime.configure({ ...ON, personality, mischief });
+      env.runtime.handleGesture("hover-dwell", info);
+      assert.equal(env.sends.length, 1, `${personality} ${JSON.stringify(info)}`);
+      assert.equal(env.sends[0].file, file, `${personality} ${JSON.stringify(info)} ${extra}`);
+    }
+  }
+});
+
 test("pounce plays the side-correct file", () => {
   for (const [x, file] of [[700, "pounceRight.svg"], [400, "pounceLeft.svg"]]) {
     const env = setup();

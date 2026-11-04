@@ -697,10 +697,21 @@ function createCompanionRuntime(options = {}) {
     play("petting", anim.file, anim.duration ?? PETTING_DEFAULT_DURATION_MS);
   }
 
-  function handleHover() {
+  // Hover answer facing the cursor: with the cursor on the pet's left half a
+  // greet waves left (greetLeft) and shy looks away to the right (shyRight);
+  // either falls back to the original art.
+  function hoverAnimation(key, info) {
+    const theme = getTheme();
+    const sideKey = info && info.side === "left"
+      ? (key === "greet" ? "greetLeft" : "shyRight")
+      : null;
+    return (sideKey && animationFor(sideKey, theme)) || animationFor(key, theme);
+  }
+
+  function handleHover(info) {
     if (now() < hoverReadyAt || !visualGateOpen() || isOtherIdleVisualPlaying()) return;
     const key = traits.sociability >= 0.6 ? "greet" : (traits.sociability < 0.3 ? "shy" : null);
-    const anim = key && animationFor(key, getTheme());
+    const anim = key && hoverAnimation(key, info);
     if (!anim) return;
     hoverReadyAt = now() + HOVER_COOLDOWN_MS;
     cooldownUntil[key] = Math.max(cooldownUntil[key] || 0, now() + cooldownFor(key, traits));
@@ -709,17 +720,20 @@ function createCompanionRuntime(options = {}) {
   }
 
   // Mischief answer to a hover dwell; shy pets keep today's shy answer.
-  function tryCatch() {
+  function tryCatch(info) {
     if (traits.sociability < 0.3) return false;
     const t = now();
     // Intentionally ignores hoverReadyAt: catch has its own 90 s cooldown.
-    if (!brain.canReact("catch", t) || !startScene("catch")) return false;
+    const bucket = info && typeof info.bucket === "string" ? info.bucket : null;
+    if (!brain.canReact("catch", t) || !startScene("catch", { bucket })) return false;
     hoverReadyAt = t + HOVER_COOLDOWN_MS; // no greet right after a catch
     setMood(applyEvent(state, { kind: "hoverGreet" }, traits, t));
     return true;
   }
 
-  function handleGesture(kind) {
+  // info (hover-dwell only, optional): { bucket, side } from main, the cursor
+  // in viewBox units of the resting pose (companion-geometry.hoverInfoFromPointer).
+  function handleGesture(kind, info) {
     if (disposed || !config.enabled || !config.interactions || !GESTURES.has(kind)) return;
     if (kind === "hover-move") {
       // Cursor moved or left during a catch: it turns into the miss.
@@ -727,7 +741,7 @@ function createCompanionRuntime(options = {}) {
       return;
     }
     if (kind === "hover-dwell") {
-      if (!(mischiefOn() && tryCatch())) handleHover();
+      if (!(mischiefOn() && tryCatch(info))) handleHover(info);
       return;
     }
     if (kind === "pet-end") {

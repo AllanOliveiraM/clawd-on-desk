@@ -5558,7 +5558,7 @@ function createWindow() {
     dropLog: (message) => console.log(`Clawd: ${message}`),
     // Clawd Alive: gestures and click / drag observations feed the companion
     // (each call is a no-op while the feature or interactions are off).
-    handlePetGesture: (kind) => _companion.handleGesture(kind),
+    handlePetGesture: (kind) => _companion.handleGesture(kind, kind === "hover-dwell" ? companionHoverInfo() : undefined),
     noteCompanionEvent: (kind) => _companion.noteEvent(kind),
     noteCompanionDragEnd: (spot) => _companion.noteDragEnd(spot),
     isCompanionEnabled: () => _settingsController.get("companionEnabled") === true,
@@ -6002,6 +6002,20 @@ function readCompanionConfig(snapshot) {
     // Clawd Mischief: effective only with companionEnabled (runtime gates it).
     mischief: read("companionMischief") === true,
   };
+}
+// Clawd Alive polish: where the cursor rests on the pet at hover-dwell time,
+// in viewBox units of the displayed pose (one cursor read per dwell, no
+// polling) -> { bucket, side } for the directional catch and the greet / shy
+// facing. null when the geometry is unavailable (plain catch / greet then).
+const { hoverInfoFromPointer } = require("./companion-geometry");
+function companionHoverInfo() {
+  try {
+    const bounds = getPetWindowBounds();
+    const point = screen.getCursorScreenPoint();
+    return hoverInfoFromPointer(petWindowRuntime.getAssetPointerPayload(bounds, point));
+  } catch {
+    return null;
+  }
 }
 // Hit-window petting / hover gestures run only with both switches on.
 function isPetGesturesEnabled(snapshot) {

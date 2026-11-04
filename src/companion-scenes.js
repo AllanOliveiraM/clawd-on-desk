@@ -34,11 +34,23 @@ function sided(base, side) {
   return base + (side === "left" ? "Left" : "Right");
 }
 
+const CATCH_BUCKETS = { high: "High", body: "Body", low: "Low", left: "Left", right: "Right" };
+
+// The bucket's own key when the theme has it, else the plain key.
+function bucketKey(base, bucket, hasKey) {
+  const suffix = Object.prototype.hasOwnProperty.call(CATCH_BUCKETS, bucket) ? CATCH_BUCKETS[bucket] : null;
+  return suffix && hasKey(base + suffix) ? base + suffix : base;
+}
+
 // Theme keys of each scene. `on` lists the parts an external event switches to.
 function sceneSpec(id, opts, hasKey, random) {
   switch (id) {
     case "catch":
-      return { parts: [{ key: "catch" }], on: { "hover-move": [{ key: "catchMiss" }] } };
+      // Directional catch (Ruling P3); each part falls back on its own.
+      return {
+        parts: [{ key: bucketKey("catch", opts.bucket, hasKey) }],
+        on: { "hover-move": [{ key: bucketKey("catchMiss", opts.bucket, hasKey) }] },
+      };
     case "pounce":
       return { parts: [{ key: sided("pounce", opts.side) }] };
     case "poke":

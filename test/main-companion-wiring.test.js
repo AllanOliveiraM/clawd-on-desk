@@ -100,6 +100,7 @@ function companionHarness(prefs = {}) {
       if (id === "./companion-runtime") {
         return { createCompanionRuntime: (options) => { runtimeOptions = options; return runtime; } };
       }
+      if (id === "./companion-geometry") return require("../src/companion-geometry");
       if (id === "./companion-store") {
         return { createCompanionStore: (options) => { storeOptions = options; return { kind: "store" }; } };
       }
@@ -281,7 +282,9 @@ it("toggling either gesture pref pushes hit-state-sync, other companion keys do 
 
 it("pet interaction IPC reaches the companion and trusts only the hit window", () => {
   const registration = slice("registerPetInteractionIpc({", "registerPermissionIpc({");
-  assert.ok(registration.includes("handlePetGesture: (kind) => _companion.handleGesture(kind),"));
+  assert.ok(registration.includes(
+    'handlePetGesture: (kind) => _companion.handleGesture(kind, kind === "hover-dwell" ? companionHoverInfo() : undefined),',
+  ));
   assert.ok(registration.includes("noteCompanionEvent: (kind) => _companion.noteEvent(kind),"));
   assert.ok(registration.includes("noteCompanionDragEnd: (spot) => _companion.noteDragEnd(spot),"));
   assert.ok(registration.includes("hitWebContents: () => (hitWin && !hitWin.isDestroyed() ? hitWin.webContents : null),"));
@@ -318,4 +321,30 @@ it("main wires companionMischief", () => {
   // The runtime gets the platform for the close-button corner.
   assert.equal(typeof h.runtimeOptions.getPlatform, "function");
   assert.equal(h.runtimeOptions.getPlatform(), process.platform);
+});
+
+// ── Polish: hover catch bucket / cursor side (Ruling P3) ──
+
+it("companionHoverInfo reads the cursor once in viewBox units of the displayed pose", () => {
+  const fnSource = slice("function companionHoverInfo() {", "\n}\n");
+  const calls = [];
+  const geometry = require("../src/companion-geometry");
+  const ctx = {
+    hoverInfoFromPointer: geometry.hoverInfoFromPointer,
+    getPetWindowBounds: () => ({ x: 100, y: 200, width: 173, height: 173 }),
+    screen: { getCursorScreenPoint: () => { calls.push("cursor"); return { x: 120, y: 330 }; } },
+    petWindowRuntime: {
+      getAssetPointerPayload: (bounds, point) => {
+        calls.push(["payload", bounds.x, point.x]);
+        return { x: 1, y: 10, inside: true };
+      },
+    },
+  };
+  const companionHoverInfo = vm.runInNewContext(`${fnSource}\n}\ncompanionHoverInfo;`, ctx);
+  assert.deepEqual(companionHoverInfo(), { bucket: "left", side: "left" });
+  assert.deepEqual(calls, ["cursor", ["payload", 100, 120]]);
+  ctx.petWindowRuntime.getAssetPointerPayload = () => null;
+  assert.equal(companionHoverInfo(), null);
+  ctx.screen.getCursorScreenPoint = () => { throw new Error("no screen"); };
+  assert.equal(companionHoverInfo(), null);
 });
