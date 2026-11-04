@@ -127,6 +127,9 @@ function createCompanionRuntime(options = {}) {
   let pendingWalk = null; // { id, at, target? } chosen, waiting for the roam to ask
   let walkingMischief = null; // { id, at, side, petWidth, area, bounds, goal } proposed to the roam, waiting for arrival
   let idleQueue = null; // { id, at } welcome / stretchBack waiting for the gate
+  // After an edge scene (reachClose, wall, sitEdge) the pet walks back into
+  // the margin band soon: one short pause, then one normal roam target.
+  let returnWalk = false;
 
   const memoryOn = () => config.enabled && config.memory;
   const autonomous = () => config.enabled && config.autonomy;
@@ -187,12 +190,18 @@ function createCompanionRuntime(options = {}) {
   // Drop the current playback. Restores idle only when our visual is still the
   // one on screen and the logical state is idle.
   function stopPlayback(restore) {
+    if (playing && playing.kind === "scene") noteSceneEnded(playing.scene);
     const shouldRestore = restore && isAnimating() && getCurrentState() === "idle";
     const wasBeat = playing && (playing.kind === "beat" || playing.kind === "scene");
     clearPlayTimer();
     playing = null;
     if (shouldRestore) restoreIdleVisual();
     if (wasBeat && autonomous()) scheduleBeat();
+  }
+
+  // Any end of an edge scene (on its own or killed) queues the return walk.
+  function noteSceneEnded(scene) {
+    if (scene && EDGE_WALKS.has(scene.id) && mischiefOn() && autonomous()) returnWalk = true;
   }
 
   function abandon() {
@@ -271,7 +280,8 @@ function createCompanionRuntime(options = {}) {
     },
     restoreIdleVisual: () => restoreIdleVisual(),
     now,
-    onEnd: () => {
+    onEnd: (scene) => {
+      noteSceneEnded(scene);
       if (autonomous()) scheduleBeat();
     },
   });
@@ -316,6 +326,7 @@ function createCompanionRuntime(options = {}) {
     pendingWalk = null;
     walkingMischief = null;
     idleQueue = null;
+    returnWalk = false;
   }
 
   function syncNap() {
@@ -344,6 +355,7 @@ function createCompanionRuntime(options = {}) {
     if (!autonomous() || getIdleMode() !== "roam") {
       pendingWalk = null;
       walkingMischief = null;
+      returnWalk = false;
     }
     if (pendingWalk && t - pendingWalk.at > PENDING_WALK_MAX_MS) {
       spendWalk(pendingWalk);
@@ -463,8 +475,9 @@ function createCompanionRuntime(options = {}) {
 
   function getRoamDelayMs(isFirst, baseMs) {
     if (disposed || !autonomous()) return baseMs;
-    // A pending mischief walk asks for the shortest pause roam allows.
-    if (mischiefOn() && pendingWalk) return 0.5 * baseMs;
+    // A pending mischief walk, or the walk back from an edge scene, asks for
+    // the shortest pause roam allows.
+    if (mischiefOn() && (pendingWalk || returnWalk)) return 0.5 * baseMs;
     advanceMood();
     return roamDelayMs(isFirst, baseMs, traits, state.mood);
   }
@@ -512,6 +525,12 @@ function createCompanionRuntime(options = {}) {
     // A new walk supersedes an older one that never reported its arrival.
     spendWalk(walkingMischief);
     walkingMischief = null;
+
+    if (returnWalk) {
+      // Leave the edge: roam picks its own target inside the margin band.
+      returnWalk = false;
+      if (mischiefOn()) return null;
+    }
 
     if (mischiefOn() && pendingWalk) {
       const walk = pendingWalk;

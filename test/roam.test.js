@@ -3379,15 +3379,16 @@ describe("roam companion hooks", () => {
       { preferred: true, mischief: "wall", reachedEdgeDistancePx: 350 },
       // Edge kinds skip the margin band: y 960 touches the bottom.
       { preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 0 },
-      // Close-button corner on darwin is top left: max(top 0, left 300).
-      { preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 300 },
+      // Inset spot near the darwin top-left corner (left 180, top 48 for a
+      // 120 px pet): max(|0 - 48|, |300 - 180|).
+      { preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 120 },
       { preferred: true, mischief: "poke", reachedEdgeDistancePx: 0 },
       // A malformed kind is dropped: today's report shape.
       { preferred: true },
     ]);
     roam.setEnabled(false);
 
-    // Elsewhere the corner is top right: max(top 0, right 1920 - 1450 - 120).
+    // Elsewhere the corner is top right: max(|0 - 48|, |(1920 - 1450 - 120) - 180|).
     platform = "linux";
     reports.length = 0;
     targets.push({ x: 99999, y: -5000, preferred: true, mischief: "reachClose" });
@@ -3396,7 +3397,7 @@ describe("roam companion hooks", () => {
     roam2.tick();
     mock.timers.tick(8000);
     finishWalk(roam2);
-    assert.deepStrictEqual(reports, [{ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 350 }]);
+    assert.deepStrictEqual(reports, [{ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 170 }]);
     roam2.setEnabled(false);
   });
 
@@ -3432,11 +3433,12 @@ describe("roam companion hooks", () => {
     const run = edgeRun([
       { x: 99999, y: 700, preferred: true, mischief: "wall" },
       { x: 400, y: 99999, preferred: true, mischief: "sitEdge" },
-      { x: 99999, y: -5000, preferred: true, mischief: "reachClose" },
+      // The companion's inset spot near the top-right corner (not the corner).
+      { x: 1620, y: 48, preferred: true, mischief: "reachClose" },
       { x: -5000, y: -5000, preferred: true, mischief: "wall" },
     ]);
     assert.deepStrictEqual(run.ends, [
-      { x: 1800, y: 700 }, { x: 400, y: 960 }, { x: 1800, y: 0 }, { x: 0, y: 0 },
+      { x: 1800, y: 700 }, { x: 400, y: 960 }, { x: 1620, y: 48 }, { x: 0, y: 0 },
     ]);
     assert.deepStrictEqual(run.reports.map((r) => r.reachedEdgeDistancePx), [0, 0, 0, 0]);
     assert.deepStrictEqual(run.seen[0].edgeBounds, { xMin: 0, xMax: 1800, yMin: 0, yMax: 960 });
@@ -3467,7 +3469,8 @@ describe("roam companion hooks", () => {
     });
     assert.deepStrictEqual(run.ends, [{ x: 1320, y: 500 }, { x: 600, y: 690 }, { x: 1320, y: 270 }]);
     // Far from the real edge: the companion skips these scenes (> petWidth).
-    assert.deepStrictEqual(run.reports.map((r) => r.reachedEdgeDistancePx), [480, 270, 480]);
+    // reachClose: max(|270 - 48|, |480 - 180|).
+    assert.deepStrictEqual(run.reports.map((r) => r.reachedEdgeDistancePx), [480, 270, 300]);
     assert.ok(run.reports.every((r) => r.reachedEdgeDistancePx > 120));
   });
 

@@ -115,6 +115,11 @@ function mischiefAvailable(keys, singlePartOnly) {
 
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 
+// reachClose stops this far from its corner: 1.5 pet widths from the corner
+// side and 0.4 pet heights below the work-area top.
+const REACH_CLOSE_INSET_X = 1.5;
+const REACH_CLOSE_INSET_Y = 0.4;
+
 // Center point a walking mischief heads to, on the pet's current work area,
 // plus the scene side fixed for the arrival. null when it cannot be placed.
 function walkTarget(walk, { area, bounds, size, platform }) {
@@ -127,8 +132,11 @@ function walkTarget(walk, { area, bounds, size, platform }) {
   const right = area.x + area.width - width / 2;
   const petWidth = width || (hasBounds ? bounds.width : 0);
   if (walk.id === "reachClose") {
-    // The close-button corner: top right, top left on macOS.
-    return { cx: platform === "darwin" ? left : right, cy: area.y + height / 2, side: null, petWidth };
+    // Toward the close-button corner (top right, top left on macOS), but
+    // inset so the pet never parks over real window controls or a scrollbar.
+    const insetX = REACH_CLOSE_INSET_X * width;
+    const cx = platform === "darwin" ? left + insetX : right - insetX;
+    return { cx, cy: area.y + REACH_CLOSE_INSET_Y * height + height / 2, side: null, petWidth };
   }
   if (walk.id === "wall") {
     const side = cx - area.x <= area.x + area.width - cx ? "left" : "right";
@@ -158,7 +166,14 @@ function walkEdgeDistance(walk, { area, bounds, goal, platform }) {
   const topGap = bounds.y - area.y;
   const bottomGap = area.y + area.height - (bounds.y + bounds.height);
   let distance = Infinity;
-  if (walk.id === "reachClose") distance = Math.max(topGap, platform === "darwin" ? leftGap : rightGap);
+  if (walk.id === "reachClose") {
+    // Distance to the inset spot next to the corner, not to the corner itself.
+    const sideGap = platform === "darwin" ? leftGap : rightGap;
+    distance = Math.max(
+      Math.abs(topGap - REACH_CLOSE_INSET_Y * bounds.height),
+      Math.abs(sideGap - REACH_CLOSE_INSET_X * bounds.width),
+    );
+  }
   else if (walk.id === "wall") distance = walk.side === "left" ? leftGap : rightGap;
   else if (walk.id === "sitEdge") distance = bottomGap;
   else if (walk.id === "poke" && goal && isNum(goal.x) && isNum(goal.y)) {
@@ -177,7 +192,7 @@ function createScenePlayer(deps) {
     clearPlayback, // () -> drop the current attempt and its timer, no restore
     restoreIdleVisual,
     now,
-    onEnd, // () -> called once when a scene ends on its own
+    onEnd, // (scene) -> called once when a scene ends on its own
   } = deps;
 
   function current() {
@@ -206,7 +221,7 @@ function createScenePlayer(deps) {
   // dropped). `stillOurs` = state idle and our generation is current.
   function partFinished(scene, stillOurs) {
     if (!stillOurs) {
-      onEnd();
+      onEnd(scene);
       return;
     }
     const part = scene.parts[scene.index];
@@ -220,7 +235,7 @@ function createScenePlayer(deps) {
       return;
     }
     restoreIdleVisual();
-    onEnd();
+    onEnd(scene);
   }
 
   // External event (cursor approach, hover move): switch the rest of the
@@ -246,6 +261,8 @@ function createScenePlayer(deps) {
 
 module.exports = {
   FAKE_NAP_MAX_MS,
+  REACH_CLOSE_INSET_X,
+  REACH_CLOSE_INSET_Y,
   SIT_EDGE_MAX_MS,
   partDurationMs,
   buildScene,

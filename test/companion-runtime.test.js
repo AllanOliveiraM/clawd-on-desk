@@ -1020,7 +1020,8 @@ test("stretch only after long work", () => {
 });
 
 test("walking mischief shortens the roam delay and targets the right corner per platform", () => {
-  for (const [platform, x] of [["linux", 1900], ["win32", 1900], ["darwin", 0]]) {
+  // Inset from the corner: 1.5 pet widths from the side, 0.4 pet heights from the top.
+  for (const [platform, x] of [["linux", 1750], ["win32", 1750], ["darwin", 150]]) {
     const env = setup({ options: { getPlatform: () => platform } });
     env.theme = themeWith(["reachClose"]);
     env.runtime.configure(MON); // balanced: 8000 * 1.1
@@ -1029,7 +1030,7 @@ test("walking mischief shortens the roam delay and targets the right corner per 
     assert.equal(env.sends.length, 0, "a walking mischief waits for the roam");
     assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000);
     const target = env.runtime.pickRoamTarget(ROAM_ARGS);
-    assert.deepEqual(target, { x, y: 0, preferred: true, mischief: "reachClose" });
+    assert.deepEqual(target, { x, y: 40, preferred: true, mischief: "reachClose" });
     assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800);
     env.runtime.noteWalkFinished({ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 0 });
     assert.equal(env.sends.length, 1);
@@ -1096,7 +1097,7 @@ const BAND_ARGS = {
 
 test("edge mischief targets leave the margin band and play at the real edge", () => {
   const cases = [
-    [["reachClose"], { x: 1900, y: 0 }, "reachClose.svg"],
+    [["reachClose"], { x: 1750, y: 40 }, "reachClose.svg"],
     [["wallPushLeft", "wallPushRight"], { x: 0, y: 600 }, "wallPushLeft.svg"],
     [["sitEdge"], { x: 300, y: 900 }, "sitEdge.svg"],
   ];
@@ -1300,6 +1301,9 @@ test("a pet already at the bottom edge sits in place once and is not re-picked",
   assert.equal(env.sends[0].file, "sitEdge.svg");
   runCommitting(env, 20000);
   const sends = env.sends.length;
+  // One return walk back into the band, then nothing more.
+  assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000);
+  assert.equal(env.runtime.pickRoamTarget(atBottom), null);
   for (let i = 0; i < 900; i += 1) {
     env.clock.advance(1000);
     env.runtime.tick();
@@ -1340,6 +1344,83 @@ test("an expired pending walk spends its cooldown", () => {
     env.runtime.tick();
     assert.equal(env.runtime.getRoamDelayMs(false, 8000), 8800, "not re-picked after expiry");
   }
+});
+
+test("reachClose stops inset from the corner, never over the window controls", () => {
+  const { walkEdgeDistance } = require("../src/companion-scenes");
+  for (const platform of ["linux", "win32", "darwin"]) {
+    const env = setup({ options: { getPlatform: () => platform } });
+    env.theme = themeWith(["reachClose"]);
+    env.runtime.configure(MON);
+    tickUntilBeat(env, 200000);
+    const target = env.runtime.pickRoamTarget(BAND_ARGS);
+    const area = BAND_ARGS.workArea;
+    const sideGap = platform === "darwin" ? target.x - area.x : area.x + area.width - (target.x + 100);
+    assert.ok(sideGap >= 150, `${platform}: ${sideGap} px from the corner side`);
+    assert.ok(target.y - area.y >= 40, `${platform}: ${target.y - area.y} px below the top`);
+    // Arrival is measured against the inset spot: there it plays, in the corner it does not.
+    const walk = { id: "reachClose" };
+    const at = (x, y) => walkEdgeDistance(walk, { area, bounds: { x, y, width: 100, height: 100 }, platform });
+    assert.equal(at(target.x, target.y), 0, platform);
+    const cornerX = platform === "darwin" ? 0 : 1900;
+    assert.ok(at(cornerX, 0) > 100, `${platform}: the bare corner is not an arrival`);
+  }
+});
+
+// Plays one edge scene to its end through a walk (or kills it), then returns the env.
+function playEdgeScene(keys, kill = false) {
+  const env = setup();
+  env.theme = themeWith(keys);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  const target = env.runtime.pickRoamTarget(BAND_ARGS);
+  assert.ok(target && target.mischief, keys[0]);
+  env.runtime.noteWalkFinished({ preferred: true, mischief: target.mischief, reachedEdgeDistancePx: 0 });
+  assert.equal(env.sends.length, 1, keys[0]);
+  env.commitLast();
+  if (kill) {
+    env.state = "working";
+    env.runtime.tick();
+    env.state = "idle";
+  } else {
+    runCommitting(env, 20000);
+  }
+  assert.equal(env.runtime.isAnimating(), false, keys[0]);
+  return env;
+}
+
+test("after an edge scene the pet walks back into the band once", () => {
+  for (const kill of [false, true]) {
+    for (const keys of [["reachClose"], ["wallPushLeft", "wallPushRight"], ["sitEdge"]]) {
+      const label = `${keys[0]}${kill ? " (killed)" : ""}`;
+      const env = playEdgeScene(keys, kill);
+      env.randomValue = 0.1; // would explore a grid cell without the return walk
+      assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000, label);
+      assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000, `${label}: until the walk is asked`);
+      assert.equal(env.runtime.pickRoamTarget(BAND_ARGS), null, `${label}: roam picks a band target`);
+      // Cleared after one walk.
+      assert.ok(env.runtime.getRoamDelayMs(false, 8000) > 4000, label);
+      const next = env.runtime.pickRoamTarget(BAND_ARGS);
+      assert.ok(next && next.preferred === false, `${label}: normal explore again`);
+    }
+  }
+});
+
+test("the return walk is dropped on disable, reset, mischief off and mode change", () => {
+  const changes = [
+    (env) => env.runtime.configure({ ...MON, enabled: false }),
+    (env) => env.runtime.reset(),
+    (env) => env.runtime.configure({ ...MON, mischief: false }),
+    (env) => env.runtime.configure({ ...MON, autonomy: false }),
+    (env) => { env.mode = "activities"; env.runtime.tick(); },
+  ];
+  changes.forEach((change, i) => {
+    const env = playEdgeScene(["sitEdge"]);
+    change(env);
+    env.runtime.configure(MON);
+    env.mode = "roam";
+    assert.notEqual(env.runtime.getRoamDelayMs(false, 8000), 4000, `change ${i}`);
+  });
 });
 
 test("mischief off reproduces the 40b54948 golden runs exactly", () => {
