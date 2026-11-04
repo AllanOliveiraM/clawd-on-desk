@@ -32,6 +32,7 @@ const {
   COMPANION_DURATION_MAX_MS,
   COMPANION_WORK_TIER_GROUPS,
   isCompanionWorkFileName,
+  COMPANION_FILE_NAME_MAX,
 } = require("./companion-override-slots");
 const { normalizeShortcuts, getDefaultShortcuts } = require("./shortcut-actions");
 const {
@@ -1393,9 +1394,14 @@ function _safeBasename(raw, { maxLen } = {}) {
   return name;
 }
 
-// Companion files and work-tier keys are stricter than _safeBasename: a
-// backslash or a name over 255 chars is a corrupt entry, not something to fix.
-const COMPANION_FILE_NAME_MAX = 255;
+// Companion files are stricter than _safeBasename: a backslash or a name
+// over 255 chars is a corrupt entry, not something to fix. A forward slash
+// is a path separator everywhere, so "a/b/mine.svg" safely reduces to its
+// basename like every other override file (it is always resolved inside the
+// theme's own assets dir). A backslash is ambiguous: a separator on Windows
+// but a legal file name character on Linux / macOS, so "a\b.svg" could
+// name either "b.svg" or a file literally called "a\b.svg"; it is rejected
+// instead of guessed.
 function _safeCompanionFile(raw) {
   if (typeof raw !== "string" || raw.includes("\\")) return null;
   const name = _safeBasename(raw);
@@ -1475,7 +1481,7 @@ function normalizeCompanionWorkTierOverridesMap(value) {
     if (!isPlainObject(groupMap)) continue;
     const cleanGroup = {};
     for (const [originalFile, entry] of Object.entries(groupMap)) {
-      if (!isCompanionWorkFileName(originalFile) || originalFile.length > COMPANION_FILE_NAME_MAX || !isPlainObject(entry)) continue;
+      if (!isCompanionWorkFileName(originalFile) || !isPlainObject(entry)) continue;
       const safeFile = _safeCompanionFile(entry.file);
       if (!safeFile) continue;
       const cleanEntry = { file: safeFile };

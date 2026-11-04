@@ -94,10 +94,13 @@ function isCompanionWorkTierGroup(group) {
 }
 
 // A bare file name a theme could declare (no path, no dot segments, no
-// prototype keys), the same rule the prefs normalizer applies to the keys.
+// prototype keys, at most COMPANION_FILE_NAME_MAX chars), the same rule the
+// prefs normalizer applies to the keys.
+const COMPANION_FILE_NAME_MAX = 255;
 function isCompanionWorkFileName(file) {
   return typeof file === "string"
     && file.length > 0
+    && file.length <= COMPANION_FILE_NAME_MAX
     && file !== "__proto__"
     && file !== "constructor"
     && file !== "prototype"
@@ -159,6 +162,7 @@ module.exports = {
   COMPANION_WORK_TIER_GROUPS,
   isCompanionWorkTierGroup,
   isCompanionWorkFileName,
+  COMPANION_FILE_NAME_MAX,
   listCompanionWorkTierCards,
   companionWorkCardLabelKey,
   COMPANION_NO_DURATION_KEYS,

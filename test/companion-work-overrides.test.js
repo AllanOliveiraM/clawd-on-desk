@@ -18,6 +18,7 @@ const themeOverrideCommands = require("../src/settings-actions-theme-overrides")
 const {
   listCompanionWorkTierCards,
   companionWorkCardLabelKey,
+  isCompanionWorkFileName,
   COMPANION_WORK_SECTION_ID,
 } = require("../src/companion-override-slots");
 
@@ -308,6 +309,27 @@ test("prefs reject backslash, dot names and over-long names for work tier files 
   }, {});
   assert.deepStrictEqual(out, { clawd: { companionWorkTiers: { working: { "ok-3.svg": { file: "fine.svg" } } } } });
   assert.deepStrictEqual(normalizeThemeOverrides(JSON.parse('{"clawd":{"companionWorkTiers":{"working":{"__proto__":{"file":"x.svg"},"constructor":{"file":"x.svg"}}}}}'), {}), {});
+});
+
+test("isCompanionWorkFileName caps names at 255 chars (one rule for prefs, cards and commands)", () => {
+  assert.strictEqual(isCompanionWorkFileName(`${"a".repeat(251)}.svg`), true);
+  assert.strictEqual(isCompanionWorkFileName(`${"a".repeat(252)}.svg`), false);
+  const d = deps({ theme: "clawd", themeOverrides: {} });
+  const result = themeOverrideCommands.setAnimationOverride({
+    themeId: "clawd", slotType: "companionWorkTier", tierGroup: "working", originalFile: `${"a".repeat(300)}.svg`, file: "x.svg",
+  }, d);
+  assert.strictEqual(result.status, "error");
+});
+
+test("prefs drop a constructor / __proto__ tier group", () => {
+  assert.deepStrictEqual(normalizeThemeOverrides(JSON.parse(
+    '{"clawd":{"companionWorkTiers":{"constructor":{"a.svg":{"file":"x.svg"}},"__proto__":{"b.svg":{"file":"y.svg"}},"prototype":{"c.svg":{"file":"z.svg"}}}}}',
+  ), {}), {});
+  const out = normalizeThemeOverrides(JSON.parse(
+    '{"clawd":{"companionWorkTiers":{"constructor":{"a.svg":{"file":"x.svg"}},"working":{"a.svg":{"file":"x.svg"}}}}}',
+  ), {});
+  assert.deepStrictEqual(out, { clawd: { companionWorkTiers: { working: { "a.svg": { file: "x.svg" } } } } });
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(out.clawd.companionWorkTiers, "constructor"), false);
 });
 
 test("prefs work tier shapes: array group, non-object entry, sourceThemeId only as string", () => {
