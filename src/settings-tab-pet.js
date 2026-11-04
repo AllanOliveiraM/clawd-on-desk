@@ -541,8 +541,12 @@
       helpers.setButtonState(button, { pending: true });
       try {
         const result = await window.settingsAPI.resetCompanion();
-        if (result && result.status === "ok") ops.showToast(t("toastCompanionResetDone"));
-        else ops.showToast(t("toastCompanionResetFailed"), { error: true });
+        if (result && result.status === "ok") {
+          ops.showToast(t("toastCompanionResetDone"));
+          // The learned mood just changed; re-pull the mood card.
+          const mounted = getMountedCompanion();
+          if (mounted && mounted.moodCard) mounted.moodCard.refresh();
+        } else ops.showToast(t("toastCompanionResetFailed"), { error: true });
       } catch {
         ops.showToast(t("toastCompanionResetFailed"), { error: true });
       } finally {
@@ -551,6 +555,149 @@
       }
     });
     return { row, button };
+  }
+
+  // Spec 2026-11-04 §3: mood card. Data comes from one pull when the card is
+  // (re)mounted or Clawd Alive turns on, then from main's rate-limited push
+  // (applyCompanionMood). The renderer never polls.
+  const COMPANION_MOOD_BARS = [
+    ["energy", "companionMoodEnergy"],
+    ["contentment", "companionMoodContentment"],
+    ["familiarity", "companionMoodFamiliarity"],
+  ];
+  const COMPANION_MOOD_LABEL_KEYS = {
+    content: "companionMoodLabelContent",
+    tired: "companionMoodLabelTired",
+    grumpy: "companionMoodLabelGrumpy",
+    neutral: "companionMoodLabelNeutral",
+  };
+
+  function moodBarValue(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+  }
+
+  function formatLastInteraction(at) {
+    const ts = Number(at);
+    if (at == null || !Number.isFinite(ts) || ts <= 0) return t("companionMoodLastNever");
+    const ageMs = Math.max(0, Date.now() - ts);
+    const minutes = Math.floor(ageMs / 60000);
+    if (minutes < 1) return t("companionMoodLastJustNow");
+    if (minutes < 60) return t("companionMoodLastMinutes").replace("{n}", String(minutes));
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t("companionMoodLastHours").replace("{n}", String(hours));
+    return t("companionMoodLastDays").replace("{n}", String(Math.floor(hours / 24)));
+  }
+
+  function buildCompanionMoodCard(enabled) {
+    const row = document.createElement("div");
+    row.className = "row companion-mood-card";
+    row.hidden = !enabled;
+    const text = document.createElement("div");
+    text.className = "row-text companion-mood-text";
+    const label = document.createElement("span");
+    label.className = "row-label";
+    label.textContent = t("companionMoodTitle");
+    const summary = document.createElement("span");
+    summary.className = "row-desc companion-mood-summary";
+    summary.textContent = "";
+    text.appendChild(label);
+    text.appendChild(summary);
+
+    const barsEl = document.createElement("div");
+    barsEl.className = "companion-mood-bars";
+    const barRefs = new Map();
+    for (const [key, labelKey] of COMPANION_MOOD_BARS) {
+      const barEl = document.createElement("div");
+      barEl.className = "companion-mood-bar";
+      barEl.dataset.bar = key;
+      const barLabel = document.createElement("span");
+      barLabel.className = "companion-mood-bar-label";
+      barLabel.textContent = t(labelKey);
+      const track = document.createElement("div");
+      track.className = "companion-mood-bar-track";
+      track.setAttribute("role", "progressbar");
+      track.setAttribute("aria-label", t(labelKey));
+      track.setAttribute("aria-valuemin", "0");
+      track.setAttribute("aria-valuemax", "100");
+      track.setAttribute("aria-valuenow", "0");
+      const fill = document.createElement("div");
+      fill.className = "companion-mood-bar-fill";
+      fill.style.setProperty("width", "0%");
+      track.appendChild(fill);
+      const valueEl = document.createElement("span");
+      valueEl.className = "companion-mood-bar-value";
+      valueEl.textContent = "0";
+      barEl.appendChild(barLabel);
+      barEl.appendChild(track);
+      barEl.appendChild(valueEl);
+      barsEl.appendChild(barEl);
+      barRefs.set(key, { track, fill, valueEl });
+    }
+    text.appendChild(barsEl);
+
+    const last = document.createElement("span");
+    last.className = "row-desc companion-mood-last";
+    last.textContent = "";
+    text.appendChild(last);
+    row.appendChild(text);
+
+    let requestId = 0;
+    function isMounted() {
+      return document.body.contains(row);
+    }
+    function apply(snapshot) {
+      if (!snapshot || typeof snapshot !== "object" || !snapshot.mood || typeof snapshot.mood !== "object") {
+        return false;
+      }
+      for (const [key] of COMPANION_MOOD_BARS) {
+        const value = moodBarValue(snapshot.mood[key]);
+        const refs = barRefs.get(key);
+        refs.track.setAttribute("aria-valuenow", String(value));
+        refs.fill.style.setProperty("width", `${value}%`);
+        refs.valueEl.textContent = String(value);
+      }
+      const moodKey = COMPANION_MOOD_LABEL_KEYS[snapshot.label] || COMPANION_MOOD_LABEL_KEYS.neutral;
+      const personality = COMPANION_PERSONALITIES.includes(snapshot.personality)
+        ? snapshot.personality
+        : readCompanionPersonality();
+      summary.textContent = t("companionMoodSummary")
+        .replace("{mood}", t(moodKey))
+        .replace("{personality}", t(companionPersonalityLabelKey(personality)));
+      last.textContent = formatLastInteraction(snapshot.lastInteractionAt);
+      return true;
+    }
+    function showUnavailable() {
+      summary.textContent = t("companionMoodUnavailable");
+      last.textContent = "";
+    }
+    async function refresh() {
+      if (!readCompanionEnabled()) return;
+      if (!window.settingsAPI || typeof window.settingsAPI.getCompanionMood !== "function") {
+        showUnavailable();
+        return;
+      }
+      const id = ++requestId;
+      let result = null;
+      try { result = await window.settingsAPI.getCompanionMood(); } catch { result = null; }
+      if (id !== requestId || !isMounted()) return;
+      if (!result || result.status !== "ok" || !apply(result.snapshot)) showUnavailable();
+    }
+    function setVisible(visible) {
+      const wasHidden = row.hidden;
+      row.hidden = !visible;
+      if (visible && wasHidden) Promise.resolve().then(refresh);
+    }
+    if (enabled) Promise.resolve().then(refresh);
+    return { element: row, apply, refresh, setVisible, isMounted };
+  }
+
+  // Push entry point (settings-renderer routes settings:companion-mood-changed
+  // here). A hidden, unmounted or missing card ignores it.
+  function applyCompanionMood(snapshot) {
+    const mounted = getMountedCompanion();
+    if (!mounted || !mounted.moodCard || mounted.moodCard.element.hidden) return false;
+    return mounted.moodCard.apply(snapshot);
   }
 
   function buildCompanionSection() {
@@ -563,6 +710,7 @@
       disabled: !enabled,
     });
     const reset = buildCompanionResetRow(enabled);
+    const moodCard = buildCompanionMoodCard(enabled);
     const section = helpers.buildSection(t("sectionPetCompanion"), [
       helpers.buildSwitchRow({
         key: "companionEnabled",
@@ -570,6 +718,7 @@
         descKey: "rowCompanionEnabledDesc",
       }),
       personality.row,
+      moodCard.element,
       autonomyRow,
       helpers.buildSwitchRow({
         key: "companionInteractions",
@@ -597,6 +746,7 @@
       personalityDescription: personality.optionDescription,
       autonomyDescription: autonomyRow.querySelector(".row-desc"),
       resetButton: reset.button,
+      moodCard,
     };
     return section;
   }
@@ -624,6 +774,7 @@
     mounted.personalityDescription.textContent = t(`${companionPersonalityLabelKey(personality)}Desc`);
     mounted.autonomyDescription.textContent = t(readCompanionAutonomyDescKey());
     helpers.setButtonState(mounted.resetButton, { disabled: !enabled });
+    mounted.moodCard.setVisible(enabled);
     return true;
   }
 
@@ -970,6 +1121,7 @@
     core.tabs.pet = {
       render,
       patchInPlace,
+      applyCompanionMood,
     };
   }
 

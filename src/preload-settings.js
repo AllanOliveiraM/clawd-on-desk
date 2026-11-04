@@ -19,6 +19,10 @@
 //                                       accepted custom /state activity only
 //   onRecapChanged(cb)                  cb() — coalesced signal that the local
 //                                       Footprints aggregate changed
+//   getCompanionMood()                  Promise<{ status, snapshot? }> — Clawd
+//                                       Alive mood card initial pull
+//   onCompanionMoodChanged(cb)          cb(snapshot) — mood card push, at most
+//                                       once per 2 s while Settings is open
 //   onAnimationPreviewPosterReady(cb)   cb({ themeId, filename, previewImageUrl,
 //                                       previewPosterCacheKey }) — incremental
 //                                       animation override preview poster
@@ -50,6 +54,7 @@ const textScaleContextListeners = new Set();
 const sizeContextListeners = new Set();
 const agentActivityListeners = new Set();
 const recapChangedListeners = new Set();
+const companionMoodListeners = new Set();
 const updateCheckStatusListeners = new Set();
 const requestedTabListeners = new Set();
 const officialThemeProgressListeners = new Set();
@@ -107,6 +112,11 @@ ipcRenderer.on("settings:recap-changed", () => {
     try { cb(); } catch (err) { console.warn("recap changed listener threw:", err); }
   }
 });
+ipcRenderer.on("settings:companion-mood-changed", (_event, payload) => {
+  for (const cb of companionMoodListeners) {
+    try { cb(payload); } catch (err) { console.warn("companion mood listener threw:", err); }
+  }
+});
 ipcRenderer.on("settings:update-check-status", (_event, payload) => {
   for (const cb of updateCheckStatusListeners) {
     try { cb(payload); } catch (err) { console.warn("update check status listener threw:", err); }
@@ -157,6 +167,12 @@ contextBridge.exposeInMainWorld("settingsAPI", {
   selectRoamFence: () => ipcRenderer.invoke("settings:select-roam-fence"),
   clearRoamFence: () => ipcRenderer.invoke("settings:clear-roam-fence"),
   resetCompanion: () => ipcRenderer.invoke("settings:companion-reset"),
+  getCompanionMood: () => ipcRenderer.invoke("settings:get-companion-mood"),
+  onCompanionMoodChanged: (cb) => {
+    if (typeof cb !== "function") return () => {};
+    companionMoodListeners.add(cb);
+    return () => companionMoodListeners.delete(cb);
+  },
   getShortcutFailures: () => ipcRenderer.invoke("settings:getShortcutFailures"),
   getAnimationOverridesData: () => ipcRenderer.invoke("settings:get-animation-overrides-data"),
   openThemeAssetsDir: () => ipcRenderer.invoke("settings:open-theme-assets-dir"),

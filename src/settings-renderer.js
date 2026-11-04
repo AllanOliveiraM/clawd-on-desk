@@ -155,6 +155,13 @@ if (window.settingsAPI && typeof window.settingsAPI.onRecapChanged === "function
   });
 }
 
+if (window.settingsAPI && typeof window.settingsAPI.onCompanionMoodChanged === "function") {
+  window.settingsAPI.onCompanionMoodChanged((snapshot) => {
+    const tab = core.tabs.pet;
+    if (tab && typeof tab.applyCompanionMood === "function") tab.applyCompanionMood(snapshot);
+  });
+}
+
 if (window.settingsAPI && typeof window.settingsAPI.onAnimationPreviewPosterReady === "function") {
   window.settingsAPI.onAnimationPreviewPosterReady((payload) => core.ops.applyAnimationPreviewPoster(payload));
 }

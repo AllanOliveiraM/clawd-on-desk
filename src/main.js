@@ -4647,6 +4647,45 @@ function showResumeInput(t) {
   });
 }
 
+// Clawd Alive test mode: the data behind the pet menu's "Test animations"
+// submenu. The menu-time gate mirrors the spec's blockers (agents,
+// permissions, DND, mini); the runtime re-checks everything on play.
+const { resolveCompanionTestGate } = require("./companion-test-menu");
+function getCompanionTestMenuInfo() {
+  const companionEnabled = _settingsController.get("companionEnabled") === true;
+  if (!companionEnabled) return { companionEnabled: false };
+  const catalog = typeof _companion.debugCatalog === "function" ? _companion.debugCatalog() : [];
+  return {
+    companionEnabled,
+    catalog,
+    gateReason: resolveCompanionTestGate({
+      agentBusy: anySessionInProgress(),
+      permission: _perm.hasVisiblePermissionBubbles(),
+      dnd: doNotDisturb,
+      mini: _mini.getMiniMode() || _mini.getMiniTransitioning(),
+    }),
+    play: (id, opts) => (typeof _companion.debugPlay === "function"
+      ? _companion.debugPlay(id, opts)
+      : { ok: false, reason: "disabled" }),
+  };
+}
+
+// Clawd Alive mood card (spec 2026-11-04 §3): event-driven push to an open
+// Settings window, at most once per 2 s. Every companion visual, gesture and
+// event nudges it; with Settings closed a nudge is a no-op (no timer, no IPC).
+const { createCompanionMoodFeed, readMoodSnapshot } = require("./companion-mood-feed");
+const companionMoodFeed = createCompanionMoodFeed({
+  getSnapshot: () => readMoodSnapshot(_companion),
+  send: (snapshot) => settingsWindowRuntime.sendCompanionMood(snapshot),
+  isOpen: () => settingsWindowRuntime.isRendererLoaded()
+    && _settingsController.get("companionEnabled") === true,
+});
+// Hooks wired above this point can only fire after init; the try still keeps
+// a mood-card nudge from ever breaking the companion call it wraps.
+function nudgeCompanionMood(result) {
+  try { companionMoodFeed.notify(); } catch {}
+  return result;
+}
 const _menuCtx = {
   get win() { return win; },
   get petAlwaysOnTop() { return getPetAlwaysOnTopEffective(); },
@@ -5568,9 +5607,11 @@ function createWindow() {
     dropLog: (message) => console.log(`Clawd: ${message}`),
     // Clawd Alive: gestures and click / drag observations feed the companion
     // (each call is a no-op while the feature or interactions are off).
-    handlePetGesture: (kind) => _companion.handleGesture(kind, kind === "hover-dwell" ? companionHoverInfo() : undefined),
-    noteCompanionEvent: (kind) => _companion.noteEvent(kind),
-    noteCompanionDragEnd: (spot) => _companion.noteDragEnd(spot),
+    handlePetGesture: (kind) => nudgeCompanionMood(
+      _companion.handleGesture(kind, kind === "hover-dwell" ? companionHoverInfo() : undefined)
+    ),
+    noteCompanionEvent: (kind) => nudgeCompanionMood(_companion.noteEvent(kind)),
+    noteCompanionDragEnd: (spot) => nudgeCompanionMood(_companion.noteDragEnd(spot)),
     isCompanionEnabled: () => _settingsController.get("companionEnabled") === true,
     hitWebContents: () => (hitWin && !hitWin.isDestroyed() ? hitWin.webContents : null),
     isDragLocked: () => petWindowRuntime.isDragLocked(),
@@ -5872,7 +5913,7 @@ const _roamCtx = {
   isCompanionPlaying: () => _companion.holdsRoam(),
   getRoamDelayMs: (isFirst, baseMs) => _companion.getRoamDelayMs(isFirst, baseMs),
   pickPreferredTarget: (args) => _companion.pickRoamTarget(args),
-  onWalkFinished: (info) => _companion.noteWalkFinished(info),
+  onWalkFinished: (info) => nudgeCompanionMood(_companion.noteWalkFinished(info)),
   onPreferredTargetDiscarded: () => _companion.onPreferredTargetDiscarded(),
   pickWalkVisual: () => _companion.pickWalkVisual(),
   get miniTransitioning() { return _mini.getMiniTransitioning(); },
@@ -5971,7 +6012,7 @@ const _idleActivity = require("./idle-activity").createIdleActivityController({
   sendToRenderer,
   // Clawd Alive: null unless the companion is on, autonomous and in
   // "activities" mode — then the original uniform pick runs unchanged.
-  chooser: (args) => _companion.chooseIdleActivity(args),
+  chooser: (args) => nudgeCompanionMood(_companion.chooseIdleActivity(args)),
 });
 _idleActivity.setEnabled(_settingsController.get("idleActivities") === true);
 _idleActivity.setFrequency(_settingsController.get("idleActivityFrequency"));
@@ -6040,7 +6081,10 @@ const _companion = require("./companion-runtime").createCompanionRuntime({
   canPlay: isPetFreeForIdle,
   restoreIdleVisual: () => _tick.restoreIdleVisual(),
   isVisualGenerationCurrent,
-  sendToRenderer,
+  sendToRenderer: (...args) => {
+    sendToRenderer(...args);
+    nudgeCompanionMood();
+  },
   getIdleMode: () => (_settingsController.get("freeRoam") === true
     ? "roam"
     : _settingsController.get("idleActivities") === true ? "activities" : "none"),
@@ -6065,6 +6109,7 @@ try {
   for (const key of COMPANION_PREF_KEYS) {
     _settingsController.subscribeKey(key, (_value, snapshot) => {
       _companion.configure(readCompanionConfig(snapshot));
+      nudgeCompanionMood();
       if (key === "companionEnabled" || key === "companionInteractions") {
         sendToHitWin("hit-state-sync", { petGesturesEnabled: isPetGesturesEnabled(snapshot) });
       }
@@ -6072,29 +6117,6 @@ try {
   }
 } catch (err) {
   console.warn("Clawd: companion subscribeKey failed:", err && err.message);
-}
-
-// Clawd Alive test mode: the data behind the pet menu's "Test animations"
-// submenu. The menu-time gate mirrors the spec's blockers (agents,
-// permissions, DND, mini); the runtime re-checks everything on play.
-const { resolveCompanionTestGate } = require("./companion-test-menu");
-function getCompanionTestMenuInfo() {
-  const companionEnabled = _settingsController.get("companionEnabled") === true;
-  if (!companionEnabled) return { companionEnabled: false };
-  const catalog = typeof _companion.debugCatalog === "function" ? _companion.debugCatalog() : [];
-  return {
-    companionEnabled,
-    catalog,
-    gateReason: resolveCompanionTestGate({
-      agentBusy: anySessionInProgress(),
-      permission: _perm.hasVisiblePermissionBubbles(),
-      dnd: doNotDisturb,
-      mini: _mini.getMiniMode() || _mini.getMiniTransitioning(),
-    }),
-    play: (id, opts) => (typeof _companion.debugPlay === "function"
-      ? _companion.debugPlay(id, opts)
-      : { ok: false, reason: "disabled" }),
-  };
 }
 
 // Convenience getters for mini state (used throughout main.js)
@@ -6500,6 +6522,7 @@ if (!gotTheLock) {
     try { stopUpdateScheduler(); } catch {}
     releasePowerSaveBlocker();
     // Clawd Alive: stop beat/petting timers and flush companion-state.json.
+    companionMoodFeed.dispose();
     try { _companion.dispose(); } catch (err) { console.warn("Clawd: companion dispose failed:", err && err.message); }
     flushRuntimeStateToPrefs();
     globalShortcut.unregisterAll();

@@ -367,6 +367,25 @@ function createSettingsWindowRuntime(options = {}) {
     return true;
   }
 
+  function isRendererLoaded() {
+    return settingsRendererLoaded && isLiveWindow(getWindow());
+  }
+
+  // Clawd Alive mood card push. Callers rate-limit (companion-mood-feed);
+  // this only guarantees nothing is sent to a closed or unloaded window.
+  function sendCompanionMood(snapshot) {
+    if (!isRendererLoaded()) return false;
+    const wc = getWindow().webContents;
+    if (!wc || (typeof wc.isDestroyed === "function" && wc.isDestroyed())) return false;
+    if (typeof wc.send !== "function") return false;
+    try {
+      wc.send("settings:companion-mood-changed", snapshot);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // textScale changed while settings is open: re-zoom, raise the minimum
   // size, and only grow the window if it now sits below that minimum — never
   // touch a user-chosen size otherwise.
@@ -590,6 +609,8 @@ function createSettingsWindowRuntime(options = {}) {
     notifySizeContextChanged,
     applyTitleToWindow,
     notifyRecapChanged,
+    isRendererLoaded,
+    sendCompanionMood,
   };
 }
 

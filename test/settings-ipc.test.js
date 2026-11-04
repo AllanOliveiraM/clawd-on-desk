@@ -340,6 +340,7 @@ test("settings IPC registers owned channels and leaves animation override channe
   assert.ok(ipcMain.handlers.has("settings:select-roam-fence"));
   assert.ok(ipcMain.handlers.has("settings:clear-roam-fence"));
   assert.ok(ipcMain.handlers.has("settings:companion-reset"));
+  assert.ok(ipcMain.handlers.has("settings:get-companion-mood"));
   assert.ok(ipcMain.handlers.has("settings:pick-sound-file"));
   assert.ok(ipcMain.handlers.has("settings:list-themes"));
   assert.ok(ipcMain.handlers.has("settings:detect-agent-installations"));
@@ -430,6 +431,50 @@ test("companion reset calls runtime and rejects untrusted senders", async () => 
 
   const missing = createHarness();
   assert.deepStrictEqual(await missing.ipcMain.invoke("settings:companion-reset"), {
+    status: "error",
+    message: "unavailable",
+  });
+});
+
+test("companion mood snapshot is normalized and limited to the trusted Settings window", async () => {
+  const harness = createHarness({
+    companionRuntime: {
+      getMoodSnapshot: () => ({
+        mood: { energy: 70.6, contentment: 55, familiarity: 12 },
+        label: "content",
+        personality: "shy",
+        lastInteractionAt: 1700000000000,
+        extra: "dropped",
+      }),
+    },
+  });
+  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:get-companion-mood"), {
+    status: "ok",
+    snapshot: {
+      mood: { energy: 71, contentment: 55, familiarity: 12 },
+      label: "content",
+      personality: "shy",
+      lastInteractionAt: 1700000000000,
+    },
+  });
+
+  harness.ipcMain.invokeEvent = { sender: {}, senderFrame: null };
+  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:get-companion-mood"), {
+    status: "error",
+    message: "untrusted settings sender",
+  });
+
+  // Before the runtime grows getMoodSnapshot, getMood() is enough.
+  const older = createHarness({
+    companionRuntime: { getMood: () => ({ energy: 10, contentment: 50, familiarity: 0 }) },
+  });
+  assert.deepStrictEqual(await older.ipcMain.invoke("settings:get-companion-mood"), {
+    status: "ok",
+    snapshot: { mood: { energy: 10, contentment: 50, familiarity: 0 }, label: "tired", personality: null, lastInteractionAt: null },
+  });
+
+  const missing = createHarness();
+  assert.deepStrictEqual(await missing.ipcMain.invoke("settings:get-companion-mood"), {
     status: "error",
     message: "unavailable",
   });

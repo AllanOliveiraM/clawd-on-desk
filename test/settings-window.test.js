@@ -463,6 +463,23 @@ test("settings window coalesces live recap changes after the renderer is ready",
   assert.deepStrictEqual(win.calls, [["send", "settings:recap-changed", undefined]]);
 });
 
+// Clawd Alive mood card (spec 2026-11-04 §3): the push only reaches a loaded
+// renderer; the rate limit lives in src/companion-mood-feed.js.
+test("settings window pushes the companion mood only to a loaded renderer", () => {
+  const { runtime } = createRuntime();
+  assert.equal(runtime.isRendererLoaded(), false);
+  assert.equal(runtime.sendCompanionMood({ label: "content" }), false);
+  runtime.open();
+  const win = FakeBrowserWindow.instances[0];
+  assert.equal(runtime.isRendererLoaded(), false);
+  assert.equal(runtime.sendCompanionMood({ label: "content" }), false);
+  win.emitWebContents("did-finish-load");
+  win.calls = [];
+  assert.equal(runtime.isRendererLoaded(), true);
+  assert.equal(runtime.sendCompanionMood({ label: "content" }), true);
+  assert.deepStrictEqual(win.calls, [["send", "settings:companion-mood-changed", { label: "content" }]]);
+});
+
 test("settings window deep-link survives a reopen before load and reaches a minimized live window", () => {
   const { runtime, timers } = createRuntime();
   runtime.open();

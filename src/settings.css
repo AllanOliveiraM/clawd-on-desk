@@ -5591,3 +5591,45 @@ html, body {
   opacity: 0.55;
   cursor: default;
 }
+
+/* Clawd Alive mood card (Pet → Personality & behavior). */
+.companion-mood-card[hidden] {
+  display: none;
+}
+.companion-mood-text {
+  width: 100%;
+}
+.companion-mood-bars {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+.companion-mood-bar {
+  display: grid;
+  grid-template-columns: minmax(84px, max-content) 1fr 2.5em;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.companion-mood-bar-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+.companion-mood-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.companion-mood-bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+  .companion-mood-bar-fill {
+    transition: none;
+  }
+}

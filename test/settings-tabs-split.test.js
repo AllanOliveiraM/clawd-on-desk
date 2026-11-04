@@ -766,7 +766,7 @@ describe("settings tab split", () => {
     assert.deepStrictEqual(sectionRowLabels(pet), [
       ["大小", "跨显示器保持大小"],
       ["空闲时", "移动方式", "活动范围", "出现频率", "允许贴靠屏幕边缘", "关闭极简模式", "全屏时自动隐藏"],
-      ["启用 Clawd Alive", "性格", "自主行为", "抚摸与鼠标反应", "淘气捣蛋", "跨会话记忆", "重置 Clawd 的记忆"],
+      ["启用 Clawd Alive", "性格", "当前心情", "自主行为", "抚摸与鼠标反应", "淘气捣蛋", "跨会话记忆", "重置 Clawd 的记忆"],
       ["桌宠保持在最前"],
       ["跟随鼠标光标"],
       ["测试结果动画"],
@@ -1663,6 +1663,29 @@ describe("settings tab split", () => {
     assert.strictEqual(permissions.runtime.permissionsSubtab, "local");
   });
 
+  // Spec 2026-11-04 §3: the mood push is routed to the Pet tab, which owns
+  // the card; the renderer registers it once and never polls.
+  it("routes the companion mood push to the Pet tab", () => {
+    const source = fs.readFileSync(RENDERER, "utf8");
+    const start = source.indexOf("if (window.settingsAPI && typeof window.settingsAPI.onCompanionMoodChanged");
+    assert.ok(start >= 0, "renderer subscribes to onCompanionMoodChanged");
+    const end = source.indexOf("\n}\n", start) + 3;
+    const block = source.slice(start, end);
+    assert.doesNotMatch(source, /setInterval\([^)]*[Mm]ood/);
+    let pushed = null;
+    const applied = [];
+    const core = { tabs: {} };
+    vm.runInNewContext(block, {
+      core,
+      window: { settingsAPI: { onCompanionMoodChanged(cb) { pushed = cb; } } },
+    });
+    assert.strictEqual(typeof pushed, "function");
+    assert.doesNotThrow(() => pushed({ label: "tired" }), "no Pet tab yet");
+    core.tabs.pet = { applyCompanionMood: (snapshot) => applied.push(snapshot) };
+    pushed({ label: "content" });
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(applied)), [{ label: "content" }]);
+  });
+
   it("wires the deep-link receiver for sessions and recap only", () => {
     const source = fs.readFileSync(RENDERER, "utf8");
     const initStart = source.indexOf("globalThis.ClawdSettingsTabGeneral.init(core);");
@@ -1706,6 +1729,7 @@ describe("settings tab split", () => {
           onChanged() {},
           onAgentActivity() {},
           onRecapChanged() {},
+          onCompanionMoodChanged() {},
           onAnimationPreviewPosterReady() {},
           onShortcutRecordKey() {},
           onShortcutFailuresChanged() {},

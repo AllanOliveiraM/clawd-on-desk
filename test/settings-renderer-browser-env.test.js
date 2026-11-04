@@ -13063,6 +13063,151 @@ describe("settings renderer browser environment", () => {
       ]);
       assert.strictEqual(button.disabled, false);
     });
+
+    // Spec 2026-11-04 §3: mood card, visible only with Clawd Alive on, fed by
+    // an initial pull plus main's rate-limited push (no renderer polling).
+    describe("mood card", () => {
+      const SNAPSHOT = {
+        mood: { energy: 64, contentment: 80, familiarity: 12 },
+        label: "content",
+        personality: "playful",
+        lastInteractionAt: null,
+      };
+
+      function moodHarness({ enabled = true, pull = () => ({ status: "ok", snapshot: SNAPSHOT }) } = {}) {
+        const pulls = [];
+        const harness = loadGeneralTabForTest({
+          tab: "pet",
+          snapshot: companionSnapshot({ companionEnabled: enabled }),
+          settingsAPI: {
+            getCompanionMood: () => {
+              pulls.push("pull");
+              return pull();
+            },
+          },
+        });
+        harness.renderContent();
+        return { harness, pulls, card: () => harness.content.querySelector(".companion-mood-card") };
+      }
+
+      function bars(card) {
+        return card.querySelectorAll(".companion-mood-bar").map((barEl) => [
+          barEl.dataset.bar,
+          barEl.querySelector(".companion-mood-bar-label").textContent,
+          barEl.querySelector(".companion-mood-bar-track").getAttribute("aria-valuenow"),
+          barEl.querySelector(".companion-mood-bar-fill").style.getPropertyValue("width"),
+        ]);
+      }
+
+      it("renders the bars, label, personality and last interaction from the pull", async () => {
+        const { harness, pulls, card } = moodHarness();
+        await flush();
+        assert.deepStrictEqual(pulls, ["pull"]);
+        const el = card();
+        assert.ok(el, "card renders inside the companion section");
+        assert.strictEqual(el.hidden, false);
+        assert.strictEqual(el.querySelector(".row-label").textContent, en.companionMoodTitle);
+        assert.deepStrictEqual(bars(el), [
+          ["energy", en.companionMoodEnergy, "64", "64%"],
+          ["contentment", en.companionMoodContentment, "80", "80%"],
+          ["familiarity", en.companionMoodFamiliarity, "12", "12%"],
+        ]);
+        assert.strictEqual(el.querySelector(".companion-mood-summary").textContent,
+          en.companionMoodSummary.replace("{mood}", en.companionMoodLabelContent).replace("{personality}", "Playful"));
+        assert.strictEqual(el.querySelector(".companion-mood-last").textContent, en.companionMoodLastNever);
+        assert.strictEqual(harness.core.state.mountedControls.companion.moodCard.element, el);
+      });
+
+      it("live pushes update the mounted card in place", async () => {
+        const { harness, card } = moodHarness();
+        await flush();
+        const el = card();
+        const before = harness.getContentRenderCount();
+        harness.core.tabs.pet.applyCompanionMood({
+          mood: { energy: 20, contentment: 30, familiarity: 99 },
+          label: "tired",
+          personality: null,
+          lastInteractionAt: Date.now() - 5 * 60 * 1000,
+        });
+        assert.strictEqual(harness.getContentRenderCount(), before);
+        assert.strictEqual(card(), el);
+        assert.deepStrictEqual(bars(el).map((b) => b[2]), ["20", "30", "99"]);
+        // Without a runtime personality the saved preference is shown.
+        assert.strictEqual(el.querySelector(".companion-mood-summary").textContent,
+          en.companionMoodSummary.replace("{mood}", en.companionMoodLabelTired).replace("{personality}", "Balanced"));
+        assert.strictEqual(el.querySelector(".companion-mood-last").textContent,
+          en.companionMoodLastMinutes.replace("{n}", "5"));
+      });
+
+      it("formats the last interaction age", async () => {
+        const { harness, card } = moodHarness();
+        await flush();
+        const cases = [
+          [10 * 1000, en.companionMoodLastJustNow],
+          [3 * 3600 * 1000, en.companionMoodLastHours.replace("{n}", "3")],
+          [2 * 86400 * 1000, en.companionMoodLastDays.replace("{n}", "2")],
+        ];
+        for (const [age, text] of cases) {
+          harness.core.tabs.pet.applyCompanionMood({ ...SNAPSHOT, lastInteractionAt: Date.now() - age });
+          assert.strictEqual(card().querySelector(".companion-mood-last").textContent, text);
+        }
+      });
+
+      it("is hidden with Clawd Alive off and pulls when it turns on", async () => {
+        const { harness, pulls, card } = moodHarness({ enabled: false });
+        await flush();
+        assert.deepStrictEqual(pulls, [], "no IPC while the card is hidden");
+        assert.strictEqual(card().hidden, true);
+        const before = harness.getContentRenderCount();
+        applyBroadcast(harness, { companionEnabled: true });
+        await flush();
+        assert.strictEqual(harness.getContentRenderCount(), before);
+        assert.strictEqual(card().hidden, false);
+        assert.deepStrictEqual(pulls, ["pull"]);
+        applyBroadcast(harness, { companionEnabled: false });
+        assert.strictEqual(card().hidden, true);
+      });
+
+      it("ignores pushes when the card is unmounted or hidden, and malformed pushes", async () => {
+        const { harness, card } = moodHarness({ enabled: false });
+        await flush();
+        assert.doesNotThrow(() => harness.core.tabs.pet.applyCompanionMood(SNAPSHOT));
+        assert.strictEqual(card().hidden, true);
+        harness.core.ops.clearMountedControls();
+        harness.content.innerHTML = "";
+        assert.doesNotThrow(() => harness.core.tabs.pet.applyCompanionMood(SNAPSHOT));
+        const on = moodHarness();
+        await flush();
+        on.harness.core.tabs.pet.applyCompanionMood(null);
+        on.harness.core.tabs.pet.applyCompanionMood({ label: "content" });
+        assert.deepStrictEqual(bars(on.card()).map((b) => b[2]), ["64", "80", "12"]);
+      });
+
+      it("shows the unavailable text when the pull fails", async () => {
+        const { card } = moodHarness({ pull: () => Promise.reject(new Error("gone")) });
+        await flush();
+        assert.strictEqual(card().querySelector(".companion-mood-summary").textContent, en.companionMoodUnavailable);
+        const errored = moodHarness({ pull: () => ({ status: "error", message: "unavailable" }) });
+        await flush();
+        assert.strictEqual(errored.card().querySelector(".companion-mood-summary").textContent, en.companionMoodUnavailable);
+      });
+
+      it("a stale pull resolving after a re-render does not touch the new card", async () => {
+        const pending = createDeferred();
+        let first = true;
+        const { harness, card } = moodHarness({
+          pull: () => {
+            if (first) { first = false; return pending.promise; }
+            return { status: "ok", snapshot: { ...SNAPSHOT, mood: { energy: 1, contentment: 2, familiarity: 3 } } };
+          },
+        });
+        harness.renderContent();
+        await flush();
+        pending.resolve({ status: "ok", snapshot: SNAPSHOT });
+        await flush();
+        assert.deepStrictEqual(bars(card()).map((b) => b[2]), ["1", "2", "3"]);
+      });
+    });
   });
 
   it("uses snapshot mode changes when a broadcast arrives before the optimistic save resolves", async () => {

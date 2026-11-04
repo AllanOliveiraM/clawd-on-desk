@@ -15,6 +15,7 @@ const {
   listPetAccessoryOptions,
   listPetMouthAccessoryOptions,
 } = require("./pet-customization-catalog");
+const { readMoodSnapshot } = require("./companion-mood-feed");
 
 const SOUND_OVERRIDE_ASSET_EXTS = new Set([".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"]);
 // #895: cleanup prompts must skip the default integrations, referencing the
@@ -601,6 +602,14 @@ function registerSettingsIpc(options = {}) {
     } catch (err) {
       return { status: "error", message: (err && err.message) || "reset failed" };
     }
+  });
+  // Clawd Alive mood card (spec 2026-11-04 §3): the initial pull; live
+  // updates arrive on settings:companion-mood-changed while Settings is open.
+  handle("settings:get-companion-mood", (event) => {
+    const rejected = rejectUntrustedSettingsEvent(event);
+    if (rejected) return rejected;
+    const snapshot = readMoodSnapshot(options.companionRuntime);
+    return snapshot ? { status: "ok", snapshot } : { status: "error", message: "unavailable" };
   });
   handle("settings:update", (_event, payload) => {
     if (!payload || typeof payload !== "object") {

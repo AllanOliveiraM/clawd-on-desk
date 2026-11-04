@@ -88,6 +88,7 @@ function companionHarness(prefs = {}) {
   const subscriptions = new Map();
   const configureCalls = [];
   const hitSends = [];
+  const nudges = [];
   let runtimeOptions = null;
   let storeOptions = null;
   const runtime = {
@@ -127,14 +128,16 @@ function companionHarness(prefs = {}) {
     getActiveTheme: () => ({ name: "theme" }),
     isPetFreeForIdle: () => "free",
     isVisualGenerationCurrent: () => true,
-    sendToRenderer: () => null,
+    sendToRenderer: (...args) => { nudges.push(["render", ...args]); return null; },
+    // Mood card push (spec 2026-11-04 §3), defined outside this slice.
+    nudgeCompanionMood: (result) => { nudges.push(["nudge"]); return result; },
     sendToHitWin: (...args) => hitSends.push(JSON.parse(JSON.stringify(args))),
     console: { warn() {} },
     process: { platform: process.platform },
   };
   vm.runInNewContext(`${companionSource}\nthis._companionOut = _companion;\nthis._isPetGesturesEnabled = isPetGesturesEnabled;`, ctx);
   return {
-    ctx, values, subscriptions, configureCalls, hitSends, runtime, runtimeOptions, storeOptions,
+    ctx, values, subscriptions, configureCalls, hitSends, nudges, runtime, runtimeOptions, storeOptions,
     out: ctx._companionOut, isPetGesturesEnabled: ctx._isPetGesturesEnabled,
   };
 }
@@ -216,7 +219,7 @@ it("roam ctx isIdleActivityPlaying includes companion", () => {
   assert.ok(roamCtx.includes("isCompanionPlaying: () => _companion.holdsRoam(),"));
   assert.ok(roamCtx.includes("getRoamDelayMs: (isFirst, baseMs) => _companion.getRoamDelayMs(isFirst, baseMs),"));
   assert.ok(roamCtx.includes("pickPreferredTarget: (args) => _companion.pickRoamTarget(args),"));
-  assert.ok(roamCtx.includes("onWalkFinished: (info) => _companion.noteWalkFinished(info),"));
+  assert.ok(roamCtx.includes("onWalkFinished: (info) => nudgeCompanionMood(_companion.noteWalkFinished(info)),"));
   assert.ok(roamCtx.includes("pickWalkVisual: () => _companion.pickWalkVisual(),"));
 });
 
@@ -232,7 +235,7 @@ it("state ctx asks the companion for the work escalation visual", () => {
 
 it("idle activities, tick and settings IPC reach the companion", () => {
   const controller = slice('const _idleActivity = require("./idle-activity")', "\n});");
-  assert.ok(controller.includes("chooser: (args) => _companion.chooseIdleActivity(args),"));
+  assert.ok(controller.includes("chooser: (args) => nudgeCompanionMood(_companion.chooseIdleActivity(args)),"));
   const tickCtx = slice("const _tickCtx = {", 'const _tick = require("./tick")');
   assert.ok(tickCtx.includes("get companion() { return _companion; }"));
   const settingsIpc = slice("const settingsIpcRuntime = registerSettingsIpc({", "\n});");
@@ -296,10 +299,10 @@ it("toggling either gesture pref pushes hit-state-sync, other companion keys do 
 it("pet interaction IPC reaches the companion and trusts only the hit window", () => {
   const registration = slice("registerPetInteractionIpc({", "registerPermissionIpc({");
   assert.ok(registration.includes(
-    'handlePetGesture: (kind) => _companion.handleGesture(kind, kind === "hover-dwell" ? companionHoverInfo() : undefined),',
+    'handlePetGesture: (kind) => nudgeCompanionMood(\n      _companion.handleGesture(kind, kind === "hover-dwell" ? companionHoverInfo() : undefined)\n    ),',
   ));
-  assert.ok(registration.includes("noteCompanionEvent: (kind) => _companion.noteEvent(kind),"));
-  assert.ok(registration.includes("noteCompanionDragEnd: (spot) => _companion.noteDragEnd(spot),"));
+  assert.ok(registration.includes("noteCompanionEvent: (kind) => nudgeCompanionMood(_companion.noteEvent(kind)),"));
+  assert.ok(registration.includes("noteCompanionDragEnd: (spot) => nudgeCompanionMood(_companion.noteDragEnd(spot)),"));
   assert.ok(registration.includes("hitWebContents: () => (hitWin && !hitWin.isDestroyed() ? hitWin.webContents : null),"));
   assert.ok(registration.includes("isDragLocked: () => petWindowRuntime.isDragLocked(),"));
   assert.ok(registration.includes("getThemeReactions: () => {"));
@@ -360,4 +363,31 @@ it("companionHoverInfo reads the cursor once in viewBox units of the displayed p
   assert.equal(companionHoverInfo(), null);
   ctx.screen.getCursorScreenPoint = () => { throw new Error("no screen"); };
   assert.equal(companionHoverInfo(), null);
+});
+
+// ── Mood card push (spec 2026-11-04 §3) ──
+
+it("companion visuals and pref changes nudge the mood card feed", () => {
+  const h = companionHarness({ companionEnabled: true });
+  h.runtimeOptions.sendToRenderer("state-change", "idle", "beat.svg");
+  assert.deepEqual(h.nudges, [["render", "state-change", "idle", "beat.svg"], ["nudge"]]);
+  h.nudges.length = 0;
+  h.subscriptions.get("companionPersonality")("shy", { companionEnabled: true, companionPersonality: "shy" });
+  assert.deepEqual(h.nudges, [["nudge"]]);
+});
+
+it("the mood feed is gated on a loaded Settings window and companionEnabled", () => {
+  const feed = slice("// Clawd Alive mood card (spec 2026-11-04 §3)", "const _menuCtx = {");
+  assert.match(feed, /isOpen: \(\) => settingsWindowRuntime\.isRendererLoaded\(\)\n\s+&& _settingsController\.get\("companionEnabled"\) === true,/);
+  assert.match(feed, /send: \(snapshot\) => settingsWindowRuntime\.sendCompanionMood\(snapshot\),/);
+  assert.ok(!/setInterval/.test(feed), "no polling");
+  const quit = slice('app.on("before-quit", (event) => {', "\n  });");
+  assert.ok(quit.includes("companionMoodFeed.dispose();"));
+});
+
+it("the test-mode menu info feature-checks the runtime debug API", () => {
+  const info = slice("function getCompanionTestMenuInfo() {", "\n}\n");
+  assert.ok(info.includes('typeof _companion.debugCatalog === "function"'));
+  assert.ok(info.includes('typeof _companion.debugPlay === "function"'));
+  assert.ok(info.includes('if (!companionEnabled) return { companionEnabled: false };'));
 });

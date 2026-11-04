@@ -93,6 +93,23 @@ test("settings preload exposes the companion reset on its dedicated IPC channel"
   assert.deepStrictEqual(invokes, [["settings:companion-reset"]]);
 });
 
+test("settings preload exposes the companion mood pull and push channels", async () => {
+  const { exposed, invokes, ipcHandlers } = loadPreload();
+  const settingsAPI = exposed.get("settingsAPI");
+  await settingsAPI.getCompanionMood();
+  assert.deepStrictEqual(invokes, [["settings:get-companion-mood"]]);
+
+  const forward = ipcHandlers.get("settings:companion-mood-changed");
+  assert.equal(typeof forward, "function");
+  const received = [];
+  const unsubscribe = settingsAPI.onCompanionMoodChanged((snapshot) => received.push(snapshot));
+  forward({}, { label: "tired" });
+  unsubscribe();
+  forward({}, { label: "content" });
+  assert.deepStrictEqual(received, [{ label: "tired" }]);
+  assert.equal(typeof settingsAPI.onCompanionMoodChanged(null), "function");
+});
+
 test("settings preload queries the current size context on its dedicated IPC channel", async () => {
   const { exposed, invokes } = loadPreload();
   await exposed.get("settingsAPI").getSizeContext();
