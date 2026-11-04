@@ -3347,6 +3347,30 @@ describe("roam companion hooks", () => {
     roam.setEnabled(false);
   });
 
+  it("fetch walks skip the margin band to the side edge it proposed", () => {
+    const reports = [];
+    const targets = [
+      { x: -99999, y: 500, preferred: true, mischief: "fetch", side: "left" },
+      { x: 99999, y: 500, preferred: true, mischief: "fetch", side: "right" },
+    ];
+    const ctx = makeCtx({
+      pickPreferredTarget: () => targets.shift() || null,
+      onWalkFinished: (info) => reports.push(info),
+    });
+    const roam = roamModule(ctx);
+    roam.setEnabled(true);
+    roam.tick();
+    mock.timers.tick(8000);
+    finishWalk(roam);
+    mock.timers.tick(4000);
+    finishWalk(roam);
+    assert.deepStrictEqual(reports, [
+      { preferred: true, mischief: "fetch", reachedEdgeDistancePx: 0 },
+      { preferred: true, mischief: "fetch", reachedEdgeDistancePx: 0 },
+    ]);
+    roam.setEnabled(false);
+  });
+
   it("roam reports mischief kind and edge distance on arrival", () => {
     const reports = [];
     const targets = [

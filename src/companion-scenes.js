@@ -17,6 +17,7 @@ const {
   POKE_FINGERTIP,
   WALL_PUSH_HANDS_U,
   WALL_PEEK_EDGE_U,
+  FETCH_EDGE_U,
   SIT_EDGE_LEDGE_V,
   REACH_CLOSE_TIP,
   REACH_CLOSE_TITLEBAR_PX,
@@ -46,6 +47,39 @@ function partDurationMs(anim, once = false) {
 
 function sided(base, side) {
   return base + (side === "left" ? "Left" : "Right");
+}
+
+// "Vai buscar" objects, in theme-key order (fetch<Obj>Left / fetch<Obj>Right).
+const FETCH_OBJECTS = ["Cursor", "Duck", "Enter", "Bug", "Box", "Sock"];
+
+// The object keys of one side the theme has art for.
+function fetchObjectKeys(side, hasKey) {
+  return FETCH_OBJECTS.map((obj) => sided(`fetch${obj}`, side)).filter(hasKey);
+}
+
+// A side can fetch with its exit and at least one object.
+function fetchSideReady(side, hasKey) {
+  return hasKey(sided("fetchExit", side)) && fetchObjectKeys(side, hasKey).length > 0;
+}
+
+function pickIndex(length, random) {
+  const index = clamp(Math.floor(random() * length), 0, length - 1);
+  return Number.isFinite(index) ? index : 0;
+}
+
+// The fetch side: the preferred one when its art is complete, else the other.
+function fetchSide(preferred, hasKey) {
+  const other = preferred === "left" ? "right" : "left";
+  if (fetchSideReady(preferred, hasKey)) return preferred;
+  return fetchSideReady(other, hasKey) ? other : null;
+}
+
+// The planned object when it belongs to the side, else a random one.
+function fetchObjectKey(side, variant, hasKey, random) {
+  const open = fetchObjectKeys(side, hasKey);
+  if (open.length === 0) return null;
+  if (typeof variant === "string" && open.includes(variant)) return variant;
+  return open[pickIndex(open.length, random)];
 }
 
 const CATCH_BUCKETS = { high: "High", body: "Body", low: "Low", left: "Left", right: "Right" };
@@ -98,6 +132,17 @@ function sceneSpec(id, opts, hasKey, random) {
       const index = clamp(Math.floor(random() * open.length), 0, open.length - 1);
       return { parts: [{ key: open[Number.isFinite(index) ? index : 0] }] };
     }
+    case "fetch": {
+      // Slide out through the side edge, then drag the object back in.
+      const side = opts.side === "left" || opts.side === "right" ? opts.side : null;
+      const object = side && hasKey(sided("fetchExit", side)) ? fetchObjectKey(side, opts.variant, hasKey, random) : null;
+      return object ? { parts: [{ key: sided("fetchExit", side) }, { key: object }] } : null;
+    }
+    case "searchMouse":
+      return { parts: [{ key: "searchMouse" }] };
+    case "single":
+      // Test mode: one theme key played once (a one-shot keeps its own length).
+      return typeof opts.key === "string" ? { parts: [{ key: opts.key, once: opts.once === true }] } : null;
     case "dayRhythm":
     case "toy":
       return typeof opts.variant === "string" ? { parts: [{ key: opts.variant }] } : null;
@@ -159,9 +204,12 @@ const WALL_KEYS = ["wallPushLeft", "wallPushRight", "wallPeekLeft", "wallPeekRig
 // Single-part only (activities mode) leaves out every walking or looping scene.
 function mischiefAvailable(keys, singlePartOnly) {
   const out = new Set(VARIANT_KEYS.filter((key) => keys.has(key)));
+  if (keys.has("searchMouse")) out.add("searchMouse");
   if (singlePartOnly) return out;
   for (const id of ["fakeNap", "reachClose", "sitEdge"]) if (keys.has(id)) out.add(id);
   if (WALL_KEYS.some((key) => keys.has(key))) out.add("wall");
+  const hasKey = (key) => keys.has(key);
+  if (fetchSideReady("left", hasKey) || fetchSideReady("right", hasKey)) out.add("fetch");
   return out;
 }
 
@@ -191,6 +239,11 @@ function overhangOf(spot, area, W, H) {
   };
 }
 
+// A side fixed by the caller (test mode), else null.
+function forcedSide(walk) {
+  return walk.side === "left" || walk.side === "right" ? walk.side : null;
+}
+
 // Art-anchored walk (Ruling P4): the exact window top-left that puts an art
 // anchor on its screen point. undefined -> the art cannot be placed (keep the
 // whole-window walk); null -> skip this walk (it would never line up).
@@ -213,16 +266,26 @@ function artWalkTarget(walk, { area, bounds, art, platform, random, petWidth }) 
   }
   if (walk.id === "wall") {
     const cx = hasBounds ? bounds.x + bounds.width / 2 : area.x + area.width / 2;
-    const side = cx - area.x <= right - cx ? "left" : "right";
+    const side = forcedSide(walk) || (cx - area.x <= right - cx ? "left" : "right");
     const open = [sided("wallPush", side), sided("wallPeek", side)].filter((key) => art.has(key));
     if (open.length === 0) return undefined;
-    const index = clamp(Math.floor(random() * open.length), 0, open.length - 1);
-    const key = open[Number.isFinite(index) ? index : 0];
+    const key = open.includes(walk.variant) ? walk.variant : open[pickIndex(open.length, random)];
     const leftU = key.startsWith("wallPush") ? WALL_PUSH_HANDS_U : WALL_PEEK_EDGE_U;
     const anchor = art.point(key, side === "left" ? leftU : art.mirrorU(key, leftU), 0);
     if (!anchor) return undefined;
     const y = hasBounds ? bounds.y : area.y + (area.height - H) / 2;
     return done({ x: side === "left" ? area.x - anchor.x : right - anchor.x, y }, { side, variant: key });
+  }
+  if (walk.id === "fetch") {
+    const cx = hasBounds ? bounds.x + bounds.width / 2 : area.x + area.width / 2;
+    const side = fetchSide(forcedSide(walk) || (cx - area.x <= right - cx ? "left" : "right"), art.has);
+    if (!side) return undefined;
+    const variant = fetchObjectKey(side, walk.variant, art.has, random);
+    const exit = sided("fetchExit", side);
+    const anchor = art.point(exit, side === "left" ? FETCH_EDGE_U : art.mirrorU(exit, FETCH_EDGE_U), 0);
+    if (!anchor) return undefined;
+    const y = hasBounds ? bounds.y : area.y + (area.height - H) / 2;
+    return done({ x: side === "left" ? area.x - anchor.x : right - anchor.x, y }, { side, variant });
   }
   if (walk.id === "sitEdge") {
     const ledge = art.point("sitEdge", 0, SIT_EDGE_LEDGE_V);
@@ -276,9 +339,17 @@ function walkTarget(walk, { area, bounds, size, platform, art, random = Math.ran
     const cx = platform === "darwin" ? left + insetX : right - insetX;
     return { cx, cy: area.y + REACH_CLOSE_INSET_Y * height + height / 2, side: null, petWidth };
   }
-  if (walk.id === "wall") {
-    const side = cx - area.x <= area.x + area.width - cx ? "left" : "right";
-    return { cx: side === "left" ? left : right, cy, side, petWidth };
+  if (walk.id === "wall" || walk.id === "fetch") {
+    let side = forcedSide(walk) || (cx - area.x <= area.x + area.width - cx ? "left" : "right");
+    let variant = null;
+    if (walk.id === "fetch" && art) {
+      side = fetchSide(side, art.has);
+      if (!side) return null;
+      variant = fetchObjectKey(side, walk.variant, art.has, random);
+    }
+    const out = { cx: side === "left" ? left : right, cy, side, petWidth };
+    if (variant) out.variant = variant;
+    return out;
   }
   if (walk.id === "sitEdge") return { cx, cy: area.y + area.height - height / 2, side: null, petWidth };
   if (walk.id === "poke" && walk.target && isNum(walk.target.x) && isNum(walk.target.y)) {
@@ -317,7 +388,7 @@ function walkEdgeDistance(walk, { area, bounds, goal, platform }) {
       Math.abs(sideGap - REACH_CLOSE_INSET_X * bounds.width),
     );
   }
-  else if (walk.id === "wall") distance = walk.side === "left" ? leftGap : rightGap;
+  else if (walk.id === "wall" || walk.id === "fetch") distance = walk.side === "left" ? leftGap : rightGap;
   else if (walk.id === "sitEdge") distance = bottomGap;
   else if (walk.id === "poke" && goal && isNum(goal.x) && isNum(goal.y)) {
     distance = Math.hypot(bounds.x - goal.x, bounds.y - goal.y);
@@ -411,6 +482,8 @@ module.exports = {
   SPOT_REACH_TOLERANCE_RATIO,
   partDurationMs,
   sided,
+  FETCH_OBJECTS,
+  fetchObjectKeys,
   buildScene,
   createScenePlayer,
   mischiefAvailable,

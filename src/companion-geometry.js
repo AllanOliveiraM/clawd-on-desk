@@ -29,6 +29,9 @@ const POUNCE_SHORT_TIP = Object.freeze({ u: -6.5, v: 10.5 });
 const WALL_PUSH_HANDS_U = -2.5;
 // clawd-alive-wall-peek-left.svg: the edge the pet peeks around.
 const WALL_PEEK_EDGE_U = -1.12;
+// clawd-alive-fetch-exit-left.svg: the outer edge of the visible body (the
+// side arm) the pet slides out past; it is put on the screen edge.
+const FETCH_EDGE_U = 0;
 // clawd-alive-sit-edge.svg: the ledge the pet sits on (bottom of the feet).
 const SIT_EDGE_LEDGE_V = 15;
 // clawd-alive-reach-close.svg: the long arm's hand tip (top-right reach).
@@ -142,6 +145,7 @@ module.exports = {
   POUNCE_SHORT_TIP,
   WALL_PUSH_HANDS_U,
   WALL_PEEK_EDGE_U,
+  FETCH_EDGE_U,
   SIT_EDGE_LEDGE_V,
   REACH_CLOSE_TIP,
   REACH_CLOSE_TITLEBAR_PX,

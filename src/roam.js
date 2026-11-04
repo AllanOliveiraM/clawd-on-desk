@@ -53,7 +53,7 @@ const ROAM_DELAY_MAX_FACTOR = 3; // …or stretch it to 3× the base delay
 const { walkEdgeDistance } = require("./companion-scenes");
 // Edge/corner mischief kinds skip the 15% margin band: they may reach the
 // work-area edge (still whole-window, still inside an active fence).
-const EDGE_MISCHIEF_KINDS = new Set(["reachClose", "wall", "sitEdge"]);
+const EDGE_MISCHIEF_KINDS = new Set(["reachClose", "wall", "sitEdge", "fetch"]);
 
 module.exports = function initRoam(ctx) {
   let enabled = false;
