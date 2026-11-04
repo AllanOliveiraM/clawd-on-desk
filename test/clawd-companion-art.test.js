@@ -274,3 +274,86 @@ test("built-in alive files are not shared between unrelated slots except the all
   assert.deepEqual(shared, []);
   for (const f of owners.keys()) assert.ok(fs.existsSync(path.join(SVG_DIR, f)), `${f} exists`);
 });
+
+const os = require("node:os");
+const { spawnSync } = require("node:child_process");
+const { applyUserOverridesPatch, applyVariantPatch, VARIANT_ALLOWED_KEYS } = require("../src/theme-variants");
+
+test("themes without companion blocks load with empty base companion data", () => {
+  for (const id of ["calico", "cloudling"]) {
+    const theme = themeLoader.loadTheme(id, { strict: true });
+    assert.deepEqual(theme.companionAnimations, {}, id);
+    assert.deepEqual(theme._baseCompanionAnimations, {}, id);
+    assert.deepEqual(theme.companionWorkTiers, { working: [], juggling: [] }, id);
+    assert.deepEqual(theme._baseCompanionWorkTiers, { working: [], juggling: [] }, id);
+  }
+});
+
+test("hostile companion overrides never add keys, traverse or mutate the base", () => {
+  const base = { companionAnimations: { greet: { file: "greet.svg", duration: 2500 } } };
+  const snapshot = JSON.stringify(base);
+  const hostile = JSON.parse(`{"companionAnimations":{
+    "greet":{"file":"../../etc/evil.svg","durationMs":"x"},
+    "undeclaredKey":{"file":"u.svg"},
+    "__proto__":{"file":"p.svg"},
+    "constructor":{"file":"c.svg"}}}`);
+  const patched = applyUserOverridesPatch(base, hostile);
+  assert.equal(JSON.stringify(base), snapshot);
+  assert.deepEqual(Object.keys(patched.companionAnimations), ["greet"]);
+  const norm = schema.normalizeCompanionAnimations(patched.companionAnimations);
+  assert.deepEqual(norm.greet.files, ["evil.svg"]);
+  assert.equal(norm.undeclaredKey, undefined);
+  assert.equal({}.file, undefined);
+  for (const bad of [null, [], "x", 5]) assert.equal(applyUserOverridesPatch(base, bad), base);
+});
+
+test("variants cannot override companion blocks; drift and warn-once are visible", (t) => {
+  assert.equal(VARIANT_ALLOWED_KEYS.has("companionAnimations"), false);
+  assert.equal(VARIANT_ALLOWED_KEYS.has("companionWorkTiers"), false);
+  assert.deepEqual([...VARIANT_ALLOWED_KEYS].sort(), [
+    "completionVisualMap", "description", "displayHintMap", "fileHitBoxes", "hitBoxes", "idleAnimations",
+    "idleVisualOptions", "jugglingTiers", "name", "objectScale", "preview", "sleepingHitboxFiles",
+    "timings", "transitions", "wideHitboxFiles", "workingTiers",
+  ]);
+  const warn = t.mock.method(console, "warn", () => {});
+  const raw0 = { companionAnimations: { greet: { file: "g.svg" } } };
+  const out = applyVariantPatch(raw0, { companionAnimations: { greet: { file: "x.svg" } }, companionWorkTiers: {} }, "t", "v");
+  assert.deepEqual(out.companionAnimations, raw0.companionAnimations);
+  assert.equal(warn.mock.callCount(), 2);
+  assert.match(warn.mock.calls[0].arguments[0], /companionAnimations/);
+  assert.match(warn.mock.calls[1].arguments[0], /companionWorkTiers/);
+});
+
+test("create-theme scaffold carries no companion blocks", () => {
+  const createTheme = require("../scripts/create-theme");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-art-scaffold-"));
+  try {
+    const result = createTheme.createThemeScaffold({ themesRoot: root, id: "alive-less", name: "Alive Less", author: "T" });
+    const text = fs.readFileSync(path.join(result.targetDir, "theme.json"), "utf8");
+    assert.ok(!/companion/i.test(text));
+    const parsed = JSON.parse(text);
+    assert.equal(parsed.companionAnimations, undefined);
+    assert.equal(parsed.companionWorkTiers, undefined);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("validate-theme CLI names a missing companion file by key", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-art-validate-"));
+  try {
+    const calico = path.join(ROOT, "themes", "calico");
+    const cfg = JSON.parse(fs.readFileSync(path.join(calico, "theme.json"), "utf8"));
+    cfg.companionAnimations = { greet: { file: "no-such-greet.svg" } };
+    cfg.companionWorkTiers = { working: [{ minSessions: 1, files: ["no-such-tier.svg"] }] };
+    fs.writeFileSync(path.join(dir, "theme.json"), JSON.stringify(cfg));
+    fs.cpSync(path.join(calico, "assets"), path.join(dir, "assets"), { recursive: true });
+    const r = spawnSync(process.execPath, [path.join(ROOT, "scripts", "validate-theme.js"), dir], { encoding: "utf8" });
+    const out = r.stdout + r.stderr;
+    assert.match(out, /no-such-greet\.svg/, out);
+    assert.match(out, /companionAnimations\.greet|greet/, out);
+    assert.match(out, /no-such-tier\.svg/, out);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
