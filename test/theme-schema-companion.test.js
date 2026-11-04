@@ -41,6 +41,8 @@ describe("theme companionAnimations block", () => {
       ...schema.MISCHIEF_ANIMATION_KEYS,
       ...schema.POLISH_ANIMATION_KEYS,
       ...schema.TRANSITION_ANIMATION_KEYS,
+      ...schema.FETCH_ANIMATION_KEYS,
+      ...schema.SEARCH_MOUSE_ANIMATION_KEYS,
     ]);
     assert.deepStrictEqual(schema.MISCHIEF_ANIMATION_KEYS, [
       "catch", "catchMiss", "pounceLeft", "pounceRight", "fakeNap", "boo",
@@ -59,7 +61,7 @@ describe("theme companionAnimations block", () => {
       "walkBouncy", "walkTired", "walkCurious",
       "sleepTwitch", "collapseSleepTwitch",
     ]);
-    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-26, -6), [...schema.POLISH_ANIMATION_KEYS]);
+    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-41, -21), [...schema.POLISH_ANIMATION_KEYS]);
     const block = {};
     for (const key of schema.POLISH_ANIMATION_KEYS) block[key] = { file: `../x/${key}.svg`, duration: 1400 };
     const theme = schema.mergeDefaults(validThemeJson({ companionAnimations: block }), "test", false);
@@ -73,12 +75,31 @@ describe("theme companionAnimations block", () => {
     assert.deepStrictEqual(schema.TRANSITION_ANIMATION_KEYS, [
       "sitDown", "standUp", "fakeNapIn", "fakeNapOut", "pettingIn", "pettingOut",
     ]);
-    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-6), [...schema.TRANSITION_ANIMATION_KEYS]);
+    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-21, -15), [...schema.TRANSITION_ANIMATION_KEYS]);
     const block = {};
     for (const key of schema.TRANSITION_ANIMATION_KEYS) block[key] = { file: `../x/${key}.svg`, duration: 250 };
     const theme = schema.mergeDefaults(validThemeJson({ companionAnimations: block }), "test", false);
     for (const key of schema.TRANSITION_ANIMATION_KEYS) {
       assert.deepStrictEqual(theme.companionAnimations[key], { files: [`${key}.svg`], duration: 250 }, key);
+    }
+  });
+
+  it("exports the fetch pairs and searchMouse last, optional and basenamed", () => {
+    assert.deepStrictEqual(schema.FETCH_ANIMATION_KEYS, [
+      "fetchExitLeft", "fetchExitRight",
+      "fetchCursorLeft", "fetchCursorRight", "fetchDuckLeft", "fetchDuckRight",
+      "fetchEnterLeft", "fetchEnterRight", "fetchBugLeft", "fetchBugRight",
+      "fetchBoxLeft", "fetchBoxRight", "fetchSockLeft", "fetchSockRight",
+    ]);
+    assert.deepStrictEqual(schema.SEARCH_MOUSE_ANIMATION_KEYS, ["searchMouse"]);
+    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-15), [
+      ...schema.FETCH_ANIMATION_KEYS, ...schema.SEARCH_MOUSE_ANIMATION_KEYS,
+    ]);
+    const block = {};
+    for (const key of schema.COMPANION_ANIMATION_KEYS.slice(-15)) block[key] = { file: `../x/${key}.svg`, duration: 7000 };
+    const theme = schema.mergeDefaults(validThemeJson({ companionAnimations: block }), "test", false);
+    for (const key of schema.COMPANION_ANIMATION_KEYS.slice(-15)) {
+      assert.deepStrictEqual(theme.companionAnimations[key], { files: [`${key}.svg`], duration: 7000 }, key);
     }
   });
 
@@ -240,7 +261,11 @@ describe("theme companionAnimations block", () => {
     };
     assert.deepStrictEqual(theme.companionAnimations, base);
     const declared = Object.keys(theme.companionAnimations);
-    assert.deepStrictEqual(declared, [...schema.COMPANION_ANIMATION_KEYS]);
+    // The fetch / searchMouse art is still being drawn: the integration step
+    // adds it to theme.json and drops this exclusion.
+    const artPending = new Set([...schema.FETCH_ANIMATION_KEYS, ...schema.SEARCH_MOUSE_ANIMATION_KEYS]);
+    assert.deepStrictEqual(declared.filter((key) => !artPending.has(key)),
+      schema.COMPANION_ANIMATION_KEYS.filter((key) => !artPending.has(key)));
     const required = schema.collectRequiredAssetFiles(theme);
     for (const key of declared) {
       const [file] = theme.companionAnimations[key].files;

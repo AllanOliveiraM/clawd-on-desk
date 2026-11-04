@@ -644,6 +644,16 @@ const TRANSITION_ANIMATION_KEYS = Object.freeze([
   "sitDown", "standUp", "fakeNapIn", "fakeNapOut", "pettingIn", "pettingOut",
 ]);
 
+// Clawd Alive "fetch" scene (exit through the side edge, then drag one big
+// object back in) and the XWayland "searching the mouse" look. All optional:
+// fetch needs its side's exit plus at least one object of that side.
+const FETCH_OBJECTS = Object.freeze(["Cursor", "Duck", "Enter", "Bug", "Box", "Sock"]);
+const FETCH_ANIMATION_KEYS = Object.freeze([
+  "fetchExitLeft", "fetchExitRight",
+  ...FETCH_OBJECTS.flatMap((obj) => [`fetch${obj}Left`, `fetch${obj}Right`]),
+]);
+const SEARCH_MOUSE_ANIMATION_KEYS = Object.freeze(["searchMouse"]);
+
 // Optional Clawd Alive visuals. Each known key maps to { files, duration };
 // unknown keys and entries without a usable file are dropped. Accepts both the
 // authored shape ({ file } / { files }) and the already-normalized shape.
@@ -652,6 +662,8 @@ const COMPANION_ANIMATION_KEYS = Object.freeze([
   ...MISCHIEF_ANIMATION_KEYS,
   ...POLISH_ANIMATION_KEYS,
   ...TRANSITION_ANIMATION_KEYS,
+  ...FETCH_ANIMATION_KEYS,
+  ...SEARCH_MOUSE_ANIMATION_KEYS,
 ]);
 
 function normalizeCompanionAnimations(value) {
@@ -1938,6 +1950,9 @@ module.exports = {
   COMPANION_ANIMATION_KEYS,
   MISCHIEF_ANIMATION_KEYS,
   POLISH_ANIMATION_KEYS,
+  FETCH_OBJECTS,
+  FETCH_ANIMATION_KEYS,
+  SEARCH_MOUSE_ANIMATION_KEYS,
   TRANSITION_ANIMATION_KEYS,
   normalizeCompanionAnimations,
   normalizeCompanionWorkTiers,
