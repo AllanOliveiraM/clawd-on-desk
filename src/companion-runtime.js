@@ -514,7 +514,8 @@ function createCompanionRuntime(options = {}) {
       const roam = getIdleMode() === "roam";
       if (!(roam && pendingWalk && pendingWalk.debug)) pendingWalk = null;
       if (!(roam && walkingMischief && walkingMischief.debug)) walkingMischief = null;
-      returnWalk = false;
+      // The walk back from a test edge scene also only needs Free Roam.
+      if (!(roam && returnWalk === "debug")) returnWalk = false;
     }
     if (pendingWalk && t - pendingWalk.at > PENDING_WALK_MAX_MS) {
       spendWalk(pendingWalk);

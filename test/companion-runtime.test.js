@@ -2760,6 +2760,29 @@ test("a test fetch gets the return walk even with mischief and autonomy off", ()
   assert.equal(env.runtime.getRoamDelayMs(false, 4000), 4000, "once");
 });
 
+test("a test fetch keeps its return walk with mischief on and autonomy off (M5)", () => {
+  const env = debugEnv({ keys: FETCH_PAIR, config: { ...ON, autonomy: false, mischief: true } });
+  env.runtime.debugPlay("fetch", { variant: "fetchDuckLeft" });
+  const target = env.runtime.pickRoamTarget(BAND_ARGS);
+  env.runtime.noteWalkFinished({ preferred: true, mischief: target.mischief, reachedEdgeDistancePx: 0 });
+  runCommitting(env, 20000);
+  env.runtime.tick();
+  assert.equal(env.runtime.isAnimating(), false);
+  assert.equal(env.runtime.getRoamDelayMs(false, 4000), 2000, "short pause for the walk back");
+  assert.equal(env.runtime.pickRoamTarget(BAND_ARGS), null, "roam picks a band target");
+  assert.equal(env.runtime.getRoamDelayMs(false, 4000), 4000, "once");
+  // Leaving Free Roam still drops it.
+  const off = debugEnv({ keys: FETCH_PAIR, config: { ...ON, autonomy: false, mischief: true } });
+  off.runtime.debugPlay("fetch", { variant: "fetchDuckLeft" });
+  const t2 = off.runtime.pickRoamTarget(BAND_ARGS);
+  off.runtime.noteWalkFinished({ preferred: true, mischief: t2.mischief, reachedEdgeDistancePx: 0 });
+  runCommitting(off, 20000);
+  off.mode = "none";
+  off.runtime.tick();
+  off.mode = "roam";
+  assert.equal(off.runtime.getRoamDelayMs(false, 4000), 4000);
+});
+
 test("FETCH_OBJECTS has one definition", () => {
   assert.equal(require("../src/companion-scenes").FETCH_OBJECTS, require("../src/theme-schema").FETCH_OBJECTS);
 });
