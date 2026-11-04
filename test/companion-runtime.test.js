@@ -1717,6 +1717,113 @@ test("walk variants never consume randomness without their art or with the featu
   }
 });
 
+// ---- polish: roam waits for companion visuals (item 10) ----
+
+test("holdsRoam covers the send, the playback and a 1.5 s breather afterwards", () => {
+  const env = setup();
+  env.mode = "none";
+  env.theme = themeWith([...ALL_KEYS]);
+  env.runtime.configure({ ...ON, personality: "playful" });
+  assert.equal(env.runtime.holdsRoam(), false);
+  env.runtime.handleGesture("hover-dwell"); // greet
+  assert.equal(env.sends.length, 1);
+  assert.equal(env.runtime.holdsRoam(), true, "uncommitted send");
+  env.commitLast();
+  env.clock.advance(2000);
+  assert.equal(env.runtime.holdsRoam(), true, "playing");
+  env.clock.advance(1500); // greet ends at 3500 (beat clamp)
+  assert.equal(env.runtime.isAnimating(), false);
+  assert.equal(env.runtime.holdsRoam(), true, "breather");
+  env.clock.advance(1499);
+  assert.equal(env.runtime.holdsRoam(), true);
+  env.clock.advance(1);
+  assert.equal(env.runtime.holdsRoam(), false);
+  assert.equal(env.clock.pendingTimers, 0, "the breather needs no timer");
+
+  // An abandoned send (not committed) also breathes.
+  env.clock.advance(60000);
+  env.runtime.handleGesture("hover-dwell");
+  const last = env.sends[env.sends.length - 1];
+  last.opts.onLogicalSettlement({ status: "dropped" });
+  assert.equal(env.runtime.isAnimating(), false);
+  assert.equal(env.runtime.holdsRoam(), true);
+  env.clock.advance(1500);
+  assert.equal(env.runtime.holdsRoam(), false);
+
+  // Feature off: never holds.
+  env.runtime.configure({ ...ON, enabled: false });
+  assert.equal(env.runtime.holdsRoam(), false);
+});
+
+test("holdsRoam covers a petting session without a visual", () => {
+  const env = setup();
+  env.gate = false; // petting registers but cannot paint
+  env.runtime.configure(ON);
+  env.runtime.handleGesture("pet-start");
+  assert.equal(env.sends.length, 0);
+  assert.equal(env.runtime.holdsRoam(), true);
+  env.runtime.handleGesture("pet-end");
+  assert.equal(env.runtime.holdsRoam(), true, "breather after the session");
+  env.clock.advance(1500);
+  assert.equal(env.runtime.holdsRoam(), false);
+});
+
+test("holdsRoam stays true across scene parts and event switches", () => {
+  const env = setup();
+  env.mode = "none";
+  env.theme = themeWith([...ALL_KEYS, ...MISCHIEF_KEYS]);
+  env.runtime.configure(MON);
+  env.runtime.handleGesture("hover-dwell"); // catch
+  const seen = [];
+  const watch = () => seen.push(env.runtime.holdsRoam());
+  watch();
+  env.commitLast();
+  env.clock.advance(500);
+  env.runtime.handleGesture("hover-move"); // catch -> catchMiss, same tick
+  watch();
+  env.commitLast();
+  for (let t = 0; t < 3000; t += 100) { env.clock.advance(100); watch(); }
+  assert.ok(seen.every(Boolean), JSON.stringify(seen));
+
+  // Fake nap loops part after part, then boo: never a gap.
+  const nap = setup();
+  nap.theme = themeWith(["fakeNap", "boo"]);
+  nap.runtime.configure({ ...MON, personality: "playful" });
+  tickUntilBeat(nap);
+  const gaps = [];
+  for (let t = 0; t < 12000; t += 250) {
+    if (nap.sends.length && !nap.sends[nap.sends.length - 1].c) {
+      nap.sends[nap.sends.length - 1].c = true;
+      nap.commitLast();
+    }
+    nap.clock.advance(250);
+    if (!nap.runtime.holdsRoam()) gaps.push(t);
+  }
+  assert.ok(nap.sends.length > 2, "the nap looped");
+  assert.deepEqual(gaps, []);
+});
+
+test("holdsRoam covers the welcome queue and an arrival scene", () => {
+  const env = setup();
+  env.theme = themeWith(["welcome"]);
+  env.runtime.configure(MON);
+  env.gate = false;
+  env.runtime.noteIdleEntered({ from: "sleep", awayMs: 9e6 });
+  assert.equal(env.runtime.holdsRoam(), true, "welcome waits for the gate");
+  env.clock.advance(61000);
+  env.runtime.tick(null); // the queue expires
+  assert.equal(env.runtime.holdsRoam(), false);
+
+  const edge = setup();
+  edge.theme = themeWith(["sitEdge"]);
+  edge.runtime.configure(MON);
+  tickUntilBeat(edge, 200000);
+  const target = edge.runtime.pickRoamTarget(BAND_ARGS);
+  edge.runtime.noteWalkFinished({ preferred: true, mischief: target.mischief, reachedEdgeDistancePx: 0 });
+  assert.equal(edge.sends.length, 1);
+  assert.equal(edge.runtime.holdsRoam(), true, "the arrival scene holds the next walk");
+});
+
 test("mischief off reproduces the 40b54948 golden runs exactly", () => {
   // Golden produced by test/fixtures/companion-alive-script.js against the
   // pre-mischief runtime (40b54948); every new input is fed, mischief is off.

@@ -69,6 +69,8 @@ const EDGE_WALKS = new Set(["reachClose", "wall", "sitEdge"]); // skip roam's ma
 const IDLE_QUEUE_MAX_WAIT_MS = 60000; // welcome / stretch wait this long for the gate
 const PENDING_WALK_MAX_MS = 120000; // a walk the roam never asked for (or cut) is dropped
 const LONG_WORK_MS = 600000;
+// After any companion visual ends roam waits this long before a new walk.
+const ROAM_BREATHER_MS = 1500;
 // Walk variant chances per walk (Ruling P6).
 const WALK_TIRED_CHANCE = 0.6; // energy below REST_ENERGY_THRESHOLD
 const WALK_BOUNCY_PLAYFUL_CHANCE = 0.4;
@@ -142,6 +144,7 @@ function createCompanionRuntime(options = {}) {
   // After an edge scene (reachClose, wall, sitEdge) the pet walks back into
   // the margin band soon: one short pause, then one normal roam target.
   let returnWalk = false;
+  let breatherUntil = 0; // roam holds until then after a visual / petting ended
 
   const memoryOn = () => config.enabled && config.memory;
   const autonomous = () => config.enabled && config.autonomy;
@@ -201,7 +204,12 @@ function createCompanionRuntime(options = {}) {
 
   // Drop the current playback. Restores idle only when our visual is still the
   // one on screen and the logical state is idle.
+  function startBreather() {
+    breatherUntil = now() + ROAM_BREATHER_MS;
+  }
+
   function stopPlayback(restore) {
+    if (playing) startBreather();
     if (playing && playing.kind === "scene") noteSceneEnded(playing.scene);
     const shouldRestore = restore && isAnimating() && getCurrentState() === "idle";
     const wasBeat = playing && (playing.kind === "beat" || playing.kind === "scene");
@@ -223,6 +231,7 @@ function createCompanionRuntime(options = {}) {
   function finish(attempt) {
     clearPlayTimer();
     if (playing !== attempt) return;
+    startBreather(); // a next part / petting loop replays right away anyway
     const stillOurs = getCurrentState() === "idle" && isVisualGenerationCurrent(attempt.visualGeneration);
     if (attempt.kind === "scene") {
       playing = null;
@@ -780,6 +789,7 @@ function createCompanionRuntime(options = {}) {
     clearPetTimer();
     if (!petSession) return;
     petSession = false;
+    startBreather();
     if (playing && playing.kind === "petting") stopPlayback(true);
   }
 
@@ -862,6 +872,19 @@ function createCompanionRuntime(options = {}) {
       petSession = true;
       startPetVisual();
     }
+  }
+
+  // Roam's isCompanionPlaying gate: true from the send of any companion
+  // visual (committed or not), across scene parts and event switches, during
+  // a petting session even without a visual, while a welcome / stretch waits
+  // for the gate, and for ROAM_BREATHER_MS after any of these ended. Pure
+  // check of in-memory state (no timer); always false with the feature off.
+  function holdsRoam() {
+    if (disposed || !config.enabled) return false;
+    if (isAnimating() || petSession) return true;
+    const t = now();
+    if (idleQueue && mischiefOn() && t - idleQueue.at <= IDLE_QUEUE_MAX_WAIT_MS) return true;
+    return t < breatherUntil;
   }
 
   // ---- lifecycle ----
@@ -965,6 +988,7 @@ function createCompanionRuntime(options = {}) {
     onPreferredTargetDiscarded,
     noteIdleEntered,
     isAnimating: () => !disposed && isAnimating(),
+    holdsRoam,
     cancel,
     reset,
     dispose,

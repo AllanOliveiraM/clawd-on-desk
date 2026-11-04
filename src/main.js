@@ -5858,7 +5858,8 @@ const _roamCtx = {
   isIdleActivityPlaying: () => _idleActivity.isAnimating(),
   // Clawd Alive (optional roam hooks; the companion answers "original path"
   // unless it is enabled and autonomous). Roam keeps every bounds write.
-  isCompanionPlaying: () => _companion.isAnimating(),
+  // Holds through scene parts, petting, a queued welcome and a 1.5 s breather.
+  isCompanionPlaying: () => _companion.holdsRoam(),
   getRoamDelayMs: (isFirst, baseMs) => _companion.getRoamDelayMs(isFirst, baseMs),
   pickPreferredTarget: (args) => _companion.pickRoamTarget(args),
   onWalkFinished: (info) => _companion.noteWalkFinished(info),

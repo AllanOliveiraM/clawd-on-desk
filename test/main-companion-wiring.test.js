@@ -211,7 +211,9 @@ it("roam ctx isIdleActivityPlaying includes companion", () => {
   // The idle-activity line stays byte-identical; the companion beat gets its
   // own gate right next to it (both hold walks).
   assert.ok(roamCtx.includes("isIdleActivityPlaying: () => _idleActivity.isAnimating(),"));
-  assert.ok(roamCtx.includes("isCompanionPlaying: () => _companion.isAnimating(),"));
+  // Walks wait for any companion visual, petting session, queued welcome and
+  // the short breather after them (holdsRoam), not only a playing visual.
+  assert.ok(roamCtx.includes("isCompanionPlaying: () => _companion.holdsRoam(),"));
   assert.ok(roamCtx.includes("getRoamDelayMs: (isFirst, baseMs) => _companion.getRoamDelayMs(isFirst, baseMs),"));
   assert.ok(roamCtx.includes("pickPreferredTarget: (args) => _companion.pickRoamTarget(args),"));
   assert.ok(roamCtx.includes("onWalkFinished: (info) => _companion.noteWalkFinished(info),"));
