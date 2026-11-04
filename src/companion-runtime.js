@@ -41,7 +41,11 @@ const {
   walkEdgeDistance,
   SPOT_TOLERANCE_RATIO,
 } = require("./companion-scenes");
-const { createArt } = require("./companion-geometry");
+const { createArt, POUNCE_STRIKE_TIP } = require("./companion-geometry");
+
+const sided = (base, side) => base + (side === "left" ? "Left" : "Right");
+// The cursor counts as at the strike's arm height within this fraction of H.
+const POUNCE_TIP_TOLERANCE_RATIO = 0.15;
 
 const BEAT_DEFAULT_DURATION_MS = 3500;
 const BEAT_MIN_DURATION_MS = 2000;
@@ -369,7 +373,7 @@ function createCompanionRuntime(options = {}) {
     }
     if (idleQueue && t - idleQueue.at > IDLE_QUEUE_MAX_WAIT_MS) idleQueue = null;
     syncNap();
-    const hit = brain.observeCursor(cursor);
+    const hit = brain.observeCursor(withPounceZone(cursor));
     if (playing || petSession) {
       if (hit && hit.id === "boo") tryBoo();
       return true;
@@ -390,6 +394,31 @@ function createCompanionRuntime(options = {}) {
       if (keys.has("pokeLeft") || keys.has("pokeRight")) pendingWalk = { id: "poke", at: t, target: hit.target };
     }
     return false;
+  }
+
+  // Strike reach (Ruling P1) from the window bounds of the sample: the
+  // visible hand-tip lines of the pounce strike art and its arm height, so
+  // only a cursor the strike can actually reach triggers it. Without bounds
+  // or placeable art the brain keeps its band around the pet.
+  function withPounceZone(cursor) {
+    const b = cursor && cursor.petBounds;
+    if (!b || ![b.x, b.y, b.width, b.height].every(isNum)) return cursor;
+    const art = createArt(getTheme(), { width: b.width, height: b.height });
+    const keyFor = (side) => (art.has(sided("pounceStrike", side)) ? sided("pounceStrike", side) : sided("pounce", side));
+    const leftKey = keyFor("left");
+    const rightKey = keyFor("right");
+    const left = art.point(leftKey, POUNCE_STRIKE_TIP.u, POUNCE_STRIKE_TIP.v);
+    const right = art.point(rightKey, art.mirrorU(rightKey, POUNCE_STRIKE_TIP.u), POUNCE_STRIKE_TIP.v);
+    if (!left || !right) return cursor;
+    return {
+      ...cursor,
+      pounceZone: {
+        leftX: b.x + left.x,
+        rightX: b.x + right.x,
+        tipY: b.y + left.y,
+        tolY: POUNCE_TIP_TOLERANCE_RATIO * b.height,
+      },
+    };
   }
 
   // Autonomous mischief on a due beat. A walking one becomes a pending walk

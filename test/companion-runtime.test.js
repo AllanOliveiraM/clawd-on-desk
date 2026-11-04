@@ -944,6 +944,29 @@ test("pounce plays the side-correct file", () => {
   }
 });
 
+test("pounce triggers inside the strike reach and plays the strike art", () => {
+  // Window 100x100 at (450, 400); idle hit rect x 475.35..524.65. Strike tips
+  // (u -9 / 24, v 9.6): x 452.15 / 547.85 at y 473.54, +/- 15 px (0.15 H).
+  const petBounds = { x: 450, y: 400, width: 100, height: 100 };
+  const petRect = { x: 475.35, y: 434.15, width: 49.3, height: 34.8 };
+  const at = (x, y) => ({ x, y, petRect, overPet: false, petBounds });
+  const run = (keys, x, y) => {
+    const env = setup();
+    env.mode = "none";
+    env.theme = geoTheme(keys);
+    env.runtime.configure({ ...MON, personality: "playful" });
+    tickWithCursor(env, at(x, y), 3000);
+    return env.sends.map((send) => send.file);
+  };
+  const STRIKE = ["pounceStrikeLeft", "pounceStrikeRight", "pounceLeft", "pounceRight"];
+  assert.deepEqual(run(STRIKE, 460, 480), ["pounceStrikeLeft.svg"]);
+  assert.deepEqual(run(STRIKE, 540, 465), ["pounceStrikeRight.svg"]);
+  assert.deepEqual(run(["pounceLeft", "pounceRight"], 460, 480), ["pounceLeft.svg"], "falls back to pounce<Side>");
+  // Old band, beyond the reach / off the arm height: nothing.
+  assert.deepEqual(run(STRIKE, 420, 474), []);
+  assert.deepEqual(run(STRIKE, 460, 500), []);
+});
+
 test("fake nap loops until cursor approach then boo", () => {
   const env = setup();
   env.theme = themeWith(["fakeNap", "boo"]);

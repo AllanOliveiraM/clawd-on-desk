@@ -2077,17 +2077,19 @@ describe("tick companion coordination", () => {
 
     const s = withCompanion.samples;
     const petRect = { x: 0, y: 0, width: 120, height: 120 };
+    // The window bounds read with that hit rect (strike reach geometry).
+    const petBounds = { x: 0, y: 0, width: 120, height: 120 };
     assert.ok(withCompanion.still > 2);
     for (const sample of s.slice(0, withCompanion.still)) {
-      assert.deepStrictEqual(sample, { x: 300, y: 260, petRect, overPet: false });
+      assert.deepStrictEqual(sample, { x: 300, y: 260, petRect, overPet: false, petBounds });
     }
-    assert.deepStrictEqual(s[withCompanion.overStart - 1], { x: 50, y: 60, petRect, overPet: true });
+    assert.deepStrictEqual(s[withCompanion.overStart - 1], { x: 50, y: 60, petRect, overPet: true, petBounds });
     // The pet moved during the walk: never the stale rect.
     const moved = { x: 500, y: 400, width: 120, height: 120 };
     for (const sample of s.slice(withCompanion.afterWalk - 1)) {
       assert.ok(sample === null || JSON.stringify(sample.petRect) === JSON.stringify(moved), JSON.stringify(sample));
     }
-    assert.deepStrictEqual(s[s.length - 1], { x: 50, y: 60, petRect: moved, overPet: false });
+    assert.deepStrictEqual(s[s.length - 1], { x: 50, y: 60, petRect: moved, overPet: false, petBounds });
 
     // No bounds read yet in this idle period (eye tracking off, cursor still):
     // the sample is null.

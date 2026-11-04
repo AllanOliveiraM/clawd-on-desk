@@ -25,6 +25,8 @@ let roamWasActive = false;
 // stretch (dropped whenever the pet may have moved), and the non-idle period
 // since idle was last left, classified for the companion's idle entry.
 let companionPetRect = null;
+// Window bounds read together with companionPetRect (strike reach geometry).
+let companionPetBounds = null;
 let awaySince = null;
 let awaySawSleep = false;
 let awaySawWork = false;
@@ -316,7 +318,9 @@ function companionCursorSample(cursor) {
   if (!r || !cursor) return null;
   const overPet = cursor.x >= r.x && cursor.x <= r.x + r.width
     && cursor.y >= r.y && cursor.y <= r.y + r.height;
-  return { x: cursor.x, y: cursor.y, petRect: { ...r }, overPet };
+  const sample = { x: cursor.x, y: cursor.y, petRect: { ...r }, overPet };
+  if (companionPetBounds) sample.petBounds = { ...companionPetBounds };
+  return sample;
 }
 
 function shouldSuppressPassiveIpc() {
@@ -348,7 +352,10 @@ function runMainTickOnce() {
     const cameFromWalk = enteredIdle && roamWasActive;
     if (!idleNow) noteAwayState(ctx.currentState);
     // The pet may move outside idle (walks, drags, mini): re-read its rect.
-    if (!idleNow || ctx.dragLocked) companionPetRect = null;
+    if (!idleNow || ctx.dragLocked) {
+      companionPetRect = null;
+      companionPetBounds = null;
+    }
     // #1276: eye tracking off parks the gaze forward. Only the follow IPC is
     // suppressed — the rest of the idle machinery (sleep sequence, idle-look,
     // pointer-over-pet) keeps running, and themes with a dizzy state still get
@@ -424,6 +431,7 @@ function runMainTickOnce() {
       ctx.mouseOverPet = over;
       if (idleNow) {
         companionPetRect = { x: hit.left, y: hit.top, width: hit.right - hit.left, height: hit.bottom - hit.top };
+        companionPetBounds = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
       }
     }
 

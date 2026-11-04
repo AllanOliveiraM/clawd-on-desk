@@ -96,6 +96,40 @@ test("leaving the band resets the pounce clock", () => {
   assert.equal(brain.observeCursor(sample(1200, 550)), null);
 });
 
+// Strike reach (Ruling P1): RECT spans x 1000..1100; the strike hand tips
+// reach x 960 (left) / 1140 (right) at tip height y 540, +/- 20 px.
+const ZONE = { leftX: 960, rightX: 1140, tipY: 540, tolY: 20 };
+function zoned(x, y, over) {
+  return sample(x, y, { pounceZone: ZONE, ...over });
+}
+
+test("with a strike zone only a cursor inside the arm reach pounces", () => {
+  for (const [x, y, side] of [[970, 545, "left"], [960, 520, "left"], [1130, 560, "right"], [1140, 540, "right"]]) {
+    const { brain, clock } = make();
+    assert.equal(brain.observeCursor(zoned(x, y)), null);
+    clock.t += 2600;
+    assert.deepEqual(brain.observeCursor(zoned(x, y)), { id: "pounce", side }, `${x},${y}`);
+  }
+  // In the old 40..220 px band but beyond the reach, or off the arm height.
+  for (const [x, y] of [[900, 545], [1200, 540], [970, 570], [1130, 515]]) {
+    const { brain, clock } = make();
+    brain.observeCursor(zoned(x, y));
+    clock.t += 2600;
+    assert.equal(brain.observeCursor(zoned(x, y)), null, `${x},${y}`);
+  }
+});
+
+test("leaving the strike zone resets the pounce clock", () => {
+  const { brain, clock } = make();
+  brain.observeCursor(zoned(970, 540));
+  clock.t += 2000;
+  brain.observeCursor(zoned(900, 540));
+  clock.t += 600;
+  assert.equal(brain.observeCursor(zoned(970, 540)), null);
+  clock.t += 2600;
+  assert.deepEqual(brain.observeCursor(zoned(970, 540)), { id: "pounce", side: "left" });
+});
+
 test("cursor over the pet never pounces", () => {
   const { brain, clock } = make();
   brain.observeCursor(sample(1050, 550, { overPet: true }));

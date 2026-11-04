@@ -61,8 +61,11 @@ function sceneSpec(id, opts, hasKey, random) {
         parts: [{ key: bucketKey("catch", opts.bucket, hasKey) }],
         on: { "hover-move": [{ key: bucketKey("catchMiss", opts.bucket, hasKey) }] },
       };
-    case "pounce":
-      return { parts: [{ key: sided("pounce", opts.side) }] };
+    case "pounce": {
+      // The long-reach strike when the theme has it, else the short pounce.
+      const strike = sided("pounceStrike", opts.side);
+      return { parts: [{ key: hasKey(strike) ? strike : sided("pounce", opts.side) }] };
+    }
     case "poke":
       return { parts: [{ key: sided("poke", opts.side) }] };
     case "fakeNap":

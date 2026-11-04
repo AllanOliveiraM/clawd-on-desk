@@ -122,6 +122,21 @@ function distanceToCenter(x, y, rect) {
   return Math.hypot(x - (rect.x + rect.width / 2), y - (rect.y + rect.height / 2));
 }
 
+// Strike zone: { leftX, rightX } hand-tip lines, { tipY, tolY } arm height.
+function validZone(zone) {
+  return zone && [zone.leftX, zone.rightX, zone.tipY, zone.tolY].every(Number.isFinite) && zone.tolY >= 0
+    ? zone
+    : null;
+}
+
+// "left" / "right" when (x, y) is inside the strike reach on that side.
+function strikeSide(x, y, rect, zone) {
+  if (Math.abs(y - zone.tipY) > zone.tolY) return null;
+  if (x >= zone.leftX && x < rect.x) return "left";
+  if (x > rect.x + rect.width && x <= zone.rightX) return "right";
+  return null;
+}
+
 function createMischiefBrain(options) {
   const opts = options || {};
   const now = typeof opts.now === "function" ? opts.now : Date.now;
@@ -211,13 +226,19 @@ function createMischiefBrain(options) {
     }
     booFired = false;
 
-    // Pounce: lurking in the band around the pet, outside it, continuously.
-    if (!sample.overPet && edge >= POUNCE_MIN_PX && edge <= POUNCE_MAX_PX) {
+    // Pounce: lurking within the strike arm's reach, continuously. With a
+    // strike zone (Ruling P1) that is between the visible hand-tip line and
+    // the pet, at arm height; without one, the old band around the pet.
+    const zone = validZone(sample.pounceZone);
+    const lurking = zone
+      ? !sample.overPet && strikeSide(x, y, petRect, zone) !== null
+      : !sample.overPet && edge >= POUNCE_MIN_PX && edge <= POUNCE_MAX_PX;
+    if (lurking) {
       if (bandSince === null) bandSince = t;
       if (!pounceFired && t - bandSince >= POUNCE_DWELL_MS) {
         pounceFired = true;
         const cx = petRect.x + petRect.width / 2;
-        return { id: "pounce", side: x < cx ? "left" : "right" };
+        return { id: "pounce", side: zone ? strikeSide(x, y, petRect, zone) : (x < cx ? "left" : "right") };
       }
     } else {
       bandSince = null;
