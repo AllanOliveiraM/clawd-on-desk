@@ -2720,19 +2720,49 @@ function getUpdateBubbleAnchorRect(bounds) { return petWindowRuntime.getUpdateBu
 function getSessionHudAnchorRect(bounds) { return petWindowRuntime.getSessionHudAnchorRect(bounds); }
 
 // ── Main tick — delegated to src/tick.js ──
-// ── Clawd Alive: XWayland cursor trust (spec 2026-11-04 §4) ──
-// Under XWayland the cursor is only real over this app's windows; the tick
-// hands the companion a null sample elsewhere. X11, Windows and macOS trust
-// every read. Bounds are read at sample time (cached per point for 1 s).
+// ── Clawd Alive: XWayland cursor trust (spec 2026-11-04 §4, Ruling N2) ──
+// Under XWayland the cursor is only real over this app's windows and stays
+// frozen at the last point inside one of them; the tick hands the companion
+// a null sample for an untrusted read. The transparent render pet window is
+// no trust surface (the hit window stands for the pet); Settings and
+// Dashboard are trusted while the pointer is inside (they report leaving);
+// other windows only while the point moves. X11, Windows and macOS trust
+// every read. The window list is read at sample time (cached 1 s).
+function companionPinnedTrustWindows() {
+  const out = new Set();
+  try {
+    const settings = settingsWindowRuntime.getWindow();
+    if (settings) out.add(settings);
+  } catch {}
+  try {
+    const dashboard = _dashboard ? _dashboard.getWindow() : null;
+    if (dashboard) out.add(dashboard);
+  } catch {}
+  return out;
+}
 const _cursorTrust = require("./cursor-trust").createCursorTrust({
   enabled: require("./linux-ozone").isXWaylandSession({
     platform: process.platform,
     env: process.env,
     ozonePlatform: app.commandLine.getSwitchValue("ozone-platform"),
   }),
-  getWindowBounds: () => BrowserWindow.getAllWindows()
-    .filter((w) => w && !w.isDestroyed() && w.isVisible() && !w.isMinimized())
-    .map((w) => w.getBounds()),
+  getWindows: () => {
+    const pinned = companionPinnedTrustWindows();
+    return BrowserWindow.getAllWindows()
+      .filter((w) => w && w !== win && !w.isDestroyed() && w.isVisible() && !w.isMinimized())
+      .map((w) => ({ bounds: w.getBounds(), pinned: pinned.has(w) }));
+  },
+});
+// Settings / Dashboard report the pointer leaving their window (no payload);
+// only their own renderers are heard.
+ipcMain.on("companion:pointer-left", (event) => {
+  if (!_cursorTrust.enabled || !event || !event.sender) return;
+  for (const w of companionPinnedTrustWindows()) {
+    if (!w.isDestroyed() && w.webContents === event.sender) {
+      _cursorTrust.notePointerLeft();
+      return;
+    }
+  }
 });
 const _tickCtx = {
   isCursorTrusted: (point) => _cursorTrust.isTrusted(point),
@@ -6127,6 +6157,8 @@ const _companion = require("./companion-runtime").createCompanionRuntime({
   // A test walk: stop a walk in progress and re-arm roam's pause, so the
   // pending walk starts at roam's shortest pause.
   interruptRoam: () => _roam.cancelRoam(),
+  // XWayland: searchMouse looks for the cursor after 30 s instead of 10 min.
+  xwayland: _cursorTrust.enabled,
   getDisplayWorkArea: (displayId) => {
     try {
       const display = screen.getAllDisplays().find((d) => d.id === displayId);

@@ -165,8 +165,10 @@ function isXWaylandSession(options = {}) {
   if (platform !== "linux") return false;
   if (String(options.ozonePlatform || "").trim().toLowerCase() !== "x11") return false;
   const env = options.env || process.env;
+  // The session type wins when set; WAYLAND_DISPLAY is only the fallback.
   const sessionType = String(env.XDG_SESSION_TYPE || "").trim().toLowerCase();
-  return sessionType === "wayland" || !!String(env.WAYLAND_DISPLAY || "").trim();
+  if (sessionType) return sessionType === "wayland";
+  return !!String(env.WAYLAND_DISPLAY || "").trim();
 }
 
 module.exports = {

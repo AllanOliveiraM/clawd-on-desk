@@ -134,6 +134,7 @@ function companionHarness(prefs = {}) {
     sendToHitWin: (...args) => hitSends.push(JSON.parse(JSON.stringify(args))),
     console: { warn() {} },
     process: { platform: process.platform },
+    _cursorTrust: { enabled: "xwayland-flag" },
   };
   vm.runInNewContext(`${companionSource}\nthis._companionOut = _companion;\nthis._isPetGesturesEnabled = isPetGesturesEnabled;`, ctx);
   return {
@@ -436,6 +437,48 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
   const trust = slice("// ── Clawd Alive: XWayland cursor trust", "const _tickCtx = {");
   assert.match(trust, /enabled: require\("\.\/linux-ozone"\)\.isXWaylandSession\(\{/);
   assert.match(trust, /ozonePlatform: app\.commandLine\.getSwitchValue\("ozone-platform"\),/);
-  assert.match(trust, /BrowserWindow\.getAllWindows\(\)\n\s+\.filter\(\(w\) => w && !w\.isDestroyed\(\) && w\.isVisible\(\) && !w\.isMinimized\(\)\)\n\s+\.map\(\(w\) => w\.getBounds\(\)\),/);
   assert.ok(!/setInterval|setTimeout/.test(trust), "no polling");
+  assert.equal(companionHarness().runtimeOptions.xwayland, "xwayland-flag");
+
+  // Window list and leave reports, run against fakes.
+  let left = 0;
+  const handlers = new Map();
+  const mk = (name, bounds, extra = {}) => ({
+    name, webContents: { id: name }, isDestroyed: () => false, isVisible: () => true, isMinimized: () => false,
+    getBounds: () => bounds, ...extra,
+  });
+  const render = mk("render", { x: 0, y: 0, width: 500, height: 500 });
+  const hit = mk("hit", { x: 200, y: 200, width: 100, height: 100 });
+  const settings = mk("settings", { x: 900, y: 0, width: 400, height: 600 });
+  const dashboard = mk("dashboard", { x: 1400, y: 0, width: 400, height: 600 });
+  const hud = mk("hud", { x: 600, y: 700, width: 200, height: 50 });
+  const hidden = mk("hidden", { x: 0, y: 0, width: 9, height: 9 }, { isVisible: () => false });
+  let trustOptions = null;
+  const ctx = {
+    require: (id) => {
+      if (id === "./cursor-trust") {
+        return { createCursorTrust: (options) => { trustOptions = options; return { enabled: true, notePointerLeft: () => { left += 1; } }; } };
+      }
+      if (id === "./linux-ozone") return { isXWaylandSession: () => true };
+      throw new Error(id);
+    },
+    process: { platform: "linux", env: {} },
+    app: { commandLine: { getSwitchValue: () => "x11" } },
+    BrowserWindow: { getAllWindows: () => [render, hit, settings, dashboard, hud, hidden] },
+    win: render,
+    settingsWindowRuntime: { getWindow: () => settings },
+    _dashboard: { getWindow: () => dashboard },
+    ipcMain: { on: (channel, fn) => handlers.set(channel, fn) },
+  };
+  vm.runInNewContext(trust, ctx);
+  const listed = trustOptions.getWindows().map((w) => [w.bounds.x, w.pinned]);
+  assert.deepEqual(JSON.parse(JSON.stringify(listed)), [[200, false], [900, true], [1400, true], [600, false]]);
+  const onLeft = handlers.get("companion:pointer-left");
+  onLeft({ sender: hud.webContents });
+  onLeft({ sender: { id: "settings" } });
+  onLeft(null);
+  assert.equal(left, 0, "only the Settings / Dashboard renderers are heard");
+  onLeft({ sender: settings.webContents });
+  onLeft({ sender: dashboard.webContents });
+  assert.equal(left, 2);
 });
