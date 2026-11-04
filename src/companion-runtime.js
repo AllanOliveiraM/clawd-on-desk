@@ -174,10 +174,41 @@ function createCompanionRuntime(options = {}) {
     xwayland = false,
     store = null,
     random = Math.random,
-    now = Date.now,
+    now: rawNow = Date.now,
     setTimeout: setTimer = setTimeout,
     clearTimeout: clearTimer = clearTimeout,
   } = options;
+
+  // Every clock read goes through here: when the clock goes backwards (NTP,
+  // manual change) every stored deadline and stamp that is now ahead of the
+  // clock is pulled back to it, so nothing stays "in the future" for the
+  // length of the jump (Rulings R2/R3). A forward jump changes nothing.
+  let lastNow = null;
+  function now() {
+    const t = rawNow();
+    if (isNum(t)) {
+      if (lastNow !== null && t < lastNow) rebaseClock(t);
+      lastNow = t;
+    }
+    return t;
+  }
+  function rebaseClock(t) {
+    const cap = (v) => (isNum(v) && v > t ? t : v);
+    breatherUntil = cap(breatherUntil);
+    nextBeatAt = cap(nextBeatAt);
+    lastTrustedCursorAt = cap(lastTrustedCursorAt);
+    hoverReadyAt = cap(hoverReadyAt);
+    for (const key of Object.keys(cooldownUntil)) cooldownUntil[key] = cap(cooldownUntil[key]);
+    if (idleQueue) idleQueue.at = cap(idleQueue.at);
+    if (pendingWalk) pendingWalk.at = cap(pendingWalk.at);
+    if (walkingMischief) walkingMischief.at = cap(walkingMischief.at);
+    state = {
+      ...state,
+      lastAdvanceAt: cap(state.lastAdvanceAt),
+      lastInteractionAt: cap(state.lastInteractionAt),
+      streak: state.streak ? { ...state.streak, at: cap(state.streak.at) } : state.streak,
+    };
+  }
 
   const config = {
     enabled: false, personality: "balanced", autonomy: true, interactions: true, memory: true, mischief: false,
@@ -604,6 +635,7 @@ function createCompanionRuntime(options = {}) {
 
   function tick(cursor, info) {
     if (disposed) return;
+    if (debugWalkFile && getIdleMode() !== "roam") debugWalkFile = null;
     noteCursorTrust(cursor, info);
     if (!mischiefOn()) tidyDebugWalks();
     if (mischiefOn() && mischiefTick(cursor)) return;
@@ -777,14 +809,17 @@ function createCompanionRuntime(options = {}) {
       held = { episode: info.episode, byTier: new Map() };
       workPicks.set(state, held);
     }
-    if (held.byTier.has(tier)) return held.byTier.get(tier);
     const files = Array.isArray(tier.files) ? tier.files.filter((f) => typeof f === "string" && f) : [];
     const variants = Array.isArray(tier.variants) ? tier.variants.filter((f) => typeof f === "string" && f) : [];
+    // Keyed by what the tier says, not by object identity: a theme reload
+    // builds new, equal objects and must not re-roll the episode.
+    const signature = JSON.stringify([tier.minSessions, files, variants]);
+    if (held.byTier.has(signature)) return held.byTier.get(signature);
     const pickOne = (list) => (list.length === 1 ? list[0] : pickFrom(list, random));
     let file = null;
     if (variants.length > 0 && random() < WORK_VARIANT_CHANCE) file = pickOne(variants);
     else if (files.length > 0) file = pickOne(files);
-    held.byTier.set(tier, file);
+    held.byTier.set(signature, file);
     return file;
   }
 
@@ -1372,6 +1407,8 @@ function createCompanionRuntime(options = {}) {
   }
 
   function stopEverything() {
+    debugWalkFile = null;
+    workPicks.clear();
     clearPetTimer();
     petSession = false;
     stopPlayback(true);
