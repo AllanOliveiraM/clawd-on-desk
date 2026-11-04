@@ -22662,6 +22662,7 @@ describe("settings animation overrides: Clawd Alive companion cards", () => {
     assert.strictEqual(greetRow.querySelectorAll(".anim-override-toggle-row").length, 0);
     const petRange = rowFor("companion:pettingIn").querySelectorAll("input").find((input) => input.type === "range");
     assert.strictEqual(petRange.min, "100");
+    assert.strictEqual(petRange.max, "8000");
     assert.strictEqual(petRange.value, "250");
     assert.strictEqual(rowFor("companion:walkBouncy").querySelectorAll(".anim-override-slider-label").length, 0);
   });

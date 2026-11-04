@@ -26,6 +26,11 @@ const {
 } = require("./custom-applications");
 const { isPlainObject } = require("./theme-loader");
 const { COMPANION_ANIMATION_KEYS } = require("./theme-schema");
+const {
+  COMPANION_NO_DURATION_KEYS,
+  COMPANION_DURATION_MIN_MS,
+  COMPANION_DURATION_MAX_MS,
+} = require("./companion-override-slots");
 const { normalizeShortcuts, getDefaultShortcuts } = require("./shortcut-actions");
 const {
   DEFAULT_TIMEOUT_MS: PERMISSION_REVIEW_DEFAULT_TIMEOUT_MS,
@@ -1429,7 +1434,15 @@ function normalizeCompanionOverridesMap(value) {
     if (typeof cleanEntry.sourceThemeId === "string" && companionEntry.file) {
       companionEntry.sourceThemeId = cleanEntry.sourceThemeId;
     }
-    if (typeof cleanEntry.durationMs === "number" && cleanEntry.durationMs > 0) {
+    // Like drag for reactions: keys whose length the runtime never reads lose
+    // any durationMs, and the rest keep it only inside the Settings range (an
+    // unbounded value would overflow the companion's timers).
+    if (
+      !COMPANION_NO_DURATION_KEYS.has(key)
+      && typeof cleanEntry.durationMs === "number"
+      && cleanEntry.durationMs >= COMPANION_DURATION_MIN_MS
+      && cleanEntry.durationMs <= COMPANION_DURATION_MAX_MS
+    ) {
       companionEntry.durationMs = cleanEntry.durationMs;
     }
     if (Object.keys(companionEntry).length > 0) out[key] = companionEntry;

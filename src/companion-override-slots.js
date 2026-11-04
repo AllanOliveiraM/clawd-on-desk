@@ -53,9 +53,9 @@ const COMPANION_NO_DURATION_KEYS = new Set([
 ]);
 
 // The themes author intros as short as 250 ms, below the 500 ms floor of the
-// state / idle / reaction cards.
+// state / idle / reaction cards; the runtime clamps beats to 8 s.
 const COMPANION_DURATION_MIN_MS = 100;
-const COMPANION_DURATION_MAX_MS = 60000;
+const COMPANION_DURATION_MAX_MS = 8000;
 
 const COMPANION_KEY_SET = new Set(COMPANION_ANIMATION_KEYS);
 

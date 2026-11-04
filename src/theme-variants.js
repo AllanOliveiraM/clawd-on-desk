@@ -11,6 +11,11 @@ const {
   mergeFileHitBoxes,
   VISUAL_FALLBACK_STATES,
 } = require("./theme-schema");
+const {
+  COMPANION_NO_DURATION_KEYS,
+  COMPANION_DURATION_MIN_MS,
+  COMPANION_DURATION_MAX_MS,
+} = require("./companion-override-slots");
 
 // Allow-list of fields a variant may override. Anything else is ignored with a
 // warning so author typos are visible without breaking theme load.
@@ -326,7 +331,12 @@ function applyUserOverridesPatch(raw, overrides) {
         delete nextEntry.file;
         nextEntry.files = [entry.file];
       }
-      if (Number.isFinite(entry.durationMs) && entry.durationMs > 0) {
+      if (
+        !COMPANION_NO_DURATION_KEYS.has(key)
+        && Number.isFinite(entry.durationMs)
+        && entry.durationMs >= COMPANION_DURATION_MIN_MS
+        && entry.durationMs <= COMPANION_DURATION_MAX_MS
+      ) {
         nextEntry.duration = entry.durationMs;
       }
       nextCompanion[key] = nextEntry;

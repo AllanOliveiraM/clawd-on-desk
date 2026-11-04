@@ -276,7 +276,8 @@ test("companion overrides reject invalid files, unknown keys and unsupported tim
     { ...base, transition: { in: 10, out: 10 } },
     { ...base, autoReturnMs: 2000 },
     { ...base, durationMs: 50 },
-    { ...base, durationMs: 60001 },
+    { ...base, durationMs: 8001 },
+    { ...base, durationMs: 60000 },
     { ...base, companionKey: "walkBouncy", durationMs: 1000 },
     { ...base, companionKey: "sleepTwitch", durationMs: 1000 },
   ]) {
@@ -332,6 +333,10 @@ test("import round-trips companion overrides and drops unsafe entries", () => {
         boo: { file: "../../evil/boo.svg" },
         bogus: { file: "x.svg" },
         shy: { file: "" },
+        petting: { file: "my-pet.svg", durationMs: 1e10 },
+        content: { durationMs: 1e10 },
+        tired: { file: "t.svg", durationMs: 50 },
+        walkBouncy: { file: "w.svg", durationMs: 2000 },
       },
     },
   };
@@ -344,6 +349,9 @@ test("import round-trips companion overrides and drops unsafe entries", () => {
     companionAnimations: {
       greet: { file: "my-greet.svg", durationMs: 1800 },
       boo: { file: "boo.svg" },
+      petting: { file: "my-pet.svg" },
+      tired: { file: "t.svg" },
+      walkBouncy: { file: "w.svg" },
     },
   });
   assert.strictEqual(calls.length, 1);

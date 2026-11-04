@@ -40,7 +40,7 @@
 
   // Mirrors COMPANION_DURATION_MIN_MS / MAX_MS (the intros run 250-600 ms).
   const COMPANION_DURATION_MIN_MS = 100;
-  const COMPANION_DURATION_MAX_MS = 60000;
+  const COMPANION_DURATION_MAX_MS = 8000;
 
   function getCurrentOverrideThemeId() {
     return runtime.animationOverridesData
@@ -1980,7 +1980,7 @@
         cardId: card.id,
         field: "durationMs",
         label: t("animOverridesDurationCompanion"),
-        min: COMPANION_DURATION_MIN_MS, max: 20000, step: 50,
+        min: COMPANION_DURATION_MIN_MS, max: COMPANION_DURATION_MAX_MS, step: 50,
         value: current,
         numberMin: COMPANION_DURATION_MIN_MS,
         numberMax: COMPANION_DURATION_MAX_MS,

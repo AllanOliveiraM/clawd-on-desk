@@ -18,9 +18,12 @@ const {
 } = require("../src/theme-schema");
 const { normalizeThemeOverrides } = require("../src/prefs");
 const { createCompanionRuntime } = require("../src/companion-runtime");
+const fs = require("node:fs");
 const {
   COMPANION_OVERRIDE_SECTIONS,
   COMPANION_NO_DURATION_KEYS,
+  COMPANION_DURATION_MIN_MS,
+  COMPANION_DURATION_MAX_MS,
 } = require("../src/companion-override-slots");
 
 themeLoader.init(path.join(__dirname, "..", "src"));
@@ -59,6 +62,24 @@ test("user overrides replace a companion file pool and duration", () => {
   assert.strictEqual(patched.companionAnimations.content, undefined);
   // The raw theme is never mutated.
   assert.deepStrictEqual(RAW.companionAnimations.greet, { file: "greet.svg", duration: 2500 });
+  // Durations outside the Settings range, or on keys whose length the
+  // runtime never reads, never reach the theme.
+  const bounded = applyUserOverridesPatch({
+    companionAnimations: {
+      petting: { file: "pet.svg" },
+      greet: { file: "greet.svg", duration: 2500 },
+      walkTired: { file: "walk.svg" },
+    },
+  }, {
+    companionAnimations: {
+      petting: { durationMs: 1e10 },
+      greet: { durationMs: 1e10 },
+      walkTired: { durationMs: 2000 },
+    },
+  });
+  assert.strictEqual(bounded.companionAnimations.petting.duration, undefined);
+  assert.strictEqual(bounded.companionAnimations.greet.duration, 2500);
+  assert.strictEqual(bounded.companionAnimations.walkTired.duration, undefined);
   // Variants still may not touch companionAnimations.
   assert.strictEqual(VARIANT_ALLOWED_KEYS.has("companionAnimations"), false);
 });
@@ -93,10 +114,18 @@ test("prefs keep companion overrides and drop unknown keys, transitions and unsa
         nope: { file: "x.svg" },
         boo: { file: ".." },
         shy: "bad",
+        petting: { durationMs: 1e10 },
+        content: { durationMs: 1e10 },
+        tired: { durationMs: 4000 },
+        sleepTwitch: { file: "t.svg", durationMs: 4000 },
       },
     },
   }, {});
-  assert.deepStrictEqual(out, { clawd: { companionAnimations: { greet: { file: "my-greet.svg", durationMs: 1800 } } } });
+  assert.deepStrictEqual(out, { clawd: { companionAnimations: {
+    greet: { file: "my-greet.svg", durationMs: 1800 },
+    tired: { durationMs: 4000 },
+    sleepTwitch: { file: "t.svg" },
+  } } });
   // A theme map with only companion overrides is not mistaken for legacy states.
   assert.strictEqual(out.clawd.states, undefined);
 });
@@ -139,4 +168,15 @@ test("a companion override naming a missing asset fails theme validation like ot
     overrides: { reactions: { clickLeft: { file: "no-such-companion.svg" } } },
   });
   assert.strictEqual(reaction.ok, false, "the same check applies to existing override kinds");
+});
+
+test("the Settings renderer copies the companion duration range from the slot module", () => {
+  assert.strictEqual(COMPANION_DURATION_MIN_MS, 100);
+  assert.strictEqual(COMPANION_DURATION_MAX_MS, 8000);
+  const source = fs.readFileSync(path.join(__dirname, "..", "src", "settings-tab-anim-overrides.js"), "utf8");
+  const min = /const COMPANION_DURATION_MIN_MS = (\d+);/.exec(source);
+  const max = /const COMPANION_DURATION_MAX_MS = (\d+);/.exec(source);
+  assert.ok(min && max, "renderer declares both constants");
+  assert.strictEqual(Number(min[1]), COMPANION_DURATION_MIN_MS);
+  assert.strictEqual(Number(max[1]), COMPANION_DURATION_MAX_MS);
 });
