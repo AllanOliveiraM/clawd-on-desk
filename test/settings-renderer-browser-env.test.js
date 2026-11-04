@@ -22574,3 +22574,146 @@ describe("Settings tabs and segmented choice contracts", () => {
     assert.equal(group.querySelectorAll("button")[0].getAttribute("aria-checked"), "true");
   });
 });
+
+describe("settings animation overrides: Clawd Alive companion cards", () => {
+  function companionCard(key, sectionId, extra = {}) {
+    return createAnimOverrideCard({
+      id: `companion:${key}`,
+      slotType: "companion",
+      sectionId,
+      companionKey: key,
+      triggerKind: "companion",
+      stateKey: undefined,
+      currentFile: `clawd-alive-${key}.svg`,
+      baseFile: `clawd-alive-${key}.svg`,
+      bindingLabel: `companionAnimations.${key}`,
+      supportsDuration: true,
+      durationMs: 2500,
+      hasDurationOverride: false,
+      hasTransitionOverride: false,
+      wideHitboxEnabled: undefined,
+      wideHitboxOverridden: undefined,
+      wideHitboxThemeDefault: undefined,
+      ...extra,
+    });
+  }
+
+  function companionRuntime() {
+    const work = createAnimOverrideCard();
+    const greet = companionCard("greet", "companionMoods");
+    const pettingIn = companionCard("pettingIn", "companionTransitions", { durationMs: 250 });
+    const walk = companionCard("walkBouncy", "companionWalks", { supportsDuration: false, durationMs: null });
+    const runtime = createAnimOverridesRuntime(work, {
+      expandedOverrideRowIds: new Set(["companion:greet", "companion:pettingIn", "companion:walkBouncy"]),
+    });
+    runtime.animationOverridesData = {
+      theme: { id: "clawd", name: "Clawd" },
+      assets: [{ name: "mine.svg", fileUrl: "file:///mine.svg", previewImageUrl: "file:///mine.svg", cycleMs: 1200 }],
+      sections: [
+        { id: "work", cards: [work] },
+        { id: "companionMoods", group: "companion", cards: [greet] },
+        { id: "companionWalks", group: "companion", cards: [walk] },
+        { id: "companionTransitions", group: "companion", cards: [pettingIn] },
+      ],
+      cards: [work, greet, walk, pettingIn],
+      sounds: [],
+    };
+    return { runtime, greet, pettingIn, walk };
+  }
+
+  it("renders one Clawd Alive group before the companion sub-sections", () => {
+    const { runtime } = companionRuntime();
+    const { core } = loadAnimOverridesTabForTest({ runtime, modalRoot: new FakeElement("div") });
+    const parent = new FakeElement("main");
+    core.tabs.animOverrides.render(parent, core);
+    const groups = parent.querySelectorAll(".anim-override-group-head");
+    assert.strictEqual(groups.length, 1);
+    assert.strictEqual(groups[0].querySelector(".anim-override-group-title").textContent, "animOverridesGroupCompanion");
+    const titles = parent.querySelectorAll(".anim-override-section .section-title").map((node) => node.textContent);
+    assert.deepStrictEqual(titles, [
+      "animOverridesSectionWork",
+      "animOverridesSectionCompanionMoods",
+      "animOverridesSectionCompanionWalks",
+      "animOverridesSectionCompanionTransitions",
+    ]);
+    const triggers = parent.querySelectorAll(".anim-override-trigger").map((node) => node.textContent);
+    assert.deepStrictEqual(triggers.slice(1), ["animCompanionGreet", "animCompanionWalkBouncy", "animCompanionPettingIn"]);
+  });
+
+  it("renders no Clawd Alive group for themes without companion animations", () => {
+    const card = createAnimOverrideCard();
+    const runtime = createAnimOverridesRuntime(card);
+    const { core } = loadAnimOverridesTabForTest({ runtime, modalRoot: new FakeElement("div") });
+    const parent = new FakeElement("main");
+    core.tabs.animOverrides.render(parent, core);
+    assert.strictEqual(parent.querySelectorAll(".anim-override-group-head").length, 0);
+  });
+
+  it("companion drawers show duration but no fades or wide hitbox", () => {
+    const { runtime } = companionRuntime();
+    const { core } = loadAnimOverridesTabForTest({ runtime, modalRoot: new FakeElement("div") });
+    const parent = new FakeElement("main");
+    core.tabs.animOverrides.render(parent, core);
+    const rows = parent.querySelectorAll(".anim-override-row");
+    const rowFor = (id) => rows.find((row) => row.dataset.rowId === id);
+    const greetRow = rowFor("companion:greet");
+    const labels = greetRow.querySelectorAll(".anim-override-slider-label").map((node) => node.textContent);
+    assert.deepStrictEqual(labels, ["animOverridesDurationCompanion"]);
+    assert.strictEqual(greetRow.querySelectorAll(".anim-override-toggle-row").length, 0);
+    const petRange = rowFor("companion:pettingIn").querySelectorAll("input").find((input) => input.type === "range");
+    assert.strictEqual(petRange.min, "100");
+    assert.strictEqual(petRange.value, "250");
+    assert.strictEqual(rowFor("companion:walkBouncy").querySelectorAll(".anim-override-slider-label").length, 0);
+  });
+
+  it("replacing a companion file sends the companion slot and previews it as a reaction", async () => {
+    const { runtime, greet } = companionRuntime();
+    const modalRoot = new FakeElement("div");
+    const calls = [];
+    const previews = [];
+    const { core } = loadAnimOverridesTabForTest({
+      runtime,
+      modalRoot,
+      settingsAPI: {
+        command: (name, payload) => { calls.push({ name, payload }); return Promise.resolve({ status: "ok" }); },
+        previewReaction: (payload) => { previews.push(["reaction", payload]); return Promise.resolve({ status: "ok" }); },
+        previewAnimationOverride: (payload) => { previews.push(["state", payload]); return Promise.resolve({ status: "ok" }); },
+      },
+    });
+    runtime.assetPicker.state = { cardId: greet.id, selectedFile: "mine.svg" };
+    core.renderHooks.modal();
+    modalRoot.querySelector(".asset-picker-use-btn").click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(calls)), [{
+      name: "setAnimationOverride",
+      payload: { themeId: "clawd", slotType: "companion", companionKey: "greet", file: "mine.svg" },
+    }]);
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(previews)), [["reaction", { file: "mine.svg", durationMs: 1200 }]]);
+  });
+
+  it("restoring a companion card clears file and duration for that key", async () => {
+    const { runtime } = companionRuntime();
+    const calls = [];
+    const { core } = loadAnimOverridesTabForTest({
+      runtime,
+      modalRoot: new FakeElement("div"),
+      settingsAPI: {
+        command: (name, payload) => { calls.push({ name, payload }); return Promise.resolve({ status: "ok" }); },
+      },
+      readersOverrides: {
+        readThemeOverrideMap: () => ({ companionAnimations: { greet: { file: "mine.svg" } } }),
+      },
+    });
+    const parent = new FakeElement("main");
+    core.tabs.animOverrides.render(parent, core);
+    const greetRow = parent.querySelectorAll(".anim-override-row").find((row) => row.dataset.rowId === "companion:greet");
+    const reset = greetRow.querySelectorAll("button").find((button) => button.textContent === "animOverridesReset");
+    assert.strictEqual(reset.disabled, false);
+    reset.click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(calls)), [{
+      name: "setAnimationOverride",
+      payload: { themeId: "clawd", slotType: "companion", companionKey: "greet", file: null, transition: null, durationMs: null },
+    }]);
+  });
+});

@@ -25,6 +25,7 @@ const {
   normalizeCustomApplications,
 } = require("./custom-applications");
 const { isPlainObject } = require("./theme-loader");
+const { COMPANION_ANIMATION_KEYS } = require("./theme-schema");
 const { normalizeShortcuts, getDefaultShortcuts } = require("./shortcut-actions");
 const {
   DEFAULT_TIMEOUT_MS: PERMISSION_REVIEW_DEFAULT_TIMEOUT_MS,
@@ -1408,6 +1409,34 @@ function normalizeSoundOverridesMap(value) {
   return Object.keys(out).length > 0 ? out : null;
 }
 
+// Clawd Alive companion overrides: { [companionKey]: { file?, durationMs? } }.
+// Only known companion keys survive; the file is reduced to a basename (it is
+// resolved inside the theme's own assets dir) and transitions / disabled are
+// stripped because a companion card exposes neither.
+const COMPANION_OVERRIDE_KEYS = new Set(COMPANION_ANIMATION_KEYS);
+function normalizeCompanionOverridesMap(value) {
+  if (!isPlainObject(value)) return null;
+  const out = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (!COMPANION_OVERRIDE_KEYS.has(key)) continue;
+    const cleanEntry = normalizeSlotOverride(entry, { allowDisabled: false });
+    if (!cleanEntry) continue;
+    const companionEntry = {};
+    if (Object.prototype.hasOwnProperty.call(cleanEntry, "file")) {
+      const safeFile = _safeBasename(cleanEntry.file);
+      if (safeFile) companionEntry.file = safeFile;
+    }
+    if (typeof cleanEntry.sourceThemeId === "string" && companionEntry.file) {
+      companionEntry.sourceThemeId = cleanEntry.sourceThemeId;
+    }
+    if (typeof cleanEntry.durationMs === "number" && cleanEntry.durationMs > 0) {
+      companionEntry.durationMs = cleanEntry.durationMs;
+    }
+    if (Object.keys(companionEntry).length > 0) out[key] = companionEntry;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 function normalizeFileKeyedOverrideMap(value) {
   if (!isPlainObject(value)) return null;
   const out = {};
@@ -1441,7 +1470,7 @@ function normalizeThemeOverrides(value, defaultsValue) {
     // Back-compat: older prefs wrote state entries directly under themeId.
     const legacyStates = {};
     for (const [key, entry] of Object.entries(themeMap)) {
-      if (key === "states" || key === "tiers" || key === "timings" || key === "idleAnimations" || key === "reactions" || key === "hitbox" || key === "sounds") continue;
+      if (key === "states" || key === "tiers" || key === "timings" || key === "idleAnimations" || key === "reactions" || key === "hitbox" || key === "sounds" || key === "companionAnimations") continue;
       const cleanEntry = normalizeSlotOverride(entry, { allowDisabled: true });
       if (cleanEntry) legacyStates[key] = cleanEntry;
     }
@@ -1479,6 +1508,9 @@ function normalizeThemeOverrides(value, defaultsValue) {
 
     const sounds = normalizeSoundOverridesMap(themeMap.sounds);
     if (sounds) cleanThemeMap.sounds = sounds;
+
+    const companionAnimations = normalizeCompanionOverridesMap(themeMap.companionAnimations);
+    if (companionAnimations) cleanThemeMap.companionAnimations = companionAnimations;
 
     if (Object.keys(cleanThemeMap).length > 0) {
       out[themeId] = cleanThemeMap;

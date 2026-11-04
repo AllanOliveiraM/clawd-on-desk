@@ -222,3 +222,139 @@ test("settings theme override actions reset an active theme by reloading without
     { themeId: "clawd", variantId: null, overrideMap: null },
   ]);
 });
+
+// ── Clawd Alive companion animation overrides ──
+
+function companionDeps(snapshot, calls = []) {
+  return {
+    snapshot,
+    activateTheme: (themeId, variantId, overrideMap) => {
+      calls.push({ themeId, variantId, overrideMap });
+    },
+  };
+}
+
+test("companion overrides persist file and duration and reload the active theme", () => {
+  const calls = [];
+  const snapshot = {
+    theme: "clawd",
+    themeOverrides: { clawd: { sounds: { complete: { file: "done.mp3" } } } },
+  };
+  const result = themeOverrideCommands.setAnimationOverride(
+    { themeId: "clawd", slotType: "companion", companionKey: "greet", file: "my-greet.svg", durationMs: 1800 },
+    companionDeps(snapshot, calls)
+  );
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(result.commit.themeOverrides.clawd.companionAnimations, {
+    greet: { file: "my-greet.svg", durationMs: 1800 },
+  });
+  assert.deepStrictEqual(result.commit.themeOverrides.clawd.sounds, { complete: { file: "done.mp3" } });
+  assert.deepStrictEqual(calls, [
+    { themeId: "clawd", variantId: null, overrideMap: result.commit.themeOverrides.clawd },
+  ]);
+});
+
+test("companion overrides accept the short intro durations the theme authors", () => {
+  const result = themeOverrideCommands.setAnimationOverride(
+    { themeId: "clawd", slotType: "companion", companionKey: "pettingIn", durationMs: 250 },
+    companionDeps({ theme: "calico", themeOverrides: {} })
+  );
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(result.commit.themeOverrides.clawd.companionAnimations, {
+    pettingIn: { durationMs: 250 },
+  });
+});
+
+test("companion overrides reject invalid files, unknown keys and unsupported timing", () => {
+  const deps = companionDeps({ theme: "clawd", themeOverrides: {} });
+  const base = { themeId: "clawd", slotType: "companion", companionKey: "greet" };
+  for (const payload of [
+    { ...base, file: "" },
+    { ...base, file: 42 },
+    { ...base, companionKey: "nope", file: "x.svg" },
+    { ...base, companionKey: "__proto__", file: "x.svg" },
+    { ...base, transition: { in: 10, out: 10 } },
+    { ...base, autoReturnMs: 2000 },
+    { ...base, durationMs: 50 },
+    { ...base, durationMs: 60001 },
+    { ...base, companionKey: "walkBouncy", durationMs: 1000 },
+    { ...base, companionKey: "sleepTwitch", durationMs: 1000 },
+  ]) {
+    const result = themeOverrideCommands.setAnimationOverride(payload, deps);
+    assert.strictEqual(result.status, "error", JSON.stringify(payload));
+  }
+});
+
+test("restoring a companion card clears its entry, tolerating the generic transition reset", () => {
+  const snapshot = {
+    theme: "calico",
+    themeOverrides: {
+      clawd: {
+        companionAnimations: { greet: { file: "my-greet.svg", durationMs: 1800 }, boo: { file: "b.svg" } },
+      },
+    },
+  };
+  const result = themeOverrideCommands.setAnimationOverride(
+    { themeId: "clawd", slotType: "companion", companionKey: "greet", file: null, transition: null, durationMs: null },
+    companionDeps(snapshot)
+  );
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(result.commit.themeOverrides.clawd, { companionAnimations: { boo: { file: "b.svg" } } });
+});
+
+test("other override commands keep companion overrides intact", () => {
+  const companionAnimations = { greet: { file: "my-greet.svg" } };
+  const snapshot = { theme: "calico", themeOverrides: { clawd: { companionAnimations } } };
+  const sound = themeOverrideCommands.setSoundOverride(
+    { themeId: "clawd", soundName: "complete", file: "c.mp3" },
+    companionDeps(snapshot)
+  );
+  assert.deepStrictEqual(sound.commit.themeOverrides.clawd.companionAnimations, companionAnimations);
+  const state = themeOverrideCommands.setAnimationOverride(
+    { themeId: "clawd", slotType: "state", stateKey: "attention", file: "a.svg" },
+    companionDeps(snapshot)
+  );
+  assert.deepStrictEqual(state.commit.themeOverrides.clawd.companionAnimations, companionAnimations);
+  assert.strictEqual(state.commit.themeOverrides.clawd.states.companionAnimations, undefined);
+  const disabled = themeOverrideCommands.setThemeOverrideDisabled(
+    { themeId: "clawd", stateKey: "error", disabled: true },
+    companionDeps(snapshot)
+  );
+  assert.deepStrictEqual(disabled.commit.themeOverrides.clawd.companionAnimations, companionAnimations);
+});
+
+test("import round-trips companion overrides and drops unsafe entries", () => {
+  const calls = [];
+  const exported = {
+    clawd: {
+      companionAnimations: {
+        greet: { file: "my-greet.svg", durationMs: 1800, transition: { in: 1, out: 1 } },
+        boo: { file: "../../evil/boo.svg" },
+        bogus: { file: "x.svg" },
+        shy: { file: "" },
+      },
+    },
+  };
+  const result = themeOverrideCommands.importAnimationOverrides(
+    { version: 1, themes: JSON.parse(JSON.stringify(exported)) },
+    companionDeps({ theme: "clawd", themeOverrides: {} }, calls)
+  );
+  assert.strictEqual(result.status, "ok");
+  assert.deepStrictEqual(result.commit.themeOverrides.clawd, {
+    companionAnimations: {
+      greet: { file: "my-greet.svg", durationMs: 1800 },
+      boo: { file: "boo.svg" },
+    },
+  });
+  assert.strictEqual(calls.length, 1);
+  assert.deepStrictEqual(calls[0].overrideMap, result.commit.themeOverrides.clawd);
+});
+
+test("restore defaults clears companion overrides", () => {
+  const calls = [];
+  const snapshot = { theme: "clawd", themeOverrides: { clawd: { companionAnimations: { greet: { file: "g.svg" } } } } };
+  const result = themeOverrideCommands.resetThemeOverrides("clawd", companionDeps(snapshot, calls));
+  assert.strictEqual(result.status, "ok");
+  assert.strictEqual(result.commit.themeOverrides.clawd, undefined);
+  assert.deepStrictEqual(calls, [{ themeId: "clawd", variantId: null, overrideMap: null }]);
+});

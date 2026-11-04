@@ -40,6 +40,7 @@ const {
   collectRequiredAssetFiles: _collectRequiredAssetFiles,
   filterIdleVisualOptionsByAsset: _filterIdleVisualOptionsByAsset,
   basenameOnly: _basenameOnly,
+  normalizeCompanionAnimations: _normalizeCompanionAnimations,
 } = require("./theme-schema");
 const {
   resolveVariant: _resolveVariant,
@@ -235,6 +236,8 @@ function loadTheme(themeId, opts = {}) {
       if (Object.keys(clean).length > 0) theme._baseTransitions[name] = clean;
     }
   }
+  // Pre-override companion visuals, so Settings can show each card's theme file.
+  theme._baseCompanionAnimations = _normalizeCompanionAnimations(afterVariant.companionAnimations);
   theme._baseWideHitboxFiles = Array.isArray(afterVariant.wideHitboxFiles)
     ? [...new Set(afterVariant.wideHitboxFiles.map((file) => _basenameOnly(file)).filter(Boolean))]
     : [];

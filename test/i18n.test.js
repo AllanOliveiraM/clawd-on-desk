@@ -207,6 +207,33 @@ describe("i18n locales", () => {
     assert.strictEqual(strings["pt-BR"].sectionPetCompanion, "Personalidade e comportamento");
   });
 
+  it("labels every Clawd Alive animation card and section in every Settings locale", () => {
+    const strings = loadSettingsI18nStrings();
+    const { COMPANION_OVERRIDE_SECTIONS, companionCardLabelKey, companionSectionLabelKey } =
+      require("../src/companion-override-slots");
+    const keys = [
+      "animOverridesGroupCompanion", "animOverridesGroupCompanionDesc", "animOverridesDurationCompanion",
+      ...COMPANION_OVERRIDE_SECTIONS.map((section) => companionSectionLabelKey(section.id)),
+      ...COMPANION_OVERRIDE_SECTIONS.flatMap((section) => section.keys.map(companionCardLabelKey)),
+    ];
+    assert.strictEqual(new Set(keys).size, keys.length);
+    for (const lang of SUPPORTED_LANGS) {
+      const ordered = Object.keys(strings[lang]).filter((key) => keys.includes(key));
+      assert.deepStrictEqual(ordered, keys, `${lang} Clawd Alive card key order`);
+      for (const key of keys) {
+        assert.strictEqual(typeof strings[lang][key], "string", `${lang}.${key}`);
+        assert.ok(strings[lang][key].trim(), `${lang}.${key}`);
+      }
+      if (lang !== "en") {
+        assert.notStrictEqual(strings[lang].animCompanionPetting, strings.en.animCompanionPetting, lang);
+      }
+    }
+    assert.strictEqual(strings.en.animOverridesGroupCompanion, "Clawd Alive");
+    assert.strictEqual(strings["pt-BR"].animCompanionPetting, "Recebendo carinho");
+    assert.strictEqual(strings["pt-BR"].animCompanionCatchHigh, "Pegar o mouse — em cima");
+    assert.strictEqual(strings["pt-BR"].animOverridesSectionCompanionCatch, "Pegar o mouse");
+  });
+
   it("keeps Settings locale keysets aligned with English", () => {
     assertLocaleObjectParity(loadSettingsI18nStrings(), "settings");
   });

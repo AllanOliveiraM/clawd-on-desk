@@ -27,6 +27,21 @@
     return helpers.t(key);
   }
 
+  // Clawd Alive companion cards (slotType "companion"). Their i18n keys follow
+  // src/companion-override-slots.js: animCompanion<Key> and
+  // animOverridesSection<SectionId>.
+  function capitalizeKey(value) {
+    return typeof value === "string" && value ? value[0].toUpperCase() + value.slice(1) : "";
+  }
+
+  function isCompanionCard(card) {
+    return !!(card && card.slotType === "companion");
+  }
+
+  // Mirrors COMPANION_DURATION_MIN_MS / MAX_MS (the intros run 250-600 ms).
+  const COMPANION_DURATION_MIN_MS = 100;
+  const COMPANION_DURATION_MAX_MS = 60000;
+
   function getCurrentOverrideThemeId() {
     return runtime.animationOverridesData
       && runtime.animationOverridesData.theme
@@ -157,6 +172,7 @@
       tierGroup: card.tierGroup,
       originalFile: card.originalFile,
       reactionKey: card.reactionKey,
+      ...(isCompanionCard(card) ? { companionKey: card.companionKey } : {}),
     };
     let storedTimingValue = false;
     if (patch.transition && typeof patch.transition === "object") {
@@ -424,6 +440,7 @@
     }
     pruneEmptyObject(themeMap, "idleAnimations");
     pruneEmptyObject(themeMap, "reactions");
+    pruneEmptyObject(themeMap, "companionAnimations");
     if (themeMap.hitbox && typeof themeMap.hitbox === "object") {
       pruneEmptyObject(themeMap.hitbox, "wide");
       pruneEmptyObject(themeMap, "hitbox");
@@ -457,6 +474,12 @@
       themeMap.reactions[pending.reactionKey] = themeMap.reactions[pending.reactionKey] || {};
       return themeMap.reactions[pending.reactionKey];
     }
+    if (pending.slotType === "companion") {
+      if (!pending.companionKey) return null;
+      themeMap.companionAnimations = themeMap.companionAnimations || {};
+      themeMap.companionAnimations[pending.companionKey] = themeMap.companionAnimations[pending.companionKey] || {};
+      return themeMap.companionAnimations[pending.companionKey];
+    }
     return null;
   }
 
@@ -474,6 +497,11 @@
     }
     if (pending.slotType === "reaction") {
       return pending.reactionKey && themeMap.reactions ? themeMap.reactions[pending.reactionKey] || null : null;
+    }
+    if (pending.slotType === "companion") {
+      return pending.companionKey && themeMap.companionAnimations
+        ? themeMap.companionAnimations[pending.companionKey] || null
+        : null;
     }
     return null;
   }
@@ -514,6 +542,15 @@
         delete themeMap.reactions[pending.reactionKey];
       }
       pruneEmptyObject(themeMap, "reactions");
+      return;
+    }
+    if (pending.slotType === "companion") {
+      const group = themeMap.companionAnimations;
+      if (group && pending.companionKey && group[pending.companionKey]
+        && !Object.keys(group[pending.companionKey]).length) {
+        delete group[pending.companionKey];
+      }
+      pruneEmptyObject(themeMap, "companionAnimations");
     }
   }
 
@@ -540,7 +577,9 @@
       themeMap.timings.autoReturn[pending.stateKey] = pending.autoReturnMs;
     }
     if (Object.prototype.hasOwnProperty.call(pending, "durationMs")) {
-      if (pending.slotType !== "idleAnimation" && pending.slotType !== "reaction") return false;
+      if (pending.slotType !== "idleAnimation" && pending.slotType !== "reaction" && pending.slotType !== "companion") {
+        return false;
+      }
       entry.durationMs = pending.durationMs;
     }
     prunePendingThemeOverrideEntry(themeMap, pending);
@@ -684,6 +723,8 @@
       base.originalFile = card.originalFile;
     } else if (card.slotType === "reaction") {
       base.reactionKey = card.reactionKey;
+    } else if (isCompanionCard(card)) {
+      base.companionKey = card.companionKey;
     } else {
       base.stateKey = card.stateKey;
     }
@@ -915,6 +956,7 @@
       case "clickRightReaction": return t("animReactionClickRight");
       case "annoyedReaction": return t("animReactionAnnoyed");
       case "doubleReaction": return t("animReactionDouble");
+      case "companion": return t(`animCompanion${capitalizeKey(card.companionKey)}`);
       default: return card.triggerKind || card.stateKey || card.id;
     }
   }
@@ -928,7 +970,9 @@
       case "sleep": return t("animOverridesSectionSleep");
       case "mini": return t("animOverridesSectionMini");
       case "reactions": return t("animOverridesSectionReactions");
-      default: return section.id;
+      default:
+        if (section.group === "companion") return t(`animOverridesSection${capitalizeKey(section.id)}`);
+        return section.id;
     }
   }
 
@@ -1042,6 +1086,20 @@
     return wrapper;
   }
 
+  function buildCompanionGroupHead() {
+    const head = document.createElement("div");
+    head.className = "anim-override-group-head";
+    const title = document.createElement("h2");
+    title.className = "anim-override-group-title";
+    title.textContent = t("animOverridesGroupCompanion");
+    head.appendChild(title);
+    const desc = document.createElement("div");
+    desc.className = "anim-override-group-desc";
+    desc.textContent = t("animOverridesGroupCompanionDesc");
+    head.appendChild(desc);
+    return head;
+  }
+
   function buildAnimPreviewNode(fileUrl, { pending = false } = {}) {
     const frame = document.createElement("div");
     frame.className = "anim-override-preview-frame";
@@ -1127,8 +1185,13 @@
     } else {
       body.appendChild(buildAnimOverrideThemeMeta(data));
       const sections = Array.isArray(data.sections) ? data.sections : [];
+      let companionGroupShown = false;
       for (const section of sections) {
         if (!section || !Array.isArray(section.cards) || !section.cards.length) continue;
+        if (section.group === "companion" && !companionGroupShown) {
+          companionGroupShown = true;
+          body.appendChild(buildCompanionGroupHead());
+        }
         body.appendChild(buildAnimOverrideSection(section));
       }
     }
@@ -1455,7 +1518,7 @@
   }
 
   function triggerPreviewOnce(card) {
-    if (card.slotType === "reaction") {
+    if (card.slotType === "reaction" || isCompanionCard(card)) {
       window.settingsAPI.previewReaction({
         file: card.currentFile,
         durationMs: getAnimationPreviewDuration(null, card),
@@ -1505,6 +1568,11 @@
       const entry = map.reactions && map.reactions[card.reactionKey];
       return !!(hasMaterialEntryOverride(entry)
         || (hasTransitionFlag ? card.hasTransitionOverride : hasTransitionOverride(entry))
+        || (hasDurationFlag ? card.hasDurationOverride : (entry && Object.prototype.hasOwnProperty.call(entry, "durationMs"))));
+    }
+    if (isCompanionCard(card)) {
+      const entry = map.companionAnimations && map.companionAnimations[card.companionKey];
+      return !!(hasMaterialEntryOverride(entry)
         || (hasDurationFlag ? card.hasDurationOverride : (entry && Object.prototype.hasOwnProperty.call(entry, "durationMs"))));
     }
     const entry = map.states && map.states[card.stateKey];
@@ -1712,14 +1780,15 @@
       ...(card.supportsAutoReturn ? { autoReturnMs: null } : {}),
       ...(card.supportsDuration ? { durationMs: null } : {}),
     };
-    const resetHitboxFile = card.slotType !== "reaction" && card.currentFile && card.wideHitboxOverridden
+    const resetHitboxFile = card.slotType !== "reaction" && !isCompanionCard(card)
+      && card.currentFile && card.wideHitboxOverridden
       ? card.currentFile
       : null;
     const resetHitboxThemeDefault = !!card.wideHitboxThemeDefault;
     return runAnimationOverrideCommand(card, patch).then((result) => {
       if (result && result.status === "error") return result;
       const currentCard = applyPendingWideHitboxOverrideEdit(getAnimOverrideCardById(card.id) || card);
-      if (currentCard.slotType === "reaction" || !resetHitboxFile) return result;
+      if (currentCard.slotType === "reaction" || isCompanionCard(currentCard) || !resetHitboxFile) return result;
       return runWideHitboxCommand(
         {
           ...currentCard,
@@ -1840,7 +1909,9 @@
     ));
     if ((card.supportsAutoReturn || card.supportsDuration) && card.assetCycleMs == null && card.suggestedDurationMs != null) {
       info.appendChild(buildAnimTimingHint(
-        card.supportsDuration ? t("animOverridesDurationIdle") : t("animOverridesSuggestedTiming"),
+        isCompanionCard(card)
+          ? t("animOverridesDurationCompanion")
+          : (card.supportsDuration ? t("animOverridesDurationIdle") : t("animOverridesSuggestedTiming")),
         card.suggestedDurationMs,
         card.suggestedDurationStatus
       ));
@@ -1856,34 +1927,37 @@
 
     const sliders = document.createElement("div");
     sliders.className = "anim-override-sliders";
-    sliders.appendChild(buildAnimOverrideSliderRow({
-      cardId: card.id,
-      field: "transition.in",
-      label: t("animOverridesFadeIn"),
-      min: 0, max: 1000, step: 10,
-      value: card.transition.in,
-      onCommit: (v) => {
-        const current = getCurrentAnimationOverrideCard(card);
-        const transition = (current && current.transition) || card.transition || {};
-        return runAnimationOverrideCommand(card, {
-          transition: { in: v, out: transition.out },
-        });
-      },
-    }));
-    sliders.appendChild(buildAnimOverrideSliderRow({
-      cardId: card.id,
-      field: "transition.out",
-      label: t("animOverridesFadeOut"),
-      min: 0, max: 1000, step: 10,
-      value: card.transition.out,
-      onCommit: (v) => {
-        const current = getCurrentAnimationOverrideCard(card);
-        const transition = (current && current.transition) || card.transition || {};
-        return runAnimationOverrideCommand(card, {
-          transition: { in: transition.in, out: v },
-        });
-      },
-    }));
+    // Companion visuals have no fades to tune (the card shows only a duration).
+    if (!isCompanionCard(card)) {
+      sliders.appendChild(buildAnimOverrideSliderRow({
+        cardId: card.id,
+        field: "transition.in",
+        label: t("animOverridesFadeIn"),
+        min: 0, max: 1000, step: 10,
+        value: card.transition.in,
+        onCommit: (v) => {
+          const current = getCurrentAnimationOverrideCard(card);
+          const transition = (current && current.transition) || card.transition || {};
+          return runAnimationOverrideCommand(card, {
+            transition: { in: v, out: transition.out },
+          });
+        },
+      }));
+      sliders.appendChild(buildAnimOverrideSliderRow({
+        cardId: card.id,
+        field: "transition.out",
+        label: t("animOverridesFadeOut"),
+        min: 0, max: 1000, step: 10,
+        value: card.transition.out,
+        onCommit: (v) => {
+          const current = getCurrentAnimationOverrideCard(card);
+          const transition = (current && current.transition) || card.transition || {};
+          return runAnimationOverrideCommand(card, {
+            transition: { in: transition.in, out: v },
+          });
+        },
+      }));
+    }
     if (card.supportsAutoReturn) {
       const current = Number.isFinite(card.autoReturnMs) ? card.autoReturnMs : (card.suggestedDurationMs || 3000);
       sliders.appendChild(buildAnimOverrideSliderRow({
@@ -1900,7 +1974,22 @@
         },
       }));
     }
-    if (card.supportsDuration) {
+    if (card.supportsDuration && isCompanionCard(card)) {
+      const current = Number.isFinite(card.durationMs) ? card.durationMs : (card.suggestedDurationMs || 3000);
+      sliders.appendChild(buildAnimOverrideSliderRow({
+        cardId: card.id,
+        field: "durationMs",
+        label: t("animOverridesDurationCompanion"),
+        min: COMPANION_DURATION_MIN_MS, max: 20000, step: 50,
+        value: current,
+        numberMin: COMPANION_DURATION_MIN_MS,
+        numberMax: COMPANION_DURATION_MAX_MS,
+        onCommit: (v) => {
+          if (!Number.isFinite(v) || v < COMPANION_DURATION_MIN_MS || v > COMPANION_DURATION_MAX_MS) return;
+          return runAnimationOverrideCommand(card, { durationMs: v });
+        },
+      }));
+    } else if (card.supportsDuration) {
       const current = Number.isFinite(card.durationMs) ? card.durationMs : (card.suggestedDurationMs || 3000);
       sliders.appendChild(buildAnimOverrideSliderRow({
         cardId: card.id,
@@ -1918,7 +2007,7 @@
     }
     drawer.appendChild(sliders);
 
-    if (card.slotType !== "reaction") {
+    if (card.slotType !== "reaction" && !isCompanionCard(card)) {
       drawer.appendChild(buildAnimWideHitboxToggle(card));
     }
 
@@ -2223,6 +2312,12 @@
     helpers.attachActivation(previewBtn, () => {
       const currentSelected = getSelectedAnimationAsset();
       if (!currentSelected) return { status: "error", message: "no asset selected" };
+      if (isCompanionCard(card)) {
+        return window.settingsAPI.previewReaction({
+          file: currentSelected.name,
+          durationMs: getAnimationPreviewDuration(currentSelected, card),
+        });
+      }
       return window.settingsAPI.previewAnimationOverride({
         stateKey: previewStateForCard(card),
         file: currentSelected.name,
@@ -2251,7 +2346,7 @@
           ops.closeAssetPicker();
           const changed = !result.noop;
           if (changed) {
-            const previewPromise = card.slotType === "reaction"
+            const previewPromise = (card.slotType === "reaction" || isCompanionCard(card))
               ? (window.settingsAPI && typeof window.settingsAPI.previewReaction === "function"
                   ? window.settingsAPI.previewReaction({
                       file: currentSelected.name,

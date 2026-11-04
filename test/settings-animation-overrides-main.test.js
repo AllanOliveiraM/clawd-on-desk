@@ -1077,3 +1077,98 @@ test("a preview is not handed back when a real event re-applies the same state",
     harness.cleanup();
   }
 });
+
+// ── Clawd Alive companion animation cards ──
+
+function companionTheme(root, extra = {}) {
+  return makeTheme(root, {
+    companionAnimations: {
+      greetLeft: { files: ["idle.svg"], duration: 2500 },
+      greet: { files: ["sleep.svg"], duration: 1800 },
+      catchHigh: { files: ["idle.svg"], duration: 1400 },
+      walkBouncy: { files: ["idle.svg"], duration: null },
+      pettingIn: { files: ["idle.svg"], duration: 250 },
+      sleepTwitch: { files: ["sleep.svg", "idle.svg"], duration: 18000 },
+    },
+    _baseCompanionAnimations: {
+      greetLeft: { files: ["idle.svg"], duration: 2500 },
+      greet: { files: ["idle.svg"], duration: 2500 },
+      catchHigh: { files: ["idle.svg"], duration: 1400 },
+      walkBouncy: { files: ["idle.svg"], duration: null },
+      pettingIn: { files: ["idle.svg"], duration: 250 },
+      sleepTwitch: { files: ["sleep.svg", "idle.svg"], duration: 18000 },
+    },
+    ...extra,
+  });
+}
+
+test("Clawd Alive sections appear only when the theme declares companion animations", () => {
+  const without = createRuntimeHarness();
+  try {
+    const sections = without.runtime.buildAnimationOverrideSections();
+    assert.ok(sections.every((section) => !String(section.id).startsWith("companion")));
+    assert.ok(sections.every((section) => section.group === undefined));
+  } finally {
+    without.cleanup();
+  }
+
+  const harness = createRuntimeHarness({
+    snapshot: { themeOverrides: { cloudling: { companionAnimations: { greet: { file: "sleep.svg", durationMs: 1800 } } } } },
+    activeThemeFactory: (root) => companionTheme(root),
+  });
+  try {
+    const sections = harness.runtime.buildAnimationOverrideSections();
+    const companion = sections.filter((section) => section.group === "companion");
+    assert.deepStrictEqual(companion.map((section) => section.id),
+      ["companionMoods", "companionCatch", "companionWalks", "companionSleep", "companionTransitions"]);
+    // Companion sections come after every original section.
+    const firstCompanion = sections.findIndex((section) => section.group === "companion");
+    assert.ok(sections.slice(firstCompanion).every((section) => section.group === "companion"));
+    // Keys follow the Settings order, not the theme's declaration order.
+    assert.deepStrictEqual(companion[0].cards.map((card) => card.companionKey), ["greet", "greetLeft"]);
+
+    const greet = companion[0].cards[0];
+    assert.strictEqual(greet.id, "companion:greet");
+    assert.strictEqual(greet.slotType, "companion");
+    assert.strictEqual(greet.sectionId, "companionMoods");
+    assert.strictEqual(greet.triggerKind, "companion");
+    assert.strictEqual(greet.currentFile, "sleep.svg");
+    assert.strictEqual(greet.baseFile, "idle.svg");
+    assert.strictEqual(greet.bindingLabel, "companionAnimations.greet");
+    assert.strictEqual(greet.supportsDuration, true);
+    assert.strictEqual(greet.durationMs, 1800);
+    assert.strictEqual(greet.hasDurationOverride, true);
+    assert.strictEqual(greet.supportsAutoReturn, false);
+    assert.strictEqual(greet.wideHitboxEnabled, undefined);
+
+    const cards = companion.flatMap((section) => section.cards);
+    const byKey = Object.fromEntries(cards.map((card) => [card.companionKey, card]));
+    assert.strictEqual(byKey.greetLeft.hasDurationOverride, false);
+    assert.strictEqual(byKey.walkBouncy.supportsDuration, false);
+    assert.strictEqual(byKey.sleepTwitch.supportsDuration, false);
+    assert.strictEqual(byKey.sleepTwitch.currentFile, "sleep.svg");
+    assert.strictEqual(byKey.pettingIn.durationMs, 250);
+
+    const data = harness.runtime.buildAnimationOverrideData();
+    assert.ok(data.cards.some((card) => card.id === "companion:catchHigh"));
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test("original animation cards are unchanged by companion animations", () => {
+  const plain = createRuntimeHarness();
+  const withCompanion = createRuntimeHarness({ activeThemeFactory: (root) => companionTheme(root) });
+  try {
+    const strip = (sections) => JSON.parse(JSON.stringify(sections
+      .filter((section) => section.group !== "companion")
+      .map((section) => ({ ...section, cards: section.cards.map((card) => ({ ...card, currentFileUrl: null, currentFilePreviewUrl: null })) }))));
+    assert.deepStrictEqual(
+      strip(withCompanion.runtime.buildAnimationOverrideSections()),
+      strip(plain.runtime.buildAnimationOverrideSections())
+    );
+  } finally {
+    plain.cleanup();
+    withCompanion.cleanup();
+  }
+});

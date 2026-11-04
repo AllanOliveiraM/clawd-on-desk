@@ -308,6 +308,32 @@ function applyUserOverridesPatch(raw, overrides) {
     patched.idleAnimations = nextIdleAnimations;
   }
 
+  // Clawd Alive companion visuals: only keys the theme declares can be
+  // customized (like reactions). A replacement file takes over the whole pool
+  // so the companion always plays the file the user picked; the normalizer in
+  // mergeDefaults still basenames it and drops unknown keys, and the visual
+  // projection (asset whitelist) picks the new file up from there.
+  const companionOverrides = isPlainObject(overrides.companionAnimations) ? overrides.companionAnimations : null;
+  if (companionOverrides && isPlainObject(raw.companionAnimations)) {
+    const nextCompanion = { ...raw.companionAnimations };
+    for (const [key, entry] of Object.entries(companionOverrides)) {
+      if (!isPlainObject(entry)) continue;
+      if (!Object.prototype.hasOwnProperty.call(raw.companionAnimations, key)) continue;
+      const rawEntry = nextCompanion[key];
+      if (!isPlainObject(rawEntry)) continue;
+      const nextEntry = { ...rawEntry };
+      if (typeof entry.file === "string" && entry.file) {
+        delete nextEntry.file;
+        nextEntry.files = [entry.file];
+      }
+      if (Number.isFinite(entry.durationMs) && entry.durationMs > 0) {
+        nextEntry.duration = entry.durationMs;
+      }
+      nextCompanion[key] = nextEntry;
+    }
+    patched.companionAnimations = nextCompanion;
+  }
+
   return patched;
 }
 

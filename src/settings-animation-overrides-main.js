@@ -7,6 +7,10 @@ const defaultAnimationCycle = require("./animation-cycle");
 const { ANIMATION_OVERRIDES_EXPORT_VERSION } = require("./settings-actions");
 const { listIdleVisualOptions, resolveIdleVisualChoice, humanizeIdleVisualLabel } = require("./idle-visual");
 const { getTierFiles } = require("./theme-schema");
+const {
+  COMPANION_OVERRIDE_SECTIONS,
+  COMPANION_NO_DURATION_KEYS,
+} = require("./companion-override-slots");
 
 const ANIMATION_OVERRIDE_ASSET_EXTS = new Set([".svg", ".gif", ".apng", ".png", ".webp", ".jpg", ".jpeg"]);
 const ANIMATION_OVERRIDE_PREVIEW_POSTER_SIZE = { width: 176, height: 144 };
@@ -959,6 +963,76 @@ function createSettingsAnimationOverridesMain(options = {}) {
     return cards;
   }
 
+  // Clawd Alive: one card per companion key the theme declares, grouped in the
+  // Settings order. The card shows (and replaces) files[0]; an override takes
+  // over the whole pool so the companion always plays the picked file.
+  function buildCompanionCard(key, sectionId, themeOverrideMap) {
+    const activeTheme = getActiveTheme();
+    const entry = activeTheme && isPlainObject(activeTheme.companionAnimations)
+      ? activeTheme.companionAnimations[key]
+      : null;
+    if (!isPlainObject(entry) || !Array.isArray(entry.files) || !entry.files[0]) return null;
+    const currentFile = entry.files[0];
+    const baseEntry = isPlainObject(activeTheme._baseCompanionAnimations)
+      ? activeTheme._baseCompanionAnimations[key]
+      : null;
+    const baseFile = (isPlainObject(baseEntry) && Array.isArray(baseEntry.files) && baseEntry.files[0]) || currentFile;
+    const supportsDuration = !COMPANION_NO_DURATION_KEYS.has(key);
+    const durationMs = supportsDuration && Number.isFinite(entry.duration) && entry.duration > 0
+      ? entry.duration
+      : null;
+    const overrideMap = themeOverrideMap && isPlainObject(themeOverrideMap.companionAnimations)
+      ? themeOverrideMap.companionAnimations
+      : null;
+    const overrideEntry = overrideMap && isPlainObject(overrideMap[key]) ? overrideMap[key] : null;
+    const timingHint = buildTimingHint(currentFile, durationMs);
+    const preview = buildAnimationAssetPreview(currentFile);
+    return {
+      id: `companion:${key}`,
+      slotType: "companion",
+      sectionId,
+      companionKey: key,
+      triggerKind: "companion",
+      currentFile,
+      baseFile,
+      currentFileUrl: preview.fileUrl,
+      currentFilePreviewUrl: preview.previewImageUrl,
+      needsScriptedPreviewPoster: preview.needsScriptedPreviewPoster,
+      currentFilePreviewPosterCacheKey: preview.previewPosterCacheKey,
+      previewPosterPending: preview.previewPosterPending,
+      bindingLabel: `companionAnimations.${key}`,
+      transition: readResolvedTransition(currentFile),
+      transitionThemeDefault: readThemeDefaultTransition(currentFile),
+      hasTransitionOverride: false,
+      supportsAutoReturn: false,
+      supportsDuration,
+      autoReturnMs: null,
+      durationMs,
+      hasAutoReturnOverride: false,
+      hasDurationOverride: !!(overrideEntry && Object.prototype.hasOwnProperty.call(overrideEntry, "durationMs")),
+      ...timingHint,
+      previewDurationMs: timingHint.previewDurationMs || durationMs,
+      displayHintWarning: false,
+      displayHintTarget: null,
+    };
+  }
+
+  function buildCompanionSections(themeOverrideMap) {
+    const activeTheme = getActiveTheme();
+    if (!activeTheme || !isPlainObject(activeTheme.companionAnimations)) return [];
+    const sections = [];
+    for (const spec of COMPANION_OVERRIDE_SECTIONS) {
+      const cards = spec.keys
+        .map((key) => buildCompanionCard(key, spec.id, themeOverrideMap))
+        .filter(Boolean);
+      for (const card of cards) {
+        card.aspectRatioWarning = computeAspectRatioWarning(card.baseFile, card.currentFile);
+      }
+      if (cards.length > 0) sections.push({ id: spec.id, mode: null, group: "companion", cards });
+    }
+    return sections;
+  }
+
   function pushSection(sections, id, mode, cards) {
     if (!Array.isArray(cards) || cards.length === 0) return;
     sections.push({ id, mode: mode || null, cards });
@@ -1090,6 +1164,10 @@ function createSettingsAnimationOverridesMain(options = {}) {
         card.aspectRatioWarning = computeAspectRatioWarning(card.baseFile, card.currentFile);
       }
     }
+
+    // Appended after the hitbox pass on purpose: companion visuals have no
+    // wide-hitbox control, like reactions.
+    sections.push(...buildCompanionSections(themeOverrideMap));
 
     return sections;
   }

@@ -3199,6 +3199,24 @@ html, body {
   font-size: 12px;
   color: var(--text-secondary);
 }
+/* Clawd Alive: heading over the companion animation sub-sections. */
+.anim-override-group-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.anim-override-group-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.anim-override-group-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 /* #509: single-row panel for the default idle visual picker. Same look as
    .section-rows, but no overflow:hidden — the picker menu must drop below
    the row (the row is alone in this panel, so clipping would swallow it). */

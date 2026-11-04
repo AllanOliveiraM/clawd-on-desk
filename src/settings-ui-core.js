@@ -308,6 +308,7 @@
       ...(map.reactions ? Object.keys(map.reactions) : []),
       ...hitboxKeys,
       ...(map.sounds ? Object.keys(map.sounds) : []),
+      ...(map.companionAnimations ? Object.keys(map.companionAnimations) : []),
     ];
     return keys.length > 0;
   }

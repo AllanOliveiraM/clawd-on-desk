@@ -3,6 +3,12 @@
 const { normalizeThemeOverrides } = require("./prefs");
 const { requireString } = require("./settings-validators");
 const { isPlainObject } = require("./theme-loader");
+const {
+  COMPANION_NO_DURATION_KEYS,
+  COMPANION_DURATION_MIN_MS,
+  COMPANION_DURATION_MAX_MS,
+  isCompanionAnimationKey,
+} = require("./companion-override-slots");
 
 const ANIMATION_OVERRIDES_EXPORT_VERSION = 1;
 
@@ -14,6 +20,7 @@ const THEME_OVERRIDE_RESERVED_KEYS = new Set([
   "reactions",
   "hitbox",
   "sounds",
+  "companionAnimations",
 ]);
 const TIER_OVERRIDE_GROUPS = new Set(["workingTiers", "jugglingTiers"]);
 const REACTION_KEYS = new Set(["drag", "clickLeft", "clickRight", "annoyed", "double"]);
@@ -98,6 +105,15 @@ function cloneSoundOverrides(themeMap) {
   return out;
 }
 
+function cloneCompanionOverrides(themeMap) {
+  const out = {};
+  if (!isPlainObject(themeMap) || !isPlainObject(themeMap.companionAnimations)) return out;
+  for (const [key, entry] of Object.entries(themeMap.companionAnimations)) {
+    if (isPlainObject(entry)) out[key] = { ...entry };
+  }
+  return out;
+}
+
 function buildThemeOverrideMap({
   states,
   workingTiers,
@@ -107,6 +123,7 @@ function buildThemeOverrideMap({
   reactions,
   hitbox,
   sounds,
+  companionAnimations,
 }) {
   const out = {};
   if (states && Object.keys(states).length > 0) out.states = states;
@@ -119,6 +136,9 @@ function buildThemeOverrideMap({
   if (reactions && Object.keys(reactions).length > 0) out.reactions = reactions;
   if (hitbox && Object.keys(hitbox).length > 0) out.hitbox = hitbox;
   if (sounds && Object.keys(sounds).length > 0) out.sounds = sounds;
+  if (companionAnimations && Object.keys(companionAnimations).length > 0) {
+    out.companionAnimations = companionAnimations;
+  }
   return out;
 }
 
@@ -182,6 +202,7 @@ function setThemeOverrideDisabled(payload, deps) {
     reactions: cloneReactionOverrides(currentThemeMap),
     hitbox: cloneHitboxOverrides(currentThemeMap),
     sounds: cloneSoundOverrides(currentThemeMap),
+    companionAnimations: cloneCompanionOverrides(currentThemeMap),
   });
   const nextOverrides = { ...currentOverrides };
   if (Object.keys(nextThemeMap).length > 0) {
@@ -200,8 +221,17 @@ function setAnimationOverride(payload, deps) {
   const { themeId, slotType } = payload;
   const idCheck = _validateAnimationOverrideThemeId(themeId);
   if (idCheck.status !== "ok") return idCheck;
-  if (slotType !== "state" && slotType !== "tier" && slotType !== "idleAnimation" && slotType !== "reaction") {
-    return { status: "error", message: "setAnimationOverride.slotType must be 'state', 'tier', 'idleAnimation', or 'reaction'" };
+  if (
+    slotType !== "state"
+    && slotType !== "tier"
+    && slotType !== "idleAnimation"
+    && slotType !== "reaction"
+    && slotType !== "companion"
+  ) {
+    return {
+      status: "error",
+      message: "setAnimationOverride.slotType must be 'state', 'tier', 'idleAnimation', 'reaction', or 'companion'",
+    };
   }
 
   const touchesFile = Object.prototype.hasOwnProperty.call(payload, "file");
@@ -237,8 +267,13 @@ function setAnimationOverride(payload, deps) {
     if (typeof payload.durationMs !== "number" || !Number.isFinite(payload.durationMs)) {
       return { status: "error", message: "setAnimationOverride.durationMs must be null or a finite number" };
     }
-    if (payload.durationMs < 500 || payload.durationMs > 60000) {
-      return { status: "error", message: "setAnimationOverride.durationMs must be between 500 and 60000" };
+    const minDuration = slotType === "companion" ? COMPANION_DURATION_MIN_MS : 500;
+    const maxDuration = slotType === "companion" ? COMPANION_DURATION_MAX_MS : 60000;
+    if (payload.durationMs < minDuration || payload.durationMs > maxDuration) {
+      return {
+        status: "error",
+        message: `setAnimationOverride.durationMs must be between ${minDuration} and ${maxDuration}`,
+      };
     }
   }
 
@@ -253,6 +288,7 @@ function setAnimationOverride(payload, deps) {
   const nextReactions = cloneReactionOverrides(currentThemeMap);
   const nextHitbox = cloneHitboxOverrides(currentThemeMap);
   const nextSounds = cloneSoundOverrides(currentThemeMap);
+  const nextCompanionAnimations = cloneCompanionOverrides(currentThemeMap);
 
   if (slotType === "state") {
     if (typeof payload.stateKey !== "string" || !payload.stateKey) {
@@ -339,6 +375,37 @@ function setAnimationOverride(payload, deps) {
     }
     if (Object.keys(nextEntry).length > 0) nextIdleAnimations[originalFile] = nextEntry;
     else delete nextIdleAnimations[originalFile];
+  } else if (slotType === "companion") {
+    const { companionKey } = payload;
+    if (!isCompanionAnimationKey(companionKey)) {
+      return { status: "error", message: "setAnimationOverride.companionKey must be a known companion animation key" };
+    }
+    if (touchesAutoReturn) {
+      return { status: "error", message: "setAnimationOverride.autoReturnMs is not supported for companion slots" };
+    }
+    // The generic card reset sends transition: null; anything else is refused
+    // because a companion card exposes no fades.
+    if (touchesTransition && payload.transition !== null) {
+      return { status: "error", message: "setAnimationOverride.transition is not supported for companion slots" };
+    }
+    if (touchesDuration && payload.durationMs !== null && COMPANION_NO_DURATION_KEYS.has(companionKey)) {
+      return { status: "error", message: `setAnimationOverride.durationMs is not supported for companion '${companionKey}'` };
+    }
+    const nextEntry = { ...(nextCompanionAnimations[companionKey] || {}) };
+    if (touchesFile) {
+      if (payload.file === null) {
+        delete nextEntry.file;
+        delete nextEntry.sourceThemeId;
+      } else {
+        nextEntry.file = payload.file;
+      }
+    }
+    if (touchesDuration) {
+      if (payload.durationMs === null) delete nextEntry.durationMs;
+      else nextEntry.durationMs = payload.durationMs;
+    }
+    if (Object.keys(nextEntry).length > 0) nextCompanionAnimations[companionKey] = nextEntry;
+    else delete nextCompanionAnimations[companionKey];
   } else {
     const { reactionKey } = payload;
     if (!REACTION_KEYS.has(reactionKey)) {
@@ -380,6 +447,7 @@ function setAnimationOverride(payload, deps) {
     reactions: nextReactions,
     hitbox: nextHitbox,
     sounds: nextSounds,
+    companionAnimations: nextCompanionAnimations,
   });
   const nextOverrides = { ...currentOverrides };
   if (Object.keys(nextThemeMap).length > 0) nextOverrides[themeId] = nextThemeMap;
@@ -441,6 +509,7 @@ function setSoundOverride(payload, deps) {
     reactions: cloneReactionOverrides(currentThemeMap),
     hitbox: cloneHitboxOverrides(currentThemeMap),
     sounds: nextSounds,
+    companionAnimations: cloneCompanionOverrides(currentThemeMap),
   });
   const nextOverrides = { ...currentOverrides };
   if (Object.keys(nextThemeMap).length > 0) nextOverrides[themeId] = nextThemeMap;
