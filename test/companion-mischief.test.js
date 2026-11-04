@@ -34,7 +34,7 @@ function sample(x, y, over) {
 }
 
 test("exports expected constants and helpers", () => {
-  assert.equal(m.MISCHIEF_IDS.length, 11);
+  assert.equal(m.MISCHIEF_IDS.length, 13);
   assert.equal(m.MISCHIEF_COOLDOWN_MS.fakeNap, 10800000);
   assert.equal(m.globalCooldownMs({ activity: 0 }), 900000);
   assert.equal(m.globalCooldownMs({ activity: 1 }), 480000);
@@ -384,4 +384,70 @@ test("reset clears cooldowns, windows and cursor state", () => {
   brain.reset();
   assert.equal(brain.canReact("fakeNap", clock.t), true);
   assert.ok(pick(brain, clock));
+});
+
+// ---- fetch ("vai buscar") and searchMouse ----
+
+test("fetch: roam-only, personality weights, 2 h cooldown and the global cooldown", () => {
+  assert.ok(m.MISCHIEF_IDS.includes("fetch"));
+  assert.equal(m.MISCHIEF_COOLDOWN_MS.fetch, 7200000);
+  const row = ["balanced", "playful", "curious", "calm", "shy"].map((p) => m.autonomousWeight("fetch", p));
+  assert.deepEqual(row, [0.2, 1, 0.3, 0, 0]);
+  const only = new Set(["fetch"]);
+  for (const personality of ["calm", "shy"]) {
+    const { brain, clock } = make({ rand: 0.6 });
+    assert.equal(pick(brain, clock, { personality, traits: getTraits(personality), available: only }), null, personality);
+  }
+  const roam = make({ rand: 0.6 });
+  assert.deepEqual(pick(roam.brain, roam.clock, { personality: "playful", available: only }), { id: "fetch" });
+  const act = make({ rand: 0.6 });
+  assert.equal(pick(act.brain, act.clock, { personality: "playful", available: only, mode: "activities" }), null);
+
+  const { brain, clock } = make({ rand: 0.6 });
+  brain.markPlayed("fetch", clock.t);
+  assert.equal(brain.isGlobalReady(clock.t), false, "fetch starts the global cooldown");
+  clock.t += 7200000 - 1;
+  assert.equal(brain.canReact("fetch", clock.t), false);
+  assert.equal(pick(brain, clock, { personality: "playful", available: only }), null);
+  clock.t += 1;
+  assert.deepEqual(pick(brain, clock, { personality: "playful", available: only }), { id: "fetch" });
+});
+
+test("fetch is blocked by low energy and without its art", () => {
+  const only = new Set(["fetch"]);
+  const low = make({ rand: 0.6 });
+  assert.equal(pick(low.brain, low.clock, { personality: "playful", available: only, state: state(24) }), null);
+  const ok = make({ rand: 0.6 });
+  assert.ok(pick(ok.brain, ok.clock, { personality: "playful", available: only, state: state(25) }));
+  const none = make({ rand: 0.6 });
+  assert.equal(pick(none.brain, none.clock, { personality: "playful", available: new Set() }), null);
+});
+
+test("searchMouse only after 10 min without a trusted cursor sample, 30 min cooldown", () => {
+  assert.equal(m.MISCHIEF_COOLDOWN_MS.searchMouse, 1800000);
+  const only = new Set(["searchMouse"]);
+  const fresh = make({ rand: 0.6 });
+  assert.equal(pick(fresh.brain, fresh.clock, { available: only }), null, "no cursor info: never");
+  assert.equal(pick(fresh.brain, fresh.clock, { available: only, cursorUnseenMs: 599999 }), null);
+  assert.deepEqual(pick(fresh.brain, fresh.clock, { available: only, cursorUnseenMs: 600000 }), { id: "searchMouse" });
+  for (const mode of ["roam", "activities"]) {
+    const { brain, clock } = make({ rand: 0.6 });
+    assert.deepEqual(pick(brain, clock, { available: only, cursorUnseenMs: 9e9, mode }), { id: "searchMouse" }, mode);
+  }
+  const { brain, clock } = make({ rand: 0.6 });
+  brain.markPlayed("searchMouse", clock.t);
+  clock.t += m.globalCooldownMs(getTraits("balanced"));
+  assert.equal(pick(brain, clock, { available: only, cursorUnseenMs: 9e9 }), null);
+  clock.t = BASE + 1800000;
+  assert.deepEqual(pick(brain, clock, { available: only, cursorUnseenMs: 9e9 }), { id: "searchMouse" });
+  const none = make({ rand: 0.6 });
+  assert.equal(pick(none.brain, none.clock, { available: new Set(), cursorUnseenMs: 9e9 }), null);
+});
+
+test("fetch and searchMouse never change the picks of a theme without their art", () => {
+  for (const rand of [0.55, 0.7, 0.85, 0.99]) {
+    const a = make({ rand });
+    const b = make({ rand });
+    assert.deepEqual(pick(a.brain, a.clock), pick(b.brain, b.clock, { cursorUnseenMs: 9e9 }));
+  }
 });

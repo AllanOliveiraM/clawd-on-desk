@@ -8,6 +8,7 @@
 const MISCHIEF_IDS = [
   "catch", "pounce", "fakeNap", "poke", "reachClose", "wall",
   "sitEdge", "dayRhythm", "welcome", "stretchBack", "toy",
+  "fetch", "searchMouse",
 ];
 
 const MISCHIEF_COOLDOWN_MS = {
@@ -22,6 +23,8 @@ const MISCHIEF_COOLDOWN_MS = {
   welcome: 0,
   stretchBack: 0,
   dayRhythm: 0,
+  fetch: 7200000,
+  searchMouse: 1800000,
 };
 
 // Cursor trigger tuning.
@@ -34,6 +37,8 @@ const POKE_MIN_CENTER_PX = 300;
 const BOO_RANGE_PX = 120;
 const LOW_ENERGY = 25;
 const OBSERVE_CHANCE = 0.5;
+// searchMouse: the cursor has been "invisible" (no trusted sample) this long.
+const CURSOR_UNSEEN_MS = 600000;
 
 const GLOBAL_COOLDOWN_CALM_MS = 900000; // activity 0
 const GLOBAL_COOLDOWN_ACTIVE_MS = 480000; // activity 1
@@ -41,16 +46,19 @@ const GLOBAL_COOLDOWN_ACTIVE_MS = 480000; // activity 1
 // Reactive triggers (catch, pounce, boo, welcome, stretchBack) never consume
 // the global cooldown: see GLOBAL_COOLDOWN_IDS.
 // Autonomous ids that walk across the screen: roam mode only.
-const WALKING_IDS = new Set(["poke", "reachClose", "wall", "sitEdge"]);
+const WALKING_IDS = new Set(["poke", "reachClose", "wall", "sitEdge", "fetch"]);
 // Zeroed when the pet is too tired to be jumpy.
-const LOW_ENERGY_BLOCKED = new Set(["pounce", "poke", "reachClose", "wall"]);
+const LOW_ENERGY_BLOCKED = new Set(["pounce", "poke", "reachClose", "wall", "fetch"]);
 
 // Ids that start the global cooldown when played (autonomous ones plus poke).
-const GLOBAL_COOLDOWN_IDS = new Set(["fakeNap", "reachClose", "wall", "sitEdge", "dayRhythm", "toy", "poke"]);
+const GLOBAL_COOLDOWN_IDS = new Set([
+  "fakeNap", "reachClose", "wall", "sitEdge", "dayRhythm", "toy", "poke", "fetch", "searchMouse",
+]);
 // Gap between cursor samples after which running clocks are considered stale.
 const SAMPLE_GAP_MS = 5000;
 
-const AUTONOMOUS_IDS = ["fakeNap", "reachClose", "wall", "sitEdge", "dayRhythm", "toy"];
+// Appended ids keep the pick sequence of a theme without their art unchanged.
+const AUTONOMOUS_IDS = ["fakeNap", "reachClose", "wall", "sitEdge", "dayRhythm", "toy", "fetch", "searchMouse"];
 
 // Order: balanced, playful, curious, calm, shy.
 const WEIGHT_TABLE = {
@@ -63,6 +71,8 @@ const WEIGHT_TABLE = {
   pounce:     { balanced: 0.6, playful: 1,   curious: 0.8, calm: 0.2, shy: 0 },
   boo:        { balanced: 0.2, playful: 1,   curious: 0.2, calm: 0,   shy: 0 },
   poke:       { balanced: 0.6, playful: 0.8, curious: 1.2, calm: 0.4, shy: 0.2 },
+  fetch:      { balanced: 0.2, playful: 1,   curious: 0.3, calm: 0,   shy: 0 },
+  searchMouse: { balanced: 1,  playful: 1,   curious: 1,   calm: 1,   shy: 1 },
 };
 
 const DAY_VARIANTS = {
@@ -86,6 +96,12 @@ function personalityRow(id, personality) {
 function reactWeight(id, personality) {
   const w = personalityRow(id, personality);
   return w === null ? 1 : w;
+}
+
+// Base pick weight of an autonomous id (0 for unknown ids).
+function autonomousWeight(id, personality) {
+  const w = personalityRow(id, personality);
+  return w === null ? 0 : w;
 }
 
 function globalCooldownMs(traits) {
@@ -322,6 +338,10 @@ function createMischiefBrain(options) {
         else if (!DAY_VARIANTS[win].some((v) => avail.has(v))) w = 0;
       } else if (id === "toy") {
         if (!TOY_VARIANTS.some((v) => avail.has(v))) w = 0;
+      } else if (id === "searchMouse") {
+        // Plan B for XWayland: only while no trusted cursor sample was seen.
+        const unseen = args && Number.isFinite(args.cursorUnseenMs) ? args.cursorUnseenMs : 0;
+        if (unseen < CURSOR_UNSEEN_MS || !avail.has(id)) w = 0;
       } else if (!avail.has(id)) {
         w = 0;
       }
@@ -367,6 +387,8 @@ function createMischiefBrain(options) {
 module.exports = {
   MISCHIEF_IDS,
   MISCHIEF_COOLDOWN_MS,
+  CURSOR_UNSEEN_MS,
+  autonomousWeight,
   globalCooldownMs,
   dayWindow,
   reactWeight,
