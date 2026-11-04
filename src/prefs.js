@@ -1393,6 +1393,16 @@ function _safeBasename(raw, { maxLen } = {}) {
   return name;
 }
 
+// Companion files and work-tier keys are stricter than _safeBasename: a
+// backslash or a name over 255 chars is a corrupt entry, not something to fix.
+const COMPANION_FILE_NAME_MAX = 255;
+function _safeCompanionFile(raw) {
+  if (typeof raw !== "string" || raw.includes("\\")) return null;
+  const name = _safeBasename(raw);
+  if (!name || name.length > COMPANION_FILE_NAME_MAX) return null;
+  return name;
+}
+
 function normalizeSoundOverridesMap(value) {
   if (!isPlainObject(value)) return null;
   const out = {};
@@ -1430,7 +1440,7 @@ function normalizeCompanionOverridesMap(value) {
     if (!cleanEntry) continue;
     const companionEntry = {};
     if (Object.prototype.hasOwnProperty.call(cleanEntry, "file")) {
-      const safeFile = _safeBasename(cleanEntry.file);
+      const safeFile = _safeCompanionFile(cleanEntry.file);
       if (safeFile) companionEntry.file = safeFile;
     }
     if (typeof cleanEntry.sourceThemeId === "string" && companionEntry.file) {
@@ -1465,8 +1475,8 @@ function normalizeCompanionWorkTierOverridesMap(value) {
     if (!isPlainObject(groupMap)) continue;
     const cleanGroup = {};
     for (const [originalFile, entry] of Object.entries(groupMap)) {
-      if (!isCompanionWorkFileName(originalFile) || !isPlainObject(entry)) continue;
-      const safeFile = _safeBasename(entry.file);
+      if (!isCompanionWorkFileName(originalFile) || originalFile.length > COMPANION_FILE_NAME_MAX || !isPlainObject(entry)) continue;
+      const safeFile = _safeCompanionFile(entry.file);
       if (!safeFile) continue;
       const cleanEntry = { file: safeFile };
       if (typeof entry.sourceThemeId === "string" && entry.sourceThemeId) {

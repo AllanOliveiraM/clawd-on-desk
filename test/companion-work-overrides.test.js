@@ -257,3 +257,65 @@ test("import round-trips work tier overrides and drops unsafe entries", () => {
     },
   });
 });
+
+// ---- gap hunting (settings): S6 / S7 and normalizer edges ----
+test("work tier command tolerates null timing keys and a null transition (S6)", () => {
+  const d = deps({ theme: "clawd", themeOverrides: {} });
+  const base = { themeId: "clawd", slotType: "companionWorkTier", tierGroup: "working", originalFile: "clawd-alive-work-coffee.svg" };
+  for (const extra of [{ autoReturnMs: null }, { durationMs: null }, { transition: null }, { autoReturnMs: null, durationMs: null, transition: null }]) {
+    const result = themeOverrideCommands.setAnimationOverride({ ...base, file: "mine.svg", ...extra }, d);
+    assert.strictEqual(result.status, "ok", `${JSON.stringify(extra)} ${result.message}`);
+    assert.deepStrictEqual(result.commit.themeOverrides.clawd.companionWorkTiers.working["clawd-alive-work-coffee.svg"], { file: "mine.svg" });
+  }
+  // Non-null timing still refused.
+  assert.strictEqual(themeOverrideCommands.setAnimationOverride({ ...base, file: "m.svg", durationMs: 1000 }, d).status, "error");
+  assert.strictEqual(themeOverrideCommands.setAnimationOverride({ ...base, file: "m.svg", autoReturnMs: 1000 }, d).status, "error");
+});
+
+test("work tier command keeps an orphan originalFile override (S6, pinned)", () => {
+  const d = deps({ theme: "clawd", themeOverrides: {} });
+  const result = themeOverrideCommands.setAnimationOverride({
+    themeId: "clawd", slotType: "companionWorkTier", tierGroup: "working",
+    originalFile: "not-in-the-ladder.svg", file: "mine.svg",
+  }, d);
+  assert.strictEqual(result.status, "ok", result.message);
+  assert.deepStrictEqual(result.commit.themeOverrides.clawd.companionWorkTiers,
+    { working: { "not-in-the-ladder.svg": { file: "mine.svg" } } });
+  // The patch ignores it: no ladder entry matches.
+  const patched = applyUserOverridesPatch(RAW, result.commit.themeOverrides.clawd);
+  const baseline = applyUserOverridesPatch(RAW, {});
+  assert.deepStrictEqual(patched.companionWorkTiers, baseline.companionWorkTiers);
+});
+
+test("prefs reject backslash, dot names and over-long names for work tier files and keys (S7)", () => {
+  const long = `${"a".repeat(300)}.svg`;
+  const out = normalizeThemeOverrides({
+    clawd: {
+      companionWorkTiers: {
+        working: {
+          "a\\b.svg": { file: "x.svg" },
+          "..": { file: "x.svg" },
+          ".": { file: "x.svg" },
+          [long]: { file: "x.svg" },
+          "a/b.svg": { file: "x.svg" },
+          "": { file: "x.svg" },
+          "ok-1.svg": { file: "a\\b.svg" },
+          "ok-2.svg": { file: long },
+          "ok-3.svg": { file: "fine.svg" },
+        },
+      },
+    },
+  }, {});
+  assert.deepStrictEqual(out, { clawd: { companionWorkTiers: { working: { "ok-3.svg": { file: "fine.svg" } } } } });
+  assert.deepStrictEqual(normalizeThemeOverrides(JSON.parse('{"clawd":{"companionWorkTiers":{"working":{"__proto__":{"file":"x.svg"},"constructor":{"file":"x.svg"}}}}}'), {}), {});
+});
+
+test("prefs work tier shapes: array group, non-object entry, sourceThemeId only as string", () => {
+  assert.deepStrictEqual(normalizeThemeOverrides({ clawd: { companionWorkTiers: { working: ["a.svg"] } } }, {}), {});
+  assert.deepStrictEqual(normalizeThemeOverrides({ clawd: { companionWorkTiers: [] } }, {}), {});
+  const out = normalizeThemeOverrides({ clawd: { companionWorkTiers: { working: {
+    "a.svg": { file: "x.svg", sourceThemeId: 5 },
+    "b.svg": { file: "y.svg", sourceThemeId: "calico" },
+  } } } }, {});
+  assert.deepStrictEqual(out.clawd.companionWorkTiers.working, { "a.svg": { file: "x.svg" }, "b.svg": { file: "y.svg", sourceThemeId: "calico" } });
+});

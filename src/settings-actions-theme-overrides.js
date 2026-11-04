@@ -442,7 +442,8 @@ function setAnimationOverride(payload, deps) {
     if (!isCompanionWorkFileName(originalFile)) {
       return { status: "error", message: "setAnimationOverride.originalFile must be a bare file name for companionWorkTier slots" };
     }
-    if (touchesAutoReturn || touchesDuration) {
+    // Null timing keys (a generic card reset) are tolerated like the companion branch.
+    if ((touchesAutoReturn && payload.autoReturnMs !== null) || (touchesDuration && payload.durationMs !== null)) {
       return { status: "error", message: "setAnimationOverride timing is not supported for companionWorkTier slots" };
     }
     if (touchesTransition && payload.transition !== null) {
