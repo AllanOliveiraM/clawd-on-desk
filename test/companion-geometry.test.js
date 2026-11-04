@@ -54,3 +54,24 @@ test("art answers null without a placeable theme, key or size", () => {
   assert.equal(geo.createArt(clawd, null).point("pokeLeft", 0, 0), null);
   assert.equal(bare.visualMargins("pokeLeft"), null);
 });
+
+test("fetch exit anchors mirror around the body center (Ruling R9)", () => {
+  const W = 1000;
+  const art = geo.createArt(clawd, { width: W, height: W });
+  assert.equal(art.mirrorU("fetchExitRight", geo.FETCH_EDGE_U), 16.5);
+  const left = art.point("fetchExitLeft", geo.FETCH_EDGE_U, 0).x / W;
+  const right = art.point("fetchExitRight", art.mirrorU("fetchExitRight", geo.FETCH_EDGE_U), 0).x / W;
+  near(left, 0.239);
+  near(right, 0.761);
+  near(left + right, 1, 0.001);
+});
+
+test("a theme without layout.centerX mirrors around the viewBox center", () => {
+  const layout = { ...clawd.layout };
+  delete layout.centerX;
+  const theme = { ...clawd, viewBox: { x: 0, y: 0, width: 20, height: 20 }, fileViewBoxes: {}, layout };
+  const art = geo.createArt(theme, { width: 1000, height: 1000 });
+  assert.equal(art.mirrorU("pokeRight", -5.5), 25.5);
+  assert.equal(art.mirrorU("noSuchKey", -5.5), null);
+  assert.equal(art.mirrorU("pokeRight", NaN), null);
+});

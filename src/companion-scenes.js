@@ -484,6 +484,8 @@ module.exports = {
   sided,
   FETCH_OBJECTS,
   fetchObjectKeys,
+  fetchSide,
+  fetchObjectKey,
   buildScene,
   createScenePlayer,
   mischiefAvailable,
