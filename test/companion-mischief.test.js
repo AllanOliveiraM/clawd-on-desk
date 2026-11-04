@@ -487,3 +487,368 @@ test("waking from a nap with a parked far cursor does not poke at once (G1)", ()
   clock.t += 2000;
   assert.equal(brain.observeCursor(sample(1600, 550)).id, "poke", "a fresh 20 s of stillness after waking");
 });
+
+// ---- coverage: napping, day windows, clocks, searchMouse, fetch, personalities ----
+
+const TRAITS = getTraits("balanced");
+const PERSONALITIES = ["balanced", "playful", "curious", "calm", "shy"];
+
+function at(brain, clock, x, y, dt, over) {
+  clock.t += dt;
+  return brain.observeCursor(sample(x, y, over));
+}
+
+test("napping toggles: boo once per approach, pounce needs a fresh dwell after waking", () => {
+  const { brain, clock } = make();
+  at(brain, clock, 1200, 550, 100); // lurking in the band since t0
+  at(brain, clock, 1200, 550, 2000);
+  brain.setNapping(true);
+  at(brain, clock, 1500, 550, 100); // far: arms the boo
+  assert.deepEqual(at(brain, clock, 1150, 550, 100), { id: "boo" });
+  assert.equal(at(brain, clock, 1150, 550, 100), null, "latched");
+  at(brain, clock, 1500, 550, 100); // leaves
+  assert.deepEqual(at(brain, clock, 1150, 550, 100), { id: "boo" }, "a second approach boos again");
+  brain.setNapping(false);
+  at(brain, clock, 1200, 550, 100);
+  assert.equal(at(brain, clock, 1200, 550, 2400), null, "dwell restarted at wake-up");
+  assert.deepEqual(at(brain, clock, 1200, 550, 200), { id: "pounce", side: "right" });
+});
+
+test("napping suppresses pounce and poke", () => {
+  const { brain, clock } = make();
+  brain.setNapping(true);
+  at(brain, clock, 1300, 550, 100); // edge 200: outside the boo range, inside the pounce band
+  for (let i = 0; i < 6; i += 1) assert.equal(at(brain, clock, 1300, 550, 1000), null);
+  const far = make();
+  far.brain.setNapping(true);
+  at(far.brain, far.clock, 1700, 550, 100);
+  for (let i = 0; i < 30; i += 1) assert.equal(at(far.brain, far.clock, 1700, 550, 1000), null);
+});
+
+test("boo range: 120 px from the edge does not boo, 119 does; over the pet (edge 0) boos", () => {
+  const no = make();
+  no.brain.setNapping(true);
+  assert.equal(at(no.brain, no.clock, 1220, 550, 100), null);
+  const yes = make();
+  yes.brain.setNapping(true);
+  assert.deepEqual(at(yes.brain, yes.clock, 1219, 550, 100), { id: "boo" });
+  const over = make();
+  over.brain.setNapping(true);
+  assert.deepEqual(at(over.brain, over.clock, 1050, 550, 100, { overPet: true }), { id: "boo" });
+});
+
+test("dayWindow boundaries and NaN", () => {
+  assert.equal(m.dayWindow(5.99), null);
+  assert.equal(m.dayWindow(6), "morning");
+  assert.equal(m.dayWindow(9.99), "morning");
+  assert.equal(m.dayWindow(10), null);
+  assert.equal(m.dayWindow(22.99), null);
+  assert.equal(m.dayWindow(23), "night");
+  assert.equal(m.dayWindow(0), "night");
+  assert.equal(m.dayWindow(2.99), "night");
+  assert.equal(m.dayWindow(3), null);
+  assert.equal(m.dayWindow(NaN), null);
+  assert.equal(m.dayWindow(undefined), null);
+});
+
+test("DST: the night window key survives fall-back and spring-forward (TZ=America/New_York)", () => {
+  const script = `
+    const m = require(${JSON.stringify(require.resolve("../src/companion-mischief"))});
+    const out = {};
+    const run = (name, play, probes) => {
+      const c = { t: 0 };
+      const b = m.createMischiefBrain({ now: () => c.t, random: () => 0.6 });
+      c.t = play; b.markPlayed("dayRhythm");
+      out[name] = probes.map((t) => { c.t = t; return b.pickAutonomous({ personality: "balanced", mode: "roam", available: new Set(["nightSleepy"]), now: t }); }).map((r) => !!r);
+    };
+    const H = 3600000;
+    const fall1 = new Date(2026, 10, 1, 1, 30).getTime(); // first 01:30 (EDT)
+    run("fall", new Date(2026, 9, 31, 23, 30).getTime(), [fall1, fall1 + H, new Date(2026, 10, 1, 2, 30).getTime(), new Date(2026, 10, 1, 23, 30).getTime()]);
+    run("spring", new Date(2026, 2, 7, 23, 30).getTime(), [new Date(2026, 2, 8, 1, 30).getTime(), new Date(2026, 2, 8, 23, 30).getTime()]);
+    console.log(JSON.stringify(out));
+  `;
+  const r = require("node:child_process").spawnSync(process.execPath, ["-e", script], {
+    env: { ...process.env, TZ: "America/New_York" }, encoding: "utf8",
+  });
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout.trim());
+  assert.deepEqual(out.fall, [false, false, false, true], "same window through the repeated hour, new one next night");
+  assert.deepEqual(out.spring, [false, true]);
+});
+
+test("getHour and now agree across midnight for the night window key", () => {
+  const night = new Date(2026, 10, 4, 23, 30, 0).getTime();
+  const { brain, clock } = make({ rand: 0.6, hour: 23, start: night });
+  const only = new Set(["nightSleepy"]);
+  brain.markPlayed("dayRhythm", clock.t);
+  clock.t = new Date(2026, 10, 5, 0, 30, 0).getTime();
+  clock.h = 0;
+  assert.equal(pick(brain, clock, { available: only }), null, "00:30 is still the 4 Nov night");
+  clock.t = new Date(2026, 10, 5, 23, 30, 0).getTime();
+  clock.h = 23;
+  assert.equal(pick(brain, clock, { available: only }).id, "dayRhythm");
+  // Without a custom hour source both come from the clock.
+  const c = { t: night };
+  const b = m.createMischiefBrain({ now: () => c.t, random: () => 0.6 });
+  b.markPlayed("dayRhythm");
+  c.t = new Date(2026, 10, 5, 0, 30, 0).getTime();
+  assert.equal(b.pickAutonomous({ personality: "balanced", mode: "roam", available: only, now: c.t }), null);
+});
+
+test("a backwards clock does not replay a dayRhythm window", () => {
+  const morning = new Date(2026, 10, 3, 7, 0, 0).getTime();
+  const { brain, clock } = make({ rand: 0.6, hour: 7, start: morning });
+  const only = new Set(["morningStretch"]);
+  brain.markPlayed("dayRhythm", clock.t, TRAITS);
+  clock.t = morning - 1800000; // 06:30, same window
+  clock.h = 6;
+  assert.equal(pick(brain, clock, { available: only }), null);
+  clock.t += 2 * 3600000; // well past the global cooldown
+  clock.h = 8;
+  assert.equal(pick(brain, clock, { available: only }), null, "still the same morning window");
+});
+
+test("a cooldown set after a clock step back is not shortened by later calls", () => {
+  const { brain, clock } = make();
+  brain.markPlayed("fakeNap", clock.t, TRAITS);
+  const back = clock.t - 1000000;
+  brain.markPlayed("poke", back, TRAITS);
+  assert.equal(brain.canReact("poke", back + 1000), false);
+  assert.equal(brain.canReact("poke", back + 1199999), false);
+  assert.equal(brain.canReact("poke", back + 1200000), true);
+  assert.equal(brain.isGlobalReady(back + m.globalCooldownMs(TRAITS) - 1), false);
+});
+
+test("a forward jump of 8 h releases the global and every own cooldown", () => {
+  const { brain, clock } = make();
+  brain.markPlayed("fakeNap", clock.t, TRAITS);
+  brain.markPlayed("sitEdge", clock.t, TRAITS);
+  const later = clock.t + 8 * 3600000;
+  assert.equal(brain.isGlobalReady(later), true);
+  assert.equal(brain.canReact("sitEdge", later), true);
+  assert.equal(brain.canReact("fakeNap", later), true, "the longest cooldown is 3 h");
+  assert.equal(brain.canReact("fakeNap", clock.t + 2 * 3600000), false, "still cooling before the jump target");
+});
+
+test("searchMouse: unusable unseen values never pick, min 0 with unseen 0 picks", () => {
+  const { brain, clock } = make({ rand: 0.6 });
+  const base = { traits: TRAITS, personality: "balanced", mode: "roam", available: new Set(["searchMouse"]), now: clock.t };
+  for (const bad of [Infinity, NaN, -5, "700000", null, undefined]) {
+    assert.equal(brain.pickAutonomous({ ...base, cursorUnseenMs: bad }), null, String(bad));
+  }
+  assert.deepEqual(brain.pickAutonomous({ ...base, cursorUnseenMs: 0, cursorUnseenMinMs: 0 }), { id: "searchMouse" });
+  // an unusable minimum falls back to the 10 min default
+  for (const bad of [Infinity, NaN, "0"]) {
+    assert.equal(brain.pickAutonomous({ ...base, cursorUnseenMs: 599999, cursorUnseenMinMs: bad }), null, String(bad));
+    assert.deepEqual(brain.pickAutonomous({ ...base, cursorUnseenMs: 600000, cursorUnseenMinMs: bad }), { id: "searchMouse" }, String(bad));
+  }
+});
+
+test("searchMouse is stationary and low-energy proof for every personality (G2)", () => {
+  for (const personality of PERSONALITIES) {
+    for (const mode of ["roam", "activities", "stationary"]) {
+      const { brain, clock } = make({ rand: 0.6 });
+      const r = brain.pickAutonomous({
+        traits: TRAITS, personality, mode, state: state(5), available: new Set(["searchMouse"]),
+        cursorUnseenMs: 700000, now: clock.t,
+      });
+      assert.deepEqual(r, { id: "searchMouse" }, `${personality}/${mode}`);
+    }
+  }
+});
+
+test("fetch eligibility matrix", () => {
+  const only = new Set(["fetch"]);
+  const go = (over, setup) => {
+    const { brain, clock } = make({ rand: 0.6 });
+    if (setup) setup(brain, clock);
+    return pick(brain, clock, { available: only, ...over });
+  };
+  assert.deepEqual(go({ personality: "playful" }), { id: "fetch" });
+  assert.equal(go({ personality: "playful", mode: "activities" }), null);
+  assert.equal(go({ personality: "playful", mode: null }), null);
+  assert.deepEqual(go({ personality: "playful", state: state(25) }), { id: "fetch" });
+  assert.equal(go({ personality: "playful", state: state(24) }), null);
+  assert.equal(go({ personality: "calm" }), null);
+  assert.equal(go({ personality: "shy" }), null);
+  const played = (brain, clock) => brain.markPlayed("fetch", clock.t, TRAITS);
+  const exact = make({ rand: 0.6 });
+  exact.brain.markPlayed("fetch", exact.clock.t, TRAITS);
+  assert.equal(exact.brain.canReact("fetch", exact.clock.t + 7199999), false);
+  assert.equal(exact.brain.canReact("fetch", exact.clock.t + 7200000), true);
+  assert.equal(go({ personality: "playful" }, played), null, "cooling down");
+});
+
+test("globalCooldownMs interpolates with activity and defaults to 0.5", () => {
+  assert.equal(m.globalCooldownMs({ activity: 0 }), 900000);
+  assert.equal(m.globalCooldownMs({ activity: 0.5 }), 690000);
+  assert.equal(m.globalCooldownMs({ activity: 1 }), 480000);
+  for (const bad of [{ activity: NaN }, {}, null, undefined, { activity: "1" }]) assert.equal(m.globalCooldownMs(bad), 690000);
+  assert.equal(m.globalCooldownMs({ activity: 7 }), 480000, "clamped");
+  assert.equal(m.globalCooldownMs({ activity: -3 }), 900000, "clamped");
+});
+
+test("personalities: unknown falls back to balanced, table is complete and finite", () => {
+  for (const id of ["fakeNap", "reachClose", "wall", "sitEdge", "dayRhythm", "toy", "pounce", "boo", "poke", "fetch", "searchMouse"]) {
+    for (const p of PERSONALITIES) {
+      for (const fn of [m.reactWeight, m.autonomousWeight]) {
+        const w = fn(id, p);
+        assert.ok(Number.isFinite(w) && w >= 0, `${fn.name}(${id},${p})`);
+      }
+    }
+    for (const p of ["zzz", undefined, null, "toString", "constructor", "__proto__"]) {
+      assert.equal(m.reactWeight(id, p), m.reactWeight(id, "balanced"), `${id}/${String(p)}`);
+      assert.equal(m.autonomousWeight(id, p), m.autonomousWeight(id, "balanced"));
+    }
+  }
+  assert.equal(m.autonomousWeight("nope", "balanced"), 0);
+  assert.equal(m.reactWeight("nope", "balanced"), 1);
+  assert.equal(m.reactWeight("catch", "shy"), 1);
+  assert.equal(m.autonomousWeight("searchMouse", "shy"), 1);
+  const { brain, clock } = make({ rand: 0.6 });
+  assert.deepEqual(pick(brain, clock, { personality: "zzz", available: new Set(["sitEdge"]) }), { id: "sitEdge" });
+  assert.deepEqual(brain.pickAutonomous({ personality: "zzz", mode: "roam", available: new Set(["sitEdge"]), now: clock.t }), { id: "sitEdge" }, "null traits and state");
+});
+
+test("markPlayed: unknown id, NaN time, reset clears own-only cooldowns, canReact before any play", () => {
+  const { brain, clock } = make();
+  assert.equal(brain.canReact("fakeNap", clock.t), true);
+  assert.equal(brain.canReact("nope", clock.t), true);
+  brain.markPlayed("nope", clock.t);
+  assert.equal(brain.canReact("nope", clock.t), true, "unknown ids have no cooldown");
+  assert.equal(brain.isGlobalReady(clock.t), true, "unknown ids start no global cooldown");
+  brain.markPlayed("pounce", NaN);
+  assert.equal(brain.canReact("pounce", clock.t + 599999), false, "NaN falls back to now()");
+  assert.equal(brain.canReact("pounce", clock.t + 600000), true);
+  brain.markPlayed("searchMouse", clock.t, TRAITS);
+  assert.equal(brain.canReact("searchMouse", clock.t + 1), false);
+  assert.equal(brain.isGlobalReady(clock.t + 1), true);
+  brain.reset();
+  assert.equal(brain.canReact("searchMouse", clock.t + 1), true);
+  assert.equal(brain.canReact("pounce", clock.t + 1), true);
+});
+
+// ---- coverage: pounce zone, poke, boo and bad samples ----
+
+const TZONE = { leftX: 800, rightX: 1300, tipY: 550, tolY: 20 };
+
+function zoneHit(x, y, zone = TZONE, over) {
+  const { brain, clock } = make();
+  at(brain, clock, x, y, 100, { pounceZone: zone, ...over });
+  return at(brain, clock, x, y, 2500, { pounceZone: zone, ...over });
+}
+
+test("pounce strike zone boundaries", () => {
+  assert.deepEqual(zoneHit(800, 550), { id: "pounce", side: "left" }, "leftX inclusive");
+  assert.equal(zoneHit(799, 550), null);
+  assert.equal(zoneHit(1000, 550), null, "rect.x exclusive");
+  assert.equal(zoneHit(1100, 550), null, "right edge of the rect exclusive");
+  assert.deepEqual(zoneHit(1101, 550), { id: "pounce", side: "right" });
+  assert.deepEqual(zoneHit(1300, 550), { id: "pounce", side: "right" }, "rightX inclusive");
+  assert.equal(zoneHit(1301, 550), null);
+  assert.deepEqual(zoneHit(900, 570), { id: "pounce", side: "left" }, "tipY + tol inclusive");
+  assert.deepEqual(zoneHit(900, 530), { id: "pounce", side: "left" }, "tipY - tol inclusive");
+  assert.equal(zoneHit(900, 571), null);
+  assert.equal(zoneHit(900, 529), null);
+  assert.deepEqual(zoneHit(1301, 550, { ...TZONE, rightX: 1400 }), { id: "pounce", side: "right" });
+});
+
+test("pounce side comes from the zone and ignores the cursor's side of the pet center", () => {
+  // Right of the rect but left of the center cannot happen; a wide pet checks the zone wins.
+  assert.deepEqual(zoneHit(1101, 550, { ...TZONE, rightX: 1200 }), { id: "pounce", side: "right" });
+  assert.deepEqual(zoneHit(900, 550), { id: "pounce", side: "left" });
+});
+
+test("an invalid strike zone falls back to the old band", () => {
+  for (const bad of [{ ...TZONE, tolY: -1 }, { ...TZONE, tolY: NaN }, { ...TZONE, leftX: "800" }, {}, null]) {
+    assert.deepEqual(zoneHit(1200, 550, bad), { id: "pounce", side: "right" }, JSON.stringify(bad));
+    assert.equal(zoneHit(1100 + 39, 550, bad), null, "inside the band's near edge");
+    assert.deepEqual(zoneHit(1100 + 40, 550, bad), { id: "pounce", side: "right" }, "band min inclusive");
+    assert.deepEqual(zoneHit(1100 + 220, 550, bad), { id: "pounce", side: "right" }, "band max inclusive");
+    assert.equal(zoneHit(1100 + 221, 550, bad), null);
+  }
+  assert.deepEqual(zoneHit(900, 550, null), { id: "pounce", side: "left" });
+});
+
+test("moving inside the strike zone keeps the dwell; toggling overPet resets it", () => {
+  const { brain, clock } = make();
+  const z = { pounceZone: TZONE };
+  at(brain, clock, 900, 545, 100, z);
+  at(brain, clock, 910, 555, 800, z);
+  at(brain, clock, 880, 550, 800, z);
+  assert.equal(at(brain, clock, 905, 560, 800, z), null);
+  assert.deepEqual(at(brain, clock, 905, 560, 200, z), { id: "pounce", side: "left" }, "2.5 s of lurking while moving");
+
+  const o = make();
+  at(o.brain, o.clock, 900, 550, 100, z);
+  at(o.brain, o.clock, 900, 550, 2000, z);
+  assert.equal(at(o.brain, o.clock, 900, 550, 100, { ...z, overPet: true }), null);
+  assert.equal(at(o.brain, o.clock, 900, 550, 2000, z), null, "dwell restarted after the overPet sample");
+  assert.deepEqual(at(o.brain, o.clock, 900, 550, 2500, z), { id: "pounce", side: "left" });
+});
+
+test("pounce dwell is exactly 2500 ms and fires once while the cursor stays", () => {
+  const { brain, clock } = make();
+  at(brain, clock, 1200, 550, 100);
+  assert.equal(at(brain, clock, 1200, 550, 2499), null);
+  assert.deepEqual(at(brain, clock, 1200, 550, 1), { id: "pounce", side: "right" });
+  assert.equal(at(brain, clock, 1200, 550, 1000), null);
+  assert.equal(at(brain, clock, 1200, 550, 4000), null);
+});
+
+test("poke: sub-3 px jitter keeps the clock, 3 px resets it", () => {
+  const jit = make();
+  at(jit.brain, jit.clock, 1600, 550, 100);
+  for (let i = 0; i < 19; i += 1) assert.equal(at(jit.brain, jit.clock, 1600 + (i % 2 ? 0 : 2.9), 550, 1000), null);
+  assert.equal(at(jit.brain, jit.clock, 1600, 550, 1000).id, "poke", "20 s of jitter under 3 px");
+
+  const mv = make();
+  at(mv.brain, mv.clock, 1600, 550, 100);
+  for (let i = 0; i < 19; i += 1) assert.equal(at(mv.brain, mv.clock, 1600 + (i % 2 ? 0 : 3), 550, 1000), null);
+  assert.equal(at(mv.brain, mv.clock, 1600, 550, 1000), null, "3 px moves reset the clock every sample");
+});
+
+test("poke: exactly 300 px from the pet center does not fire, farther does", () => {
+  const edge = make();
+  at(edge.brain, edge.clock, 1350, 550, 100);
+  for (let i = 0; i < 25; i += 1) assert.equal(at(edge.brain, edge.clock, 1350, 550, 1000), null);
+  const far = make();
+  at(far.brain, far.clock, 1351, 550, 100);
+  assert.equal(hold(far.brain, far.clock, 1351, 550, 21000).id, "poke");
+});
+
+test("poke fires once per stillness, then again after movement and another 20 s", () => {
+  const { brain, clock } = make();
+  at(brain, clock, 1600, 550, 100);
+  assert.equal(hold(brain, clock, 1600, 550, 21000).id, "poke");
+  for (let i = 0; i < 40; i += 1) assert.equal(at(brain, clock, 1600, 550, 1000), null, "once");
+  assert.equal(at(brain, clock, 1650, 550, 1000), null, "moved");
+  assert.equal(hold(brain, clock, 1650, 550, 19000), null);
+  assert.deepEqual(at(brain, clock, 1650, 550, 1000), { id: "poke", target: { x: 1650, y: 550 } });
+});
+
+test("bad samples return null and leave the clocks alone", () => {
+  const { brain, clock } = make();
+  at(brain, clock, 1200, 550, 100);
+  for (const bad of [
+    { x: NaN, y: 550, petRect: RECT }, { x: 1200, y: Infinity, petRect: RECT },
+    { x: 1200, y: 550 }, { x: "1200", y: 550, petRect: RECT }, undefined, 0,
+  ]) {
+    clock.t += 200;
+    assert.equal(brain.observeCursor(bad), null);
+  }
+  clock.t += 800; // 2.0 s after the first sample
+  assert.equal(brain.observeCursor(sample(1200, 550)), null);
+  clock.t += 600;
+  assert.deepEqual(brain.observeCursor(sample(1200, 550)), { id: "pounce", side: "right" }, "dwell kept through the bad samples");
+});
+
+test("a single null between stills keeps the poke clock", () => {
+  const { brain, clock } = make();
+  at(brain, clock, 1600, 550, 100);
+  assert.equal(hold(brain, clock, 1600, 550, 9000), null);
+  clock.t += 1000;
+  brain.observeCursor(null);
+  assert.equal(hold(brain, clock, 1600, 550, 9000), null);
+  assert.equal(at(brain, clock, 1600, 550, 2000).id, "poke");
+});
