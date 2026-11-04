@@ -1521,6 +1521,20 @@ describe("Clawd Alive dreamy sleep (pickSleepVisual)", () => {
     assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
   });
 
+  it("dropSleepVariant reports whether the dreamy file is what the pet shows", () => {
+    api.applyState("idle");
+    api.applyState("sleeping");
+    assert.strictEqual(api.dropSleepVariant(), true, "the variant is on screen");
+    assert.strictEqual(api.dropSleepVariant(), false, "already dropped");
+    answer = null;
+    api.applyState("idle");
+    api.applyState("sleeping");
+    assert.strictEqual(api.getCurrentSvg(), "clawd-sleeping.svg");
+    assert.strictEqual(api.dropSleepVariant(), false, "the theme's own sleeping file");
+    api.applyState("idle");
+    assert.strictEqual(api.dropSleepVariant(), false, "not asleep");
+  });
+
   it("a session-resolved sleep goes through the hook too", () => {
     api.applyState("idle");
     api.setState("sleeping");
@@ -1738,6 +1752,25 @@ describe("Clawd Alive work escalation (pickWorkVisual)", () => {
     api.sessions.set("j2", rawSession("juggling"));
     assert.strictEqual(api.getSvgOverride("juggling"), "clawd-working-building.svg");
     assert.strictEqual(calls.length, 1, "overridden juggling tier never asks");
+  });
+
+  it("dropWorkVariant reports whether a companion ladder file is on screen", () => {
+    api.sessions.set("s1", rawSession("working"));
+    api.setState("working", api.getSvgOverride("working"), { bypassMinDisplay: true });
+    assert.strictEqual(api.getCurrentSvg(), "clawd-alive-work-coffee.svg");
+    assert.strictEqual(api.dropWorkVariant(), true);
+    assert.strictEqual(api.dropWorkVariant(), false, "already dropped");
+    answer = null; // Alive off
+    api.applyState("working", api.getSvgOverride("working"));
+    assert.strictEqual(api.getCurrentSvg(), "clawd-working-typing.svg");
+    assert.strictEqual(api.dropWorkVariant(), false, "the theme's own tier file");
+    answer = "clawd-alive-work-coffee.svg";
+    api.sessions.clear();
+    api.sessions.set("j1", rawSession("juggling"));
+    api.setState("juggling", api.getSvgOverride("juggling"), { bypassMinDisplay: true });
+    assert.strictEqual(api.dropWorkVariant(), true, "juggling ladder too");
+    api.applyState("idle");
+    assert.strictEqual(api.dropWorkVariant(), false, "not working");
   });
 
   it("juggling asks with the live subagent count", () => {

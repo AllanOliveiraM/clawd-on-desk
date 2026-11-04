@@ -6183,6 +6183,20 @@ const _companion = require("./companion-runtime").createCompanionRuntime({
     filePath: path.join(app.getPath("userData"), "companion-state.json"),
   }),
 });
+// Alive off mid-sleep / mid-work: drop the dreamy sleep file and the work
+// ladder pick now, not at the next sleep or work episode. The state is
+// re-applied only when one of those files is on screen, never under DND.
+function dropCompanionVisualsAfterDisable() {
+  try {
+    const sleepShown = _state.dropSleepVariant();
+    const workShown = _state.dropWorkVariant();
+    if (doNotDisturb || !(sleepShown || workShown)) return;
+    const current = _state.getCurrentState();
+    _state.applyState(current, _state.getSvgOverride(current));
+  } catch (err) {
+    console.warn("Clawd: companion visual drop failed:", err && err.message);
+  }
+}
 _companion.configure(readCompanionConfig());
 try {
   for (const key of COMPANION_PREF_KEYS) {
@@ -6190,14 +6204,7 @@ try {
       _companion.configure(readCompanionConfig(snapshot));
       nudgeCompanionMood();
       if (key === "companionEnabled" && snapshot && snapshot.companionEnabled !== true) {
-        // Alive off mid-sleep: drop the dreamy file now, not at the next sleep.
-        try {
-          _state.dropSleepVariant();
-          const current = _state.getCurrentState();
-          if (current === "sleeping" || current === "collapsing") _state.applyState(current, _state.getSvgOverride(current));
-        } catch (err) {
-          console.warn("Clawd: companion sleep variant drop failed:", err && err.message);
-        }
+        dropCompanionVisualsAfterDisable();
       }
       if (key === "companionEnabled" || key === "companionInteractions") {
         sendToHitWin("hit-state-sync", { petGesturesEnabled: isPetGesturesEnabled(snapshot) });

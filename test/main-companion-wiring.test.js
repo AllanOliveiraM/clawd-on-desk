@@ -486,3 +486,33 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
   onLeft({ sender: dashboard.webContents });
   assert.equal(left, 2);
 });
+
+// F3 / F4: Alive off re-applies the current state only when a companion file
+// (dreamy sleep or work ladder) is on screen, and never under DND.
+function aliveOffHarness({ sleepShown = false, workShown = false, dnd = false, state = "sleeping" } = {}) {
+  const fnSource = slice("function dropCompanionVisualsAfterDisable() {", "\n}\n") + "\n}\n";
+  const applied = [];
+  const ctx = {
+    doNotDisturb: dnd,
+    console: { warn() {} },
+    _state: {
+      dropSleepVariant: () => sleepShown,
+      dropWorkVariant: () => workShown,
+      getCurrentState: () => state,
+      getSvgOverride: (s) => `override:${s}`,
+      applyState: (s, svg) => applied.push([s, svg]),
+    },
+  };
+  vm.runInNewContext(`${fnSource}\ndropCompanionVisualsAfterDisable();`, ctx);
+  return applied;
+}
+
+it("Alive off re-applies only a state that shows a companion file, never under DND", () => {
+  assert.deepEqual(aliveOffHarness({}), [], "nothing companion on screen");
+  assert.deepEqual(aliveOffHarness({ sleepShown: true }), [["sleeping", "override:sleeping"]]);
+  assert.deepEqual(aliveOffHarness({ workShown: true, state: "juggling" }), [["juggling", "override:juggling"]]);
+  assert.deepEqual(aliveOffHarness({ sleepShown: true, dnd: true }), []);
+  assert.deepEqual(aliveOffHarness({ workShown: true, dnd: true, state: "working" }), []);
+  const block = slice('if (key === "companionEnabled" && snapshot && snapshot.companionEnabled !== true) {', "\n      }\n");
+  assert.ok(block.includes("dropCompanionVisualsAfterDisable();"));
+});

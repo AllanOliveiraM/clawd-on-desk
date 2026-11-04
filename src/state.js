@@ -909,9 +909,14 @@ function normalizeApplyStateOptions(state, options = {}) {
 // previousState and currentState are updated.
 // Alive turned off (or the hook's answers changed): forget the held file so
 // the next apply of the sleep state shows the theme's own visual (Ruling R1').
+// Returns true only when the dropped file is the one on screen, so the caller
+// re-applies the sleep state only when that changes something.
 function dropSleepVariant() {
+  const shown = !!sleepVariantSvg && (currentState === "sleeping" || currentState === "collapsing")
+    && currentSvg === sleepVariantSvg;
   sleepVariantSvg = null;
   collapseAsked = false;
+  return shown;
 }
 function resolveSleepVariant(state, svgOverride, options) {
   const sleepPhase = state === "sleeping" || state === "collapsing";
@@ -956,9 +961,23 @@ function noteWorkEpisode(state) {
     workEpisodes[other] += 1;
   }
 }
+// Ladder files the companion swapped in (not the theme's own tier file), so
+// Alive off can tell whether the pet is showing one (dropWorkVariant).
+const companionWorkFiles = new Set();
 function getPickWorkVisual() {
   if (ctx.doNotDisturb || typeof ctx.pickWorkVisual !== "function") return null;
-  return (state, info) => ctx.pickWorkVisual(state, { ...info, episode: workEpisodes[state] || 0 });
+  return (state, info) => {
+    const file = ctx.pickWorkVisual(state, { ...info, episode: workEpisodes[state] || 0 });
+    if (typeof file === "string" && file && file !== info.baseFile) companionWorkFiles.add(file);
+    return file;
+  };
+}
+// Alive turned off: true only when a working / juggling pet shows a ladder
+// file the companion picked, so the caller re-applies the state.
+function dropWorkVariant() {
+  const shown = !!workVisualGroup(currentState) && companionWorkFiles.has(currentSvg);
+  companionWorkFiles.clear();
+  return shown;
 }
 
 function applyState(state, svgOverride, options = {}) {
@@ -4454,7 +4473,7 @@ return {
   // Read-only, unmerged account windows for source-specific alert deduplication.
   getAccountQuotaSnapshot: () => accountQuota.snapshot({ mergeSources: false }),
   startStaleCleanup, stopStaleCleanup, startWakePoll, stopWakePoll,
-  getSvgOverride, getPetPresentationSessions, refreshPetPresentation, cleanStaleSessions, startStartupRecovery, refreshTheme, dropSleepVariant,
+  getSvgOverride, getPetPresentationSessions, refreshPetPresentation, cleanStaleSessions, startStartupRecovery, refreshTheme, dropSleepVariant, dropWorkVariant,
   detectRunningAgentProcesses, buildSessionSnapshot,
   emitSessionSnapshot, broadcastSessionSnapshot, getLastSessionSnapshot,
   getActiveSessionAliasKeys,
