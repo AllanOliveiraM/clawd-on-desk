@@ -1,7 +1,7 @@
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { createCursorTrust, MOTION_TRUST_MS } = require("../src/cursor-trust");
+const { createCursorTrust, MOTION_TRUST_MS, PINNED_STILL_TRUST_MS } = require("../src/cursor-trust");
 const { isXWaylandSession } = require("../src/linux-ozone");
 
 const WAYLAND = { XDG_SESSION_TYPE: "wayland", WAYLAND_DISPLAY: "wayland-0", DISPLAY: ":0" };
@@ -21,8 +21,8 @@ test("XWayland session: Linux, x11 backend, Wayland session (XDG_SESSION_TYPE fi
   }
 });
 
-const SETTINGS = { bounds: { x: 900, y: 50, width: 400, height: 600 }, pinned: true };
-const HUD = { bounds: { x: 100, y: 100, width: 200, height: 150 }, pinned: false };
+const SETTINGS = { id: 7, bounds: { x: 900, y: 50, width: 400, height: 600 }, pinned: true };
+const HUD = { id: 3, bounds: { x: 100, y: 100, width: 200, height: 150 }, pinned: false };
 
 function setup({ enabled = true, windows = [SETTINGS, HUD] } = {}) {
   const env = { t: 0, reads: 0, windows };
@@ -44,15 +44,51 @@ test("outside XWayland every sample is trusted and no window is read", () => {
   assert.equal(env.reads, 0);
 });
 
-test("parked inside Settings / Dashboard: trusted even when still", () => {
+test("parked inside Settings / Dashboard after moving in it: trusted while still, up to 90 s", () => {
   const env = setup();
   assert.equal(env.trust.enabled, true);
-  assert.equal(env.at(1000, 400), true);
+  assert.equal(PINNED_STILL_TRUST_MS, 90000);
+  env.at(990, 400);
+  assert.equal(env.at(1000, 400), true, "moved inside Settings");
   for (let i = 0; i < 40; i += 1) assert.equal(env.at(1000, 400, 1000), true, `still ${i}`);
+});
+
+test("no leave report: still-trust in Settings ends after 90 s without motion", () => {
+  const env = setup();
+  env.at(990, 400);
+  assert.equal(env.at(1000, 400), true);
+  assert.equal(env.at(1000, 400, 89750), true, "90 s still");
+  assert.equal(env.at(1000, 400, 1000), false, "91 s still: untrusted");
+  assert.equal(env.at(1000, 400, 60000), false);
+  assert.equal(env.at(1005, 400), true, "new motion inside re-arms it");
+});
+
+test("Settings reopened over a frozen point: untrusted until motion inside it", () => {
+  const env = setup();
+  env.at(990, 400);
+  assert.equal(env.at(1000, 400), true);
+  env.windows = [HUD]; // closed with the pointer inside, no leave report
+  assert.equal(env.at(1000, 400, 1000), false);
+  env.windows = [{ ...SETTINGS, id: 8 }]; // reopened (a new window) over the frozen point
+  // Past the 2 s motion window that any app window gets.
+  assert.equal(env.at(1000, 400, 1500), false, "no motion inside since it opened");
+  assert.equal(env.at(1000, 400, 1000), false);
+  assert.equal(env.at(1001, 400), true, "moved inside the reopened window");
+  // Hidden and shown again (same window): also needs new motion.
+  env.windows = [];
+  env.at(1001, 400, 1000);
+  env.windows = [{ ...SETTINGS, id: 8 }];
+  assert.equal(env.at(1001, 400, 1500), false);
+});
+
+test("a first still sample inside Settings (nothing seen before) is not trusted", () => {
+  const env = setup();
+  assert.equal(env.at(1000, 400), false);
 });
 
 test("cursor left Settings: the frozen point is untrusted until new motion inside a window", () => {
   const env = setup();
+  env.at(990, 400);
   assert.equal(env.at(1000, 400), true);
   env.trust.notePointerLeft();
   assert.equal(env.at(1000, 400), false, "frozen at the last point inside Settings");

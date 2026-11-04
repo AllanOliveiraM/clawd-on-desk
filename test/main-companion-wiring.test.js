@@ -444,7 +444,7 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
   let left = 0;
   const handlers = new Map();
   const mk = (name, bounds, extra = {}) => ({
-    name, webContents: { id: name }, isDestroyed: () => false, isVisible: () => true, isMinimized: () => false,
+    name, id: name, webContents: { id: name }, isDestroyed: () => false, isVisible: () => true, isMinimized: () => false,
     getBounds: () => bounds, ...extra,
   });
   const render = mk("render", { x: 0, y: 0, width: 500, height: 500 });
@@ -471,8 +471,9 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
     ipcMain: { on: (channel, fn) => handlers.set(channel, fn) },
   };
   vm.runInNewContext(trust, ctx);
-  const listed = trustOptions.getWindows().map((w) => [w.bounds.x, w.pinned]);
-  assert.deepEqual(JSON.parse(JSON.stringify(listed)), [[200, false], [900, true], [1400, true], [600, false]]);
+  const listed = trustOptions.getWindows().map((w) => [w.id, w.bounds.x, w.pinned]);
+  assert.deepEqual(JSON.parse(JSON.stringify(listed)),
+    [["hit", 200, false], ["settings", 900, true], ["dashboard", 1400, true], ["hud", 600, false]]);
   const onLeft = handlers.get("companion:pointer-left");
   onLeft({ sender: hud.webContents });
   onLeft({ sender: { id: "settings" } });

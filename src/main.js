@@ -2750,7 +2750,8 @@ const _cursorTrust = require("./cursor-trust").createCursorTrust({
     const pinned = companionPinnedTrustWindows();
     return BrowserWindow.getAllWindows()
       .filter((w) => w && w !== win && !w.isDestroyed() && w.isVisible() && !w.isMinimized())
-      .map((w) => ({ bounds: w.getBounds(), pinned: pinned.has(w) }));
+      // id: a reopened Settings / Dashboard is a new window to the trust check.
+      .map((w) => ({ id: w.id, bounds: w.getBounds(), pinned: pinned.has(w) }));
   },
 });
 // Settings / Dashboard report the pointer leaving their window (no payload);
