@@ -36,6 +36,7 @@ test("art points use the theme layout (clawd numbers from the polish audit)", ()
   near(art.point("pokeRight", 20.5, 10).x / W, 0.877);
   near(art.point("wallPushLeft", geo.WALL_PUSH_HANDS_U, 10).x / W, 0.21);
   near(art.point("wallPeekLeft", geo.WALL_PEEK_EDGE_U, 10).x / W, 0.25);
+  assert.equal(geo.FETCH_EDGE_U, -1.5, "Ruling N4: the fetch art assumes the screen edge at u -1.5");
   near(art.point("sitEdge", 7.5, geo.SIT_EDGE_LEDGE_V).y / W, 0.892);
   const tip = art.point("reachClose", geo.REACH_CLOSE_TIP.u, geo.REACH_CLOSE_TIP.v);
   near(tip.x / W, 0.747);

@@ -2331,18 +2331,18 @@ test("fetch walks to the nearest side edge with the visible body on the screen e
   const nearLeft = { ...BAND_ARGS, bounds: { x: 300, y: 600, width: 100, height: 100 } };
   const nearRight = { ...BAND_ARGS, bounds: { x: 1600, y: 200, width: 100, height: 100 } };
   const left = fetchWalk(FETCH_PAIR, { args: nearLeft });
-  // Body edge u 0: x = -15.25 + 15 * 2.9 = 28.25 px into the window.
-  approx(left.target, { x: -28.25, y: 600 }, "left");
+  // Fetch screen edge u -1.5 (Ruling N4): x = -15.25 + 13.5 * 2.9 = 23.9 px into the window.
+  approx(left.target, { x: -23.9, y: 600 }, "left");
   assert.equal(left.target.mischief, "fetch");
   assert.equal(left.target.side, "left");
-  assert.ok(Math.abs(left.target.overhang.left - 28.25) < 0.01);
+  assert.ok(Math.abs(left.target.overhang.left - 23.9) < 0.01);
   assert.equal(left.env.sends.length, 0, "nothing plays before the arrival");
 
   const right = fetchWalk(FETCH_PAIR, { args: nearRight });
-  // Mirrored edge u 15: 71.75 px into the window.
-  approx(right.target, { x: 2000 - 71.75, y: 200 }, "right");
+  // Mirrored edge u 16.5: 76.1 px into the window.
+  approx(right.target, { x: 2000 - 76.1, y: 200 }, "right");
   assert.equal(right.target.side, "right");
-  assert.ok(Math.abs(right.target.overhang.right - 28.25) < 0.01);
+  assert.ok(Math.abs(right.target.overhang.right - 23.9) < 0.01);
 });
 
 test("fetch plays the exit then the object on the walked side and restores idle once", () => {
@@ -2614,7 +2614,7 @@ test("a test-mode fetch walks right away to its side and plays its object, even 
   const target = env.runtime.pickRoamTarget(nearLeft);
   assert.equal(target.mischief, "fetch");
   assert.equal(target.side, "right", "the tested side wins over the nearest");
-  approx(target, { x: 2000 - 71.75, y: 600 }, "right edge");
+  approx(target, { x: 2000 - 76.1, y: 600 }, "right edge (u 16.5)");
   env.runtime.noteWalkFinished({ preferred: true, mischief: "fetch", reachedEdgeDistancePx: 0 });
   runCommitting(env, 20000);
   assert.deepEqual(env.sends.map((s) => s.file), ["fetchExitRight.svg", "fetchDuckRight.svg"]);

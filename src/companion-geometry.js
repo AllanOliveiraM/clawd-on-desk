@@ -29,9 +29,11 @@ const POUNCE_SHORT_TIP = Object.freeze({ u: -6.5, v: 10.5 });
 const WALL_PUSH_HANDS_U = -2.5;
 // clawd-alive-wall-peek-left.svg: the edge the pet peeks around.
 const WALL_PEEK_EDGE_U = -1.12;
-// clawd-alive-fetch-exit-left.svg: the outer edge of the visible body (the
-// side arm) the pet slides out past; it is put on the screen edge.
-const FETCH_EDGE_U = 0;
+// clawd-alive-fetch-exit-left.svg: the screen edge every fetch part assumes
+// (Ruling N4, the same idea as WALL_PEEK_EDGE_U): the pet slides out past it
+// and the hauled objects drawn further out simply fall off-screen. The right
+// files mirror it to u 16.5.
+const FETCH_EDGE_U = -1.5;
 // clawd-alive-sit-edge.svg: the ledge the pet sits on (bottom of the feet).
 const SIT_EDGE_LEDGE_V = 15;
 // clawd-alive-reach-close.svg: the long arm's hand tip (top-right reach).
