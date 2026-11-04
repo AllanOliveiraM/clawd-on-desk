@@ -923,16 +923,31 @@ function resolveSleepVariant(state, svgOverride, options) {
 }
 
 // Clawd Alive work escalation: the companion holds its ladder pick per
-// working / juggling episode. The episode ends when the pet leaves that state
-// group, so re-entering re-rolls while repeated working events never do.
-let workEpisode = 0;
+// working / juggling episode, one counter per group. A group's episode ends
+// only when the pet really leaves it (idle, sleep, mini, the other group...);
+// a transient interruption (a notification, a completion, an error, sweeping
+// or thinking) and coming back keeps the pick. Re-entering re-rolls, repeated
+// working events never do.
+const WORK_TRANSIENT_STATES = new Set(["notification", "attention", "error", "sweeping", "thinking"]);
+const workEpisodes = { working: 0, juggling: 0 };
+const workGroupOpen = { working: false, juggling: false };
 function workVisualGroup(state) {
   if (state === "working" || state === "executing") return "working";
   return state === "juggling" ? "juggling" : null;
 }
+function noteWorkEpisode(state) {
+  const group = workVisualGroup(state);
+  if (group) workGroupOpen[group] = true;
+  if (WORK_TRANSIENT_STATES.has(state)) return;
+  for (const other of Object.keys(workGroupOpen)) {
+    if (other === group || !workGroupOpen[other]) continue;
+    workGroupOpen[other] = false;
+    workEpisodes[other] += 1;
+  }
+}
 function getPickWorkVisual() {
   if (ctx.doNotDisturb || typeof ctx.pickWorkVisual !== "function") return null;
-  return (state, info) => ctx.pickWorkVisual(state, { ...info, episode: workEpisode });
+  return (state, info) => ctx.pickWorkVisual(state, { ...info, episode: workEpisodes[state] || 0 });
 }
 
 function applyState(state, svgOverride, options = {}) {
@@ -977,9 +992,7 @@ function applyState(state, svgOverride, options = {}) {
 
   previousState = currentState;
   currentState = state;
-  if (workVisualGroup(previousState) && workVisualGroup(previousState) !== workVisualGroup(state)) {
-    workEpisode += 1;
-  }
+  noteWorkEpisode(state);
   stableVisualPicker.retainOnly(getVisualState(state, STATE_SVGS));
   displayRevision += 1;
   currentVisualSource = applyOptions.settingsPreview === true

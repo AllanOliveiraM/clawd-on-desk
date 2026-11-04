@@ -1641,8 +1641,69 @@ describe("Clawd Alive work escalation (pickWorkVisual)", () => {
 
   it("executing that reuses the working art asks as working", () => {
     api.sessions.set("s1", rawSession("executing"));
-    api.getSvgOverride("executing");
-    if (calls.length) assert.strictEqual(calls[0][0], "working");
+    assert.strictEqual(api.getSvgOverride("executing"), "clawd-alive-work-coffee.svg");
+    assert.strictEqual(calls.length, 1);
+    assert.strictEqual(calls[0][0], "working");
+    assert.strictEqual(calls[0][1].sessions, 1);
+  });
+
+  it("a direct juggling → working switch keeps the working pick on the next event", () => {
+    api.sessions.set("j1", rawSession("juggling"));
+    api.setState("juggling", api.getSvgOverride("juggling"), { bypassMinDisplay: true });
+    api.sessions.clear();
+    api.sessions.set("s1", rawSession("working"));
+    api.setState("working", api.getSvgOverride("working"), { bypassMinDisplay: true });
+    api.getSvgOverride("working");
+    const working = calls.filter(([state]) => state === "working").map(([, info]) => info.episode);
+    assert.strictEqual(working.length, 2);
+    assert.strictEqual(working[0], working[1], "entry pick and next event share the episode");
+    // And back: the juggling episode ended when the pet left juggling.
+    const jugglingEpisode = calls[0][1].episode;
+    api.sessions.set("j1", rawSession("juggling"));
+    api.setState("juggling", api.getSvgOverride("juggling"), { bypassMinDisplay: true });
+    api.getSvgOverride("juggling");
+    const juggling = calls.filter(([state]) => state === "juggling").map(([, info]) => info.episode);
+    assert.notStrictEqual(juggling[1], jugglingEpisode, "re-entering juggling is a new episode");
+    assert.strictEqual(juggling[1], juggling[2]);
+  });
+
+  it("transient interruptions keep the pick; idle or sleep end the episode", () => {
+    api.sessions.set("s1", rawSession("working"));
+    api.applyState("working", api.getSvgOverride("working"));
+    const first = calls[calls.length - 1][1].episode;
+    for (const state of ["notification", "attention", "error", "sweeping", "thinking"]) {
+      api.applyState(state);
+      api.applyState("working", api.getSvgOverride("working"));
+      assert.strictEqual(calls[calls.length - 1][1].episode, first, state);
+    }
+    api.applyState("attention");
+    api.applyState("idle");
+    api.getSvgOverride("working");
+    const afterIdle = calls[calls.length - 1][1].episode;
+    assert.notStrictEqual(afterIdle, first, "attention then idle ends the episode");
+    api.applyState("working", api.getSvgOverride("working"));
+    api.applyState("sleeping");
+    api.getSvgOverride("working");
+    assert.notStrictEqual(calls[calls.length - 1][1].episode, afterIdle, "sleep ends the episode");
+  });
+
+  it("a user-overridden tier file wins over the ladder", () => {
+    const overridden = themeLoader.loadTheme("clawd", { overrides: { tiers: {
+      workingTiers: { "clawd-working-typing.svg": { file: "clawd-working-debugger.svg" } },
+      jugglingTiers: { "clawd-working-juggling.svg": { file: "clawd-working-building.svg" } },
+    } } });
+    build({ theme: overridden });
+    api.sessions.set("s1", rawSession("working"));
+    assert.strictEqual(api.getSvgOverride("working"), "clawd-working-debugger.svg");
+    assert.strictEqual(calls.length, 0, "overridden tier never asks");
+    api.sessions.set("s2", rawSession("working"));
+    assert.strictEqual(api.getSvgOverride("working"), "clawd-alive-work-coffee.svg", "untouched tier still asks");
+    assert.strictEqual(calls.length, 1);
+    api.sessions.clear();
+    api.sessions.set("j1", rawSession("juggling"));
+    api.sessions.set("j2", rawSession("juggling"));
+    assert.strictEqual(api.getSvgOverride("juggling"), "clawd-working-building.svg");
+    assert.strictEqual(calls.length, 1, "overridden juggling tier never asks");
   });
 
   it("juggling asks with the live subagent count", () => {

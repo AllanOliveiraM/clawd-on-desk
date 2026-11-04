@@ -164,15 +164,18 @@ describe("companion pickWorkVisual", () => {
   });
 
   it("holds its choice while the tier and episode stay the same", () => {
-    const { rt, counter } = runtime({ rolls: [0.1, 0.9, 0.1, 0.9] });
+    const { rt, counter } = runtime({ rolls: [0.1, 0.9, 0.9, 0.1] });
     const ask = (sessions, episode) => rt.pickWorkVisual("working", { sessions, subagents: 0, baseFile: "b.svg", episode });
     assert.equal(ask(1, 1), "coffee.svg");
     for (let n = 0; n < 20; n += 1) assert.equal(ask(1, 1), "coffee.svg", "stable on repeated working events");
     assert.equal(counter.rolls, 1);
     assert.equal(ask(2, 1), "headphones.svg", "tier change re-rolls");
     assert.equal(ask(2, 1), "headphones.svg");
-    assert.equal(ask(1, 1), "coffee.svg", "back to tier 1 re-rolls");
+    assert.equal(ask(1, 1), "coffee.svg", "back to tier 1 keeps its pick within the episode");
+    assert.equal(ask(2, 1), "headphones.svg", "and tier 2 keeps its pick");
+    assert.equal(counter.rolls, 2, "1-2-1 oscillation never re-rolls");
     assert.equal(ask(1, 2), "typing.svg", "re-entering working re-rolls");
+    assert.equal(ask(2, 2), "dual.svg", "a new episode re-rolls every tier");
     assert.equal(counter.rolls, 4);
   });
 

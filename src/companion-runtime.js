@@ -627,10 +627,10 @@ function createCompanionRuntime(options = {}) {
   // tier visual (not DND, previews, mini, display hints or explicit files): a
   // file from theme.companionWorkTiers for the current count, or null for the
   // theme's own tier file. A tier with variants shows one ~35% of the time.
-  // The choice holds while the tier and the state's episode (bumped by the
-  // state machine when the pet leaves working / juggling) stay the same, so
-  // repeated working events never flicker between files.
-  const workPicks = new Map(); // "working" | "juggling" -> { episode, tier, file }
+  // Each tier's choice holds for the state's whole episode (ended by the state
+  // machine when the pet really leaves working / juggling), so repeated
+  // working events and count oscillation never flicker between files.
+  const workPicks = new Map(); // "working" | "juggling" -> { episode, byTier: Map(tier -> file) }
   function workTierFor(theme, group, count) {
     const block = theme && theme.companionWorkTiers;
     const tiers = block && typeof block === "object" && Array.isArray(block[group]) ? block[group] : [];
@@ -650,19 +650,20 @@ function createCompanionRuntime(options = {}) {
     const count = state === "working" ? info.sessions : info.subagents;
     if (!isNum(count)) return null;
     const tier = workTierFor(getTheme(), state, count);
-    if (!tier) {
-      workPicks.delete(state);
-      return null;
+    if (!tier) return null;
+    let held = workPicks.get(state);
+    if (!held || held.episode !== info.episode) {
+      held = { episode: info.episode, byTier: new Map() };
+      workPicks.set(state, held);
     }
-    const held = workPicks.get(state);
-    if (held && held.tier === tier && held.episode === info.episode) return held.file;
+    if (held.byTier.has(tier)) return held.byTier.get(tier);
     const files = Array.isArray(tier.files) ? tier.files.filter((f) => typeof f === "string" && f) : [];
     const variants = Array.isArray(tier.variants) ? tier.variants.filter((f) => typeof f === "string" && f) : [];
     const pickOne = (list) => (list.length === 1 ? list[0] : pickFrom(list, random));
     let file = null;
     if (variants.length > 0 && random() < WORK_VARIANT_CHANCE) file = pickOne(variants);
     else if (files.length > 0) file = pickOne(files);
-    workPicks.set(state, { tier, episode: info.episode, file });
+    held.byTier.set(tier, file);
     return file;
   }
 

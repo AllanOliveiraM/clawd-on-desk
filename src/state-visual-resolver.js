@@ -176,8 +176,27 @@ function getPickVisualFile(options) {
 // Clawd Alive work escalation: options.pickWorkVisual (the companion hook) may
 // swap the theme's tier file for a ladder file; null / invalid / a throwing
 // hook keeps the theme's own tier file.
+// The user's Settings override of the reached theme tier wins: that tier never
+// asks the companion. _bindingBase keeps the pre-override tier files.
+function isTierUserOverridden(theme, groupName, count) {
+  const base = theme && theme._bindingBase && Array.isArray(theme._bindingBase[groupName])
+    ? theme._bindingBase[groupName]
+    : [];
+  const tiers = theme && theme._userOverrides && theme._userOverrides.tiers;
+  const overrides = tiers && typeof tiers === "object" ? tiers[groupName] : null;
+  if (!overrides || typeof overrides !== "object") return false;
+  const reached = base.find((tier) => tier && count >= tier.minSessions);
+  if (!reached || !reached.originalFile) return false;
+  const entry = overrides[reached.originalFile];
+  if (!entry || typeof entry.file !== "string" || !entry.file) return false;
+  return entry.file.replace(/^.*[\/\\]/, "") !== reached.originalFile;
+}
+
 function pickWorkVisualFile(options, state, sessions, subagents, baseFile) {
   if (typeof options.pickWorkVisual !== "function") return baseFile;
+  const groupName = state === "working" ? "workingTiers" : "jugglingTiers";
+  const count = state === "working" ? sessions : subagents;
+  if (isTierUserOverridden(options.theme, groupName, count)) return baseFile;
   try {
     const file = options.pickWorkVisual(state, {
       sessions: sessions ?? countActiveSessionsByStates(
