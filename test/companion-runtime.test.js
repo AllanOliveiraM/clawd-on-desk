@@ -1061,7 +1061,7 @@ test("walking mischief targets the nearest wall, the bottom edge and the cursor"
 
   const poke = setup();
   poke.theme = themeWith(["pokeLeft", "pokeRight"]);
-  poke.runtime.configure(MON);
+  poke.runtime.configure({ ...MON, personality: "curious" }); // poke weight 1.2: always accepted
   const parked = { x: 1500, y: 300, petRect: { x: 950, y: 450, width: 100, height: 100 }, overPet: false };
   for (let t = 0; t < 21000; t += 250) {
     poke.clock.advance(250);
@@ -1073,6 +1073,27 @@ test("walking mischief targets the nearest wall, the bottom edge and the cursor"
   poke.runtime.noteWalkFinished({ preferred: true, mischief: "poke", reachedEdgeDistancePx: 700 });
   assert.equal(poke.sends.length, 1);
   assert.equal(poke.sends[0].file, "pokeRight.svg");
+});
+
+test("poke follows its personality weight: shy pokes far less than curious", () => {
+  const queued = (personality, randomValue) => {
+    const env = setup();
+    env.randomValue = randomValue;
+    env.theme = themeWith(["pokeLeft", "pokeRight"]);
+    env.runtime.configure({ ...MON, personality });
+    const parked = { x: 1500, y: 300, petRect: { x: 950, y: 450, width: 100, height: 100 }, overPet: false };
+    for (let t = 0; t < 21000; t += 250) {
+      env.clock.advance(250);
+      env.runtime.tick(parked);
+    }
+    const target = env.runtime.pickRoamTarget(ROAM_ARGS);
+    return !!(target && target.mischief === "poke");
+  };
+  // A roll of 0.3 passes curious (1.2) and balanced (0.6) but not shy (0.2).
+  assert.equal(queued("curious", 0.3), true);
+  assert.equal(queued("balanced", 0.3), true);
+  assert.equal(queued("shy", 0.3), false);
+  assert.equal(queued("shy", 0.1), true, "shy still pokes, just rarely");
 });
 
 test("corner target clamped by fence skips the scene", () => {
@@ -1140,7 +1161,7 @@ test("edge mischief inside a fence stays in the fence and skips the scene", () =
 test("poke and normal targets ignore edgeBounds", () => {
   const poke = setup();
   poke.theme = themeWith(["pokeLeft", "pokeRight"]);
-  poke.runtime.configure(MON);
+  poke.runtime.configure({ ...MON, personality: "curious" }); // poke weight 1.2: always accepted
   // Cursor parked at the far top right: the poke goal sits outside the band.
   const parked = { x: 1990, y: 5, petRect: { x: 300, y: 600, width: 100, height: 100 }, overPet: false };
   for (let t = 0; t < 21000; t += 250) {

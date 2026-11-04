@@ -47,6 +47,20 @@ test("exports expected constants and helpers", () => {
   assert.equal(m.reactWeight("catch", "shy"), 1);
 });
 
+test("poke has a personality weight: shy pokes far less than curious", () => {
+  const row = ["balanced", "playful", "curious", "calm", "shy"].map((p) => m.reactWeight("poke", p));
+  assert.deepEqual(row, [0.6, 0.8, 1.2, 0.4, 0.2]);
+  assert.ok(m.reactWeight("poke", "shy") * 4 <= m.reactWeight("poke", "curious"));
+});
+
+test("pounce cools down for 10 minutes", () => {
+  assert.equal(m.MISCHIEF_COOLDOWN_MS.pounce, 600000);
+  const { brain, clock } = make();
+  brain.markPlayed("pounce", clock.t);
+  assert.equal(brain.canReact("pounce", clock.t + 599999), false);
+  assert.equal(brain.canReact("pounce", clock.t + 600000), true);
+});
+
 test("transit past the pet never triggers pounce", () => {
   const { brain, clock } = make();
   assert.equal(brain.observeCursor(sample(1200, 550)), null);

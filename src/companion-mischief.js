@@ -12,7 +12,7 @@ const MISCHIEF_IDS = [
 
 const MISCHIEF_COOLDOWN_MS = {
   catch: 90000,
-  pounce: 300000,
+  pounce: 600000,
   fakeNap: 10800000,
   poke: 1200000,
   reachClose: 3600000,
@@ -62,6 +62,7 @@ const WEIGHT_TABLE = {
   toy:        { balanced: 1,   playful: 1.4, curious: 1,   calm: 1.2, shy: 0.8 },
   pounce:     { balanced: 0.6, playful: 1,   curious: 0.8, calm: 0.2, shy: 0 },
   boo:        { balanced: 0.2, playful: 1,   curious: 0.2, calm: 0,   shy: 0 },
+  poke:       { balanced: 0.6, playful: 0.8, curious: 1.2, calm: 0.4, shy: 0.2 },
 };
 
 const DAY_VARIANTS = {
@@ -80,7 +81,7 @@ function personalityRow(id, personality) {
   return Object.prototype.hasOwnProperty.call(row, personality) ? row[personality] : row.balanced;
 }
 
-// Weight used both as the base pick weight and, for pounce/boo, as the chance
+// Weight used both as the base pick weight and, for pounce/boo/poke, as the chance
 // multiplier when accepting a reactive trigger. Other ids react with weight 1.
 function reactWeight(id, personality) {
   const w = personalityRow(id, personality);
