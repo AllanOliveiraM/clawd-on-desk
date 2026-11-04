@@ -455,6 +455,36 @@ Visuals for the opt-in "Clawd Alive" companion (petting, moods). The whole block
 - A key you leave out has no visual, and the companion simply skips that moment. Themes without the block work unchanged.
 - Variants cannot override this block.
 
+### Companion Work Tiers (Optional)
+
+A second working ladder used only while Clawd Alive is on: the busier the agents, the busier the pet. With Clawd Alive off, or for a theme without the block, `workingTiers` / `jugglingTiers` play exactly as before.
+
+```json
+"companionWorkTiers": {
+  "working": [
+    { "minSessions": 6, "files": ["alive-work-chaos.svg"] },
+    { "minSessions": 4, "files": ["alive-work-control-room.svg"] },
+    { "minSessions": 1, "variants": ["alive-work-coffee.svg"] }
+  ],
+  "juggling": [
+    { "minSessions": 3, "files": ["alive-juggle-laptops.svg"] }
+  ]
+}
+```
+
+- `working` counts active sessions, like `workingTiers`. `juggling` counts live subagents, like `jugglingTiers` (the key is still called `minSessions`). Clawd uses the highest tier whose `minSessions` the count reaches. Tiers may be listed in any order.
+- `files`: when this tier is reached, one of these files replaces the theme's own working / juggling tier visual.
+- `variants`: an occasional alternative. It is shown about 35% of the time the pet enters the tier. The rest of the time the tier's `files` play, or, when the tier has no `files`, the theme's own `workingTiers` / `jugglingTiers` file. A tier with only `variants` keeps the theme's art and just adds a surprise now and then.
+- A pick holds for the whole working (or juggling) episode. Notifications, completions, errors, sweeping or thinking in between keep it. Clawd picks again when the pet really leaves the state (idle, sleep, mini) and comes back, or when the count crosses into another tier.
+- Do Not Disturb, mini mode, Settings previews, a matching `displayHintMap` entry and an explicit file always win over this ladder.
+- Every listed file is a required asset and needs accessory attachments, like any visual. These are loops held for as long as the state lasts, so they take no `duration`.
+- The built-in Clawd theme adds coffee / dual-screen / headset-trio variants at 1 / 2 / 3 sessions, a control room at 4, swamped at 5 and joyful chaos at 6+, plus juggling laptops at 3 subagents and juggling chaos at 4+.
+- Variants cannot override this block.
+
+Settings → Animation & sound → Clawd Alive → **Work** shows one card per ladder file (tier and name, for example "4 sessions — control room"). Replacing a file swaps it wherever it appears in that group; restoring brings back the theme's file. These overrides are stored in `themeOverrides[themeId].companionWorkTiers.working` / `.juggling`, keyed by the file the theme declares.
+
+They are separate from the cards of the regular working / juggling tiers above, and those win. While the count reaches a regular tier whose file the user replaced, the companion ladder is not used: the user's file plays. For the built-in Clawd theme, replacing the 3+ session tier means 3, 4, 5 and 6+ sessions all show that file, and the control room, swamped and chaos art never play, even when they were replaced in the Work section too. Restoring the regular tier card brings the ladder back.
+
 ### Idle Animations
 
 Random animations played during idle periods:
