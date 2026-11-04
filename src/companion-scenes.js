@@ -50,7 +50,7 @@ function sided(base, side) {
 }
 
 // "Vai buscar" objects, in theme-key order (fetch<Obj>Left / fetch<Obj>Right).
-const FETCH_OBJECTS = ["Cursor", "Duck", "Enter", "Bug", "Box", "Sock"];
+const { FETCH_OBJECTS } = require("./theme-schema");
 
 // The object keys of one side the theme has art for.
 function fetchObjectKeys(side, hasKey) {
@@ -401,7 +401,7 @@ function createScenePlayer(deps) {
     play, // (kind, file, durationMs, scene) -> runtime play protocol
     getPlaying, // () -> current runtime attempt or null
     isOwned, // () -> our visual is still the one on screen
-    canContinue, // () -> gate open and logical state idle
+    canContinue, // (scene) -> gate open and logical state idle
     stopPlayback, // (restore) -> runtime stop; restores only while owned
     clearPlayback, // () -> drop the current attempt and its timer, no restore
     restoreIdleVisual,
@@ -444,7 +444,7 @@ function createScenePlayer(deps) {
       scene.index += 1;
       scene.partStartedAt = null;
     }
-    if (scene.index < scene.parts.length && canContinue()) {
+    if (scene.index < scene.parts.length && canContinue(scene)) {
       playPart(scene); // takes the visual over directly, no restore in between
       return;
     }
@@ -457,7 +457,7 @@ function createScenePlayer(deps) {
   function event(name) {
     const scene = current();
     if (!scene || scene.switched || !scene.on[name]) return false;
-    if (!isOwned() || !canContinue()) {
+    if (!isOwned() || !canContinue(scene)) {
       stopPlayback(true); // kills the scene, restores only if still ours
       return false;
     }

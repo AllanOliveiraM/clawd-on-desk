@@ -31,7 +31,9 @@ const {
   beatDelayMs,
   roamDelayMs,
 } = require("./companion-intent");
-const { createMischiefBrain, reactWeight } = require("./companion-mischief");
+const {
+  createMischiefBrain, reactWeight, CURSOR_UNSEEN_MS, XWAYLAND_CURSOR_UNSEEN_MS,
+} = require("./companion-mischief");
 const {
   buildScene,
   createScenePlayer,
@@ -168,6 +170,8 @@ function createCompanionRuntime(options = {}) {
     // Test mode: stop a walk in progress / re-arm roam's pause so a pending
     // test walk starts at roam's shortest pause.
     interruptRoam = () => {},
+    // XWayland session (Ruling N1): searchMouse after 30 s, not 10 min.
+    xwayland = false,
     store = null,
     random = Math.random,
     now = Date.now,
@@ -304,7 +308,10 @@ function createCompanionRuntime(options = {}) {
 
   // Any end of an edge scene (on its own or killed) queues the return walk.
   function noteSceneEnded(scene) {
-    if (scene && EDGE_WALKS.has(scene.id) && mischiefOn() && autonomous()) returnWalk = true;
+    if (!scene || !EDGE_WALKS.has(scene.id)) return;
+    if (mischiefOn() && autonomous()) returnWalk = true;
+    // A test edge scene walks back even with mischief / autonomy off.
+    else if (scene.debug && config.enabled) returnWalk = "debug";
   }
 
   function abandon() {
@@ -377,7 +384,9 @@ function createCompanionRuntime(options = {}) {
     play,
     getPlaying: () => playing,
     isOwned: () => isAnimating(),
-    canContinue: () => canPlay() && getCurrentState() === "idle",
+    // A test scene keeps playing under the test gate (no doze guard / menu).
+    canContinue: (scene) => getCurrentState() === "idle"
+      && (scene && scene.debug ? config.enabled && !debugBlockReason() : canPlay()),
     stopPlayback,
     clearPlayback: () => {
       clearPlayTimer();
@@ -490,6 +499,9 @@ function createCompanionRuntime(options = {}) {
       idleQueue = null;
       return true;
     }
+    // searchMouse does not wait for a beat: under XWayland it must come
+    // before the 60 s doze (Ruling N1). Own cooldown only (Ruling N3).
+    if (autonomous() && getIdleMode() !== "none" && searchMouseDue(t) && startScene("searchMouse")) return true;
     if (!hit) return false;
     if (hit.id === "pounce" && config.interactions && !isRoamAnimating()
       && acceptReaction("pounce", t) && startScene("pounce", { side: hit.side })) {
@@ -539,7 +551,7 @@ function createCompanionRuntime(options = {}) {
     const t = now();
     const pick = brain.pickAutonomous({
       traits, personality: config.personality, state, mode: "roam", available: mischiefAvailable(keys, false), now: t,
-      cursorUnseenMs: cursorUnseenMs(t),
+      cursorUnseenMs: cursorUnseenMs(t), cursorUnseenMinMs: cursorUnseenMinMs(),
     });
     if (!pick) return false;
     if (WALKING_MISCHIEF.has(pick.id)) {
@@ -557,6 +569,15 @@ function createCompanionRuntime(options = {}) {
     setMood(applyEvent(state, { kind: "beat" }, traits, now()));
   }
 
+  function searchMouseDue(t) {
+    return cursorUnseenMs(t) >= cursorUnseenMinMs() && brain.canReact("searchMouse", t)
+      && hasArt(getTheme(), "searchMouse");
+  }
+
+  function cursorUnseenMinMs() {
+    return xwayland === true ? XWAYLAND_CURSOR_UNSEEN_MS : CURSOR_UNSEEN_MS;
+  }
+
   function cursorUnseenMs(t) {
     return lastTrustedCursorAt === null ? 0 : Math.max(0, t - lastTrustedCursorAt);
   }
@@ -571,9 +592,20 @@ function createCompanionRuntime(options = {}) {
     if (trusted && cursor && isNum(cursor.x) && isNum(cursor.y)) lastCursorPoint = { x: cursor.x, y: cursor.y };
   }
 
+  // Test walks with mischief off (mischiefTick does this when it is on):
+  // dropped off Free Roam, expired like any pending walk.
+  function tidyDebugWalks() {
+    const t = now();
+    const drop = (walk) => walk && walk.debug && (getIdleMode() !== "roam" || t - walk.at > PENDING_WALK_MAX_MS);
+    if (drop(pendingWalk)) pendingWalk = null;
+    if (drop(walkingMischief)) walkingMischief = null;
+    if (returnWalk === "debug" && getIdleMode() !== "roam") returnWalk = false;
+  }
+
   function tick(cursor, info) {
     if (disposed) return;
     noteCursorTrust(cursor, info);
+    if (!mischiefOn()) tidyDebugWalks();
     if (mischiefOn() && mischiefTick(cursor)) return;
     if (!autonomous() || getIdleMode() !== "roam") return;
     if (playing || petSession || getCurrentState() !== "idle") return;
@@ -614,7 +646,7 @@ function createCompanionRuntime(options = {}) {
       const t = now();
       const pick = brain.pickAutonomous({
         traits, personality: config.personality, state, mode: "activities", available: mischiefAvailable(available, true), now: t,
-        cursorUnseenMs: cursorUnseenMs(t),
+        cursorUnseenMs: cursorUnseenMs(t), cursorUnseenMinMs: cursorUnseenMinMs(),
       });
       const singleKey = pick && (pick.variant || (pick.id === "searchMouse" ? "searchMouse" : null));
       const anim = singleKey ? animationFor(singleKey, theme) : null;
@@ -636,6 +668,7 @@ function createCompanionRuntime(options = {}) {
   function getRoamDelayMs(isFirst, baseMs) {
     // A test-mode walk asks for roam's shortest pause, even without autonomy.
     if (!disposed && config.enabled && ((pendingWalk && pendingWalk.debug) || debugWalkFile)) return 0;
+    if (!disposed && config.enabled && returnWalk === "debug") return 0.5 * baseMs;
     if (disposed || !autonomous()) return baseMs;
     // A pending mischief walk, or the walk back from an edge scene, asks for
     // the shortest pause roam allows.
@@ -777,7 +810,11 @@ function createCompanionRuntime(options = {}) {
   function pickRoamTarget(args) {
     if (disposed || !args) return null;
     const debugWalk = !!(config.enabled && pendingWalk && pendingWalk.debug);
-    if (!autonomous() && !debugWalk) return null;
+    if (!autonomous() && !debugWalk) {
+      // The walk back from a test edge scene: roam's own band target.
+      if (returnWalk === "debug") returnWalk = false;
+      return null;
+    }
     const { xMin, xMax, yMin, yMax, bounds, size, displayId } = args;
     if (![xMin, xMax, yMin, yMax].every(isNum)) return null;
     const area = validArea(args.workArea)
@@ -803,8 +840,9 @@ function createCompanionRuntime(options = {}) {
 
     if (returnWalk) {
       // Leave the edge: roam picks its own target inside the margin band.
+      const wasDebug = returnWalk === "debug";
       returnWalk = false;
-      if (mischiefOn() && !debugWalk) return null;
+      if ((mischiefOn() || wasDebug) && !debugWalk) return null;
     }
 
     if ((mischiefOn() || debugWalk) && pendingWalk) {

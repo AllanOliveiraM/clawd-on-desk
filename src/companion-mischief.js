@@ -39,6 +39,8 @@ const LOW_ENERGY = 25;
 const OBSERVE_CHANCE = 0.5;
 // searchMouse: the cursor has been "invisible" (no trusted sample) this long.
 const CURSOR_UNSEEN_MS = 600000;
+// Under XWayland (Ruling N1) he looks after 30 s, before the 60 s doze.
+const XWAYLAND_CURSOR_UNSEEN_MS = 30000;
 
 const GLOBAL_COOLDOWN_CALM_MS = 900000; // activity 0
 const GLOBAL_COOLDOWN_ACTIVE_MS = 480000; // activity 1
@@ -52,8 +54,10 @@ const LOW_ENERGY_BLOCKED = new Set(["pounce", "poke", "reachClose", "wall", "fet
 
 // Ids that start the global cooldown when played (autonomous ones plus poke).
 const GLOBAL_COOLDOWN_IDS = new Set([
-  "fakeNap", "reachClose", "wall", "sitEdge", "dayRhythm", "toy", "poke", "fetch", "searchMouse",
+  "fakeNap", "reachClose", "wall", "sitEdge", "dayRhythm", "toy", "poke", "fetch",
 ]);
+// Autonomous ids that only keep their own cooldown (Ruling N3).
+const OWN_COOLDOWN_ONLY = new Set(["searchMouse"]);
 // Gap between cursor samples after which running clocks are considered stale.
 const SAMPLE_GAP_MS = 5000;
 
@@ -318,7 +322,7 @@ function createMischiefBrain(options) {
     const avail = available || new Set();
     if (traits) lastTraits = traits;
     syncClock(t);
-    if (t < globalUntil) return null;
+    const globalBlocked = t < globalUntil;
 
     const mood = (state && state.mood) || {};
     const energy = Number.isFinite(mood.energy) ? mood.energy : 50;
@@ -330,6 +334,7 @@ function createMischiefBrain(options) {
     const weights = {};
     for (const id of AUTONOMOUS_IDS) {
       let w = personalityRow(id, personality);
+      if (globalBlocked && !OWN_COOLDOWN_ONLY.has(id)) w = 0;
       if (!canReact(id, t)) w = 0;
       if (WALKING_IDS.has(id) && mode !== "roam") w = 0;
       if (energy < LOW_ENERGY && LOW_ENERGY_BLOCKED.has(id)) w = 0;
@@ -341,7 +346,8 @@ function createMischiefBrain(options) {
       } else if (id === "searchMouse") {
         // Plan B for XWayland: only while no trusted cursor sample was seen.
         const unseen = args && Number.isFinite(args.cursorUnseenMs) ? args.cursorUnseenMs : 0;
-        if (unseen < CURSOR_UNSEEN_MS || !avail.has(id)) w = 0;
+        const need = args && Number.isFinite(args.cursorUnseenMinMs) ? args.cursorUnseenMinMs : CURSOR_UNSEEN_MS;
+        if (unseen < need || !avail.has(id)) w = 0;
       } else if (!avail.has(id)) {
         w = 0;
       }
@@ -388,6 +394,7 @@ module.exports = {
   MISCHIEF_IDS,
   MISCHIEF_COOLDOWN_MS,
   CURSOR_UNSEEN_MS,
+  XWAYLAND_CURSOR_UNSEEN_MS,
   autonomousWeight,
   globalCooldownMs,
   dayWindow,

@@ -436,12 +436,36 @@ test("searchMouse only after 10 min without a trusted cursor sample, 30 min cool
   }
   const { brain, clock } = make({ rand: 0.6 });
   brain.markPlayed("searchMouse", clock.t);
-  clock.t += m.globalCooldownMs(getTraits("balanced"));
+  clock.t += 1800000 - 1;
   assert.equal(pick(brain, clock, { available: only, cursorUnseenMs: 9e9 }), null);
   clock.t = BASE + 1800000;
   assert.deepEqual(pick(brain, clock, { available: only, cursorUnseenMs: 9e9 }), { id: "searchMouse" });
   const none = make({ rand: 0.6 });
   assert.equal(pick(none.brain, none.clock, { available: new Set(), cursorUnseenMs: 9e9 }), null);
+});
+
+test("searchMouse takes its threshold from the caller (30 s under XWayland)", () => {
+  assert.equal(m.XWAYLAND_CURSOR_UNSEEN_MS, 30000);
+  const only = new Set(["searchMouse"]);
+  const a = make({ rand: 0.6 });
+  assert.equal(pick(a.brain, a.clock, { available: only, cursorUnseenMs: 29999, cursorUnseenMinMs: 30000 }), null);
+  assert.deepEqual(pick(a.brain, a.clock, { available: only, cursorUnseenMs: 30000, cursorUnseenMinMs: 30000 }), { id: "searchMouse" });
+  const b = make({ rand: 0.6 });
+  assert.equal(pick(b.brain, b.clock, { available: only, cursorUnseenMs: 30000 }), null, "default stays 10 min");
+});
+
+test("searchMouse keeps only its own cooldown (Ruling N3)", () => {
+  const only = new Set(["searchMouse"]);
+  const { brain, clock } = make({ rand: 0.6 });
+  brain.markPlayed("searchMouse", clock.t);
+  assert.equal(brain.isGlobalReady(clock.t), true, "does not start the global cooldown");
+  assert.ok(pick(brain, clock, { available: new Set(["sitEdge"]) }), "other mischief still free");
+  const g = make({ rand: 0.6 });
+  g.brain.markPlayed("fetch", g.clock.t);
+  assert.equal(g.brain.isGlobalReady(g.clock.t), false);
+  assert.deepEqual(pick(g.brain, g.clock, { available: new Set(["searchMouse", "sitEdge"]), cursorUnseenMs: 9e9 }),
+    { id: "searchMouse" }, "not blocked by the global cooldown");
+  assert.equal(pick(g.brain, g.clock, { available: new Set(["sitEdge"]) }), null);
 });
 
 test("fetch and searchMouse never change the picks of a theme without their art", () => {

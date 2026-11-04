@@ -2454,8 +2454,18 @@ test("searchMouse also plays as a single-part idle activity, never without auton
   env.mode = "activities";
   env.runtime.configure(MON);
   untrustedTicks(env, 700000);
+  assert.equal(env.sends[0].file, "searchMouse.svg", "the tick plays it once due");
+  assert.ok(env.clock.now() >= 600000);
+  // With the companion's own scene blocked, the idle-activity chooser offers it.
+  const chooser = setup();
+  chooser.theme = themeWith(["searchMouse"]);
+  chooser.mode = "activities";
+  chooser.gate = false;
+  chooser.runtime.configure(MON);
+  untrustedTicks(chooser, 700000);
+  assert.equal(chooser.sends.length, 0);
   let answer = null;
-  for (let i = 0; i < 20 && !(answer && answer.file); i += 1) answer = env.runtime.chooseIdleActivity({ theme: env.theme });
+  for (let i = 0; i < 20 && !(answer && answer.file); i += 1) answer = chooser.runtime.chooseIdleActivity({ theme: chooser.theme });
   assert.equal(answer.file, "searchMouse.svg");
 
   const off = setup();
@@ -2682,4 +2692,74 @@ test("getMoodSnapshot reports mood, label, personality and the last interaction 
   const writes = env.store.count("schedule");
   env.runtime.getMoodSnapshot();
   assert.equal(env.store.count("schedule"), writes);
+});
+
+// ---- fix round 1 (Rulings N1-N3) ----
+
+test("under XWayland searchMouse looks for the cursor after 30 s, elsewhere after 10 min", () => {
+  const xw = setup({ options: { xwayland: true } });
+  xw.theme = themeWith(["searchMouse"]);
+  xw.runtime.configure(MON);
+  xw.runtime.tick(null, { cursorTrusted: false });
+  untrustedTicks(xw, 120000);
+  assert.equal(xw.sends.length, 1);
+  assert.equal(xw.sends[0].file, "searchMouse.svg");
+  assert.ok(xw.clock.now() >= 30000 && xw.clock.now() < 600000, `at ${xw.clock.now()}`);
+
+  const plain = setup();
+  plain.theme = themeWith(["searchMouse"]);
+  plain.runtime.configure(MON);
+  plain.runtime.tick(null, { cursorTrusted: false });
+  untrustedTicks(plain, 120000);
+  assert.equal(plain.sends.length, 0, "10 min elsewhere");
+});
+
+test("a test walk is dropped off Free Roam and expires even with mischief off", () => {
+  const env = debugEnv({ keys: ["sitEdge"], config: { ...ON } });
+  assert.deepEqual(env.runtime.debugPlay("sitEdge"), { ok: true });
+  env.mode = "none";
+  env.runtime.tick();
+  env.mode = "roam";
+  assert.ok(env.runtime.getRoamDelayMs(false, 4000) > 0, "dropped when Free Roam went off");
+
+  const old = debugEnv({ keys: ["sitEdge"], config: { ...ON } });
+  old.runtime.debugPlay("sitEdge");
+  old.clock.advance(121000);
+  old.runtime.tick();
+  assert.ok(old.runtime.getRoamDelayMs(false, 4000) > 0, "expired after 2 min");
+});
+
+test("later parts of a test scene follow the test gate, not the idle gate", () => {
+  const env = debugEnv({ keys: FETCH_PAIR, config: { ...ON }, options: { getDebugBlockReason: () => null } });
+  env.runtime.debugPlay("fetch", { variant: "fetchDuckLeft" });
+  const target = env.runtime.pickRoamTarget(BAND_ARGS);
+  env.runtime.noteWalkFinished({ preferred: true, mischief: target.mischief, reachedEdgeDistancePx: 0 });
+  env.gate = false; // e.g. the doze guard closes the idle gate; the test gate stays open
+  runCommitting(env, 20000);
+  assert.deepEqual(env.sends.map((s) => s.file), ["fetchExitLeft.svg", "fetchDuckLeft.svg"]);
+
+  const dnd = debugEnv({ keys: FETCH_PAIR, config: { ...ON }, options: { getDebugBlockReason: () => dndReason } });
+  let dndReason = null;
+  dnd.runtime.debugPlay("fetch", { variant: "fetchDuckLeft" });
+  const t2 = dnd.runtime.pickRoamTarget(BAND_ARGS);
+  dnd.runtime.noteWalkFinished({ preferred: true, mischief: t2.mischief, reachedEdgeDistancePx: 0 });
+  dndReason = "dnd";
+  runCommitting(dnd, 20000);
+  assert.deepEqual(dnd.sends.map((s) => s.file), ["fetchExitLeft.svg"], "a closed test gate ends it");
+});
+
+test("a test fetch gets the return walk even with mischief and autonomy off", () => {
+  const env = debugEnv({ keys: FETCH_PAIR, config: { ...ON, autonomy: false } });
+  env.runtime.debugPlay("fetch", { variant: "fetchDuckLeft" });
+  const target = env.runtime.pickRoamTarget(BAND_ARGS);
+  env.runtime.noteWalkFinished({ preferred: true, mischief: target.mischief, reachedEdgeDistancePx: 0 });
+  runCommitting(env, 20000);
+  assert.equal(env.runtime.isAnimating(), false);
+  assert.equal(env.runtime.getRoamDelayMs(false, 4000), 2000, "short pause for the walk back");
+  assert.equal(env.runtime.pickRoamTarget(BAND_ARGS), null, "roam picks a band target");
+  assert.equal(env.runtime.getRoamDelayMs(false, 4000), 4000, "once");
+});
+
+test("FETCH_OBJECTS has one definition", () => {
+  assert.equal(require("../src/companion-scenes").FETCH_OBJECTS, require("../src/theme-schema").FETCH_OBJECTS);
 });
