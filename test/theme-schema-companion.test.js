@@ -39,6 +39,7 @@ describe("theme companionAnimations block", () => {
     assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS, [
       "petting", "content", "tired", "shy", "grumpy", "curious", "greet",
       ...schema.MISCHIEF_ANIMATION_KEYS,
+      ...schema.POLISH_ANIMATION_KEYS,
     ]);
     assert.deepStrictEqual(schema.MISCHIEF_ANIMATION_KEYS, [
       "catch", "catchMiss", "pounceLeft", "pounceRight", "fakeNap", "boo",
@@ -46,6 +47,24 @@ describe("theme companionAnimations block", () => {
       "wallPeekLeft", "wallPeekRight", "sitEdge", "morningStretch", "coffee",
       "nightSleepy", "welcome", "stretchBack", "toyBall", "toyYoyo", "toyPlane",
     ]);
+  });
+
+  it("exports the polish keys (directional catches, strikes, mirrors, walk variants) after mischief", () => {
+    assert.deepStrictEqual(schema.POLISH_ANIMATION_KEYS, [
+      "catchHigh", "catchBody", "catchLow", "catchLeft", "catchRight",
+      "catchMissHigh", "catchMissBody", "catchMissLow", "catchMissLeft", "catchMissRight",
+      "pounceStrikeLeft", "pounceStrikeRight",
+      "greetLeft", "shyRight", "reachCloseLeft",
+      "walkBouncy", "walkTired", "walkCurious",
+    ]);
+    assert.deepStrictEqual(schema.COMPANION_ANIMATION_KEYS.slice(-18), [...schema.POLISH_ANIMATION_KEYS]);
+    const block = {};
+    for (const key of schema.POLISH_ANIMATION_KEYS) block[key] = { file: `../x/${key}.svg`, duration: 1400 };
+    const theme = schema.mergeDefaults(validThemeJson({ companionAnimations: block }), "test", false);
+    for (const key of schema.POLISH_ANIMATION_KEYS) {
+      assert.deepStrictEqual(theme.companionAnimations[key], { files: [`${key}.svg`], duration: 1400 }, key);
+    }
+    assert.deepStrictEqual(schema.mergeDefaults(validThemeJson(), "test", false).companionAnimations, {});
   });
 
   it("mischief keys are optional and basenamed", () => {
@@ -143,7 +162,7 @@ describe("theme companionAnimations block", () => {
 
   it("built-in clawd declares all mischief keys", () => {
     const theme = themeLoader.loadTheme("clawd", { strict: true });
-    assert.deepStrictEqual(theme.companionAnimations, {
+    const base = {
       petting: { files: ["clawd-alive-petting.svg"], duration: null },
       content: { files: ["clawd-alive-content.svg"], duration: 3500 },
       tired: { files: ["clawd-alive-tired.svg"], duration: 4000 },
@@ -173,10 +192,14 @@ describe("theme companionAnimations block", () => {
       toyBall: { files: ["clawd-alive-toy-ball.svg"], duration: 3000 },
       toyYoyo: { files: ["clawd-alive-toy-yoyo.svg"], duration: 3000 },
       toyPlane: { files: ["clawd-alive-toy-plane.svg"], duration: 3000 },
-    });
-    assert.deepStrictEqual(Object.keys(theme.companionAnimations), [...schema.COMPANION_ANIMATION_KEYS]);
+    };
+    for (const [key, entry] of Object.entries(base)) assert.deepStrictEqual(theme.companionAnimations[key], entry, key);
+    // Polish keys are optional: the theme registers them as their art lands.
+    const declared = Object.keys(theme.companionAnimations);
+    assert.deepStrictEqual(declared, schema.COMPANION_ANIMATION_KEYS.filter((key) => declared.includes(key)));
+    for (const key of [...schema.MISCHIEF_ANIMATION_KEYS]) assert.ok(declared.includes(key), key);
     const required = schema.collectRequiredAssetFiles(theme);
-    for (const key of schema.COMPANION_ANIMATION_KEYS) {
+    for (const key of declared) {
       const [file] = theme.companionAnimations[key].files;
       assert.ok(required.includes(file), `${file} required`);
       assert.ok(theme.rendering.objectChannelFiles.includes(file), `${file} objectChannel`);
