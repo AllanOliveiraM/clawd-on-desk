@@ -1,25 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
   <defs>
     <style>
+      /* Error loops start after the 450ms intro (unchanged otherwise) */
       .body-exhausted {
         transform-origin: 7.5px 15px;
-        animation: heavy-breathe 2.5s infinite ease-in-out;
+        animation: heavy-breathe 2.5s 0.45s infinite ease-in-out;
       }
       .arm-fan {
         transform-origin: 14px 10px;
-        animation: fan-self 0.4s infinite alternate ease-in-out;
+        animation: fan-self 0.4s 0.45s infinite alternate ease-in-out;
       }
       .smoke {
         opacity: 0;
         animation: puff-smoke 3s infinite ease-out;
       }
-      .sm1 { animation-delay: 0s; }
-      .sm2 { animation-delay: 1s; }
-      .sm3 { animation-delay: 2s; }
+      .sm1 { animation-delay: 0.45s; }
+      .sm2 { animation-delay: 1.45s; }
+      .sm3 { animation-delay: 2.45s; }
 
       /* Error warning flash */
       .error-warning {
-        animation: error-flash 0.8s infinite ease-in-out;
+        animation: error-flash 0.8s 0.45s infinite ease-in-out;
+      }
+
+      /* Intro (0-450ms): rest pose, stumble, flip onto the back.
+         Outro (4550-5000ms): shake, flip back up, land in the rest pose. */
+      .out-body {
+        transform-origin: 7.5px 15px;
+        animation: body-out 0.45s 4.55s ease-in-out forwards;
+      }
+      .in-body {
+        transform-origin: 7.5px 15px;
+        animation: body-in 0.45s ease-in-out forwards;
+      }
+      .rest-art {
+        animation: rest-in 0.45s linear forwards, rest-out 0.45s 4.55s linear forwards;
+      }
+      .err-art {
+        opacity: 0;
+        animation: err-in 0.45s linear forwards, err-out 0.45s 4.55s linear forwards;
+      }
+      /* keeps #accessory-anchor on the rest-pose head while the rest art shows */
+      .err-off-in {
+        transform: translate(0, -4px);
+        animation: off-in 0.45s linear forwards;
+      }
+      .err-off-out {
+        animation: off-out 0.45s 4.55s linear forwards;
+      }
+      .shadow-in {
+        transform-origin: 7.5px 15.5px;
+        transform: scale(0.52941, 1);
+        animation: shadow-in 0.45s ease-in-out forwards;
+      }
+      .shadow-out {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-out 0.45s 4.55s ease-in-out forwards;
+      }
+      .smoke-fade {
+        animation: fade-out 0.2s 4.55s linear forwards;
+      }
+      .warn-fade {
+        opacity: 0;
+        animation: warn-in 0.45s linear forwards, fade-out 0.2s 4.55s linear forwards;
       }
 
       @keyframes heavy-breathe {
@@ -39,6 +82,76 @@
         0%, 100% { opacity: 1; }
         50% { opacity: 0.15; }
       }
+
+      @keyframes body-in {
+        0% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        10% { transform: translate(0, 0) rotate(0deg) scale(1.04, 0.94); }
+        22% { transform: translate(-1px, 0) rotate(-8deg) scale(1, 1); }
+        34% { transform: translate(0.8px, 0) rotate(6deg) scale(1, 1); }
+        46% { transform: translate(0, 0) rotate(0deg) scale(1.08, 0.85); }
+        56% { transform: translate(0, -5.8px) rotate(-6deg) scale(1, 0.06); }
+        70% { transform: translate(0, -2px) rotate(5deg) scale(0.96, 0.9); }
+        80% { transform: translate(0, 0) rotate(0deg) scale(1.1, 0.8); }
+        90% { transform: translate(0, 0) rotate(0deg) scale(0.97, 1.05); }
+        100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+      @keyframes body-out {
+        0% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+        12% { transform: translate(0, 0) rotate(0deg) scale(1.06, 0.9); }
+        24% { transform: translate(-0.6px, 0) rotate(-4deg) scale(1, 1); }
+        34% { transform: translate(0.6px, 0) rotate(4deg) scale(1, 1); }
+        44% { transform: translate(-0.3px, 0) rotate(-2deg) scale(1, 1); }
+        52% { transform: translate(0, 0) rotate(0deg) scale(1.08, 0.85); }
+        62% { transform: translate(0, -5.8px) rotate(6deg) scale(1, 0.06); }
+        76% { transform: translate(0, -1.5px) rotate(-3deg) scale(0.95, 1.08); }
+        88% { transform: translate(0, 0) rotate(0deg) scale(1.06, 0.94); }
+        95% { transform: translate(0, 0) rotate(0deg) scale(0.99, 1.01); }
+        100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+      }
+      @keyframes rest-in {
+        0%, 55.9% { opacity: 1; }
+        56%, 100% { opacity: 0; }
+      }
+      @keyframes rest-out {
+        0%, 61.9% { opacity: 0; }
+        62%, 100% { opacity: 1; }
+      }
+      @keyframes err-in {
+        0%, 55.9% { opacity: 0; }
+        56%, 100% { opacity: 1; }
+      }
+      @keyframes err-out {
+        0%, 61.9% { opacity: 1; }
+        62%, 100% { opacity: 0; }
+      }
+      @keyframes off-in {
+        0%, 55.9% { transform: translate(0, -4px); }
+        56%, 100% { transform: translate(0, 0); }
+      }
+      @keyframes off-out {
+        0%, 61.9% { transform: translate(0, 0); }
+        62%, 100% { transform: translate(0, -4px); }
+      }
+      @keyframes shadow-in {
+        0%, 46% { transform: scale(0.52941, 1); }
+        56% { transform: scale(0.4, 1); }
+        80% { transform: scale(1.04, 1); }
+        100% { transform: scale(1, 1); }
+      }
+      @keyframes shadow-out {
+        0% { transform: scale(1, 1); }
+        52% { transform: scale(1.04, 1); }
+        62% { transform: scale(0.4, 1); }
+        88%, 100% { transform: scale(0.52941, 1); }
+      }
+      @keyframes warn-in {
+        0%, 65% { opacity: 0; }
+        100% { opacity: 1; }
+      }
+      @keyframes fade-out {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      }
     </style>
     <g id="smoke-puff">
       <rect x="-1" y="-1" width="2" height="2" fill="#B0BEC5" rx="0.5"/>
@@ -46,49 +159,82 @@
     </g>
   </defs>
 
-  <rect id="ground-shadow" x="-1" y="15" width="17" height="1" fill="#000000" opacity="0.5"/>
+  <g class="shadow-out">
+    <g class="shadow-in">
+      <rect id="ground-shadow" x="-1" y="15" width="17" height="1" fill="#000000" opacity="0.5"/>
+    </g>
+  </g>
 
   <!-- Smoke -->
-  <g>
+  <g class="smoke-fade">
     <use href="#smoke-puff" class="smoke sm1"/>
     <use href="#smoke-puff" class="smoke sm2" transform="translate(-2, 0)"/>
     <use href="#smoke-puff" class="smoke sm3" transform="translate(2, 0)"/>
   </g>
 
-  <g id="accessory-anchor" class="body-exhausted">
-    <!-- Sploot Legs -->
-    <g fill="#DE886D">
-      <rect x="3" y="9" width="1" height="1"/>
-      <rect x="5" y="9" width="1" height="1"/>
-      <rect x="9" y="9" width="1" height="1"/>
-      <rect x="11" y="9" width="1" height="1"/>
-    </g>
+  <g class="out-body">
+    <g class="in-body">
+      <!-- Rest pose (clawd-idle-follow.svg) shown only during intro/outro -->
+      <g class="rest-art">
+        <g fill="#DE886D">
+          <rect x="3" y="11" width="1" height="4"/>
+          <rect x="5" y="11" width="1" height="4"/>
+          <rect x="9" y="11" width="1" height="4"/>
+          <rect x="11" y="11" width="1" height="4"/>
+        </g>
+        <rect x="2" y="6" width="11" height="7" fill="#DE886D"/>
+        <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+        <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+        <g fill="#000000">
+          <rect x="4" y="8" width="1" height="2"/>
+          <rect x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
 
-    <!-- Torso Sploot -->
-    <g fill="#DE886D">
-      <rect x="1" y="10" width="13" height="5"/>
-      <rect x="-1" y="13" width="2" height="2"/>
-    </g>
+      <g class="err-art">
+        <g class="err-off-out">
+          <g class="err-off-in">
+            <g id="accessory-anchor" class="body-exhausted">
+              <!-- Sploot Legs -->
+              <g fill="#DE886D">
+                <rect x="3" y="9" width="1" height="1"/>
+                <rect x="5" y="9" width="1" height="1"/>
+                <rect x="9" y="9" width="1" height="1"/>
+                <rect x="11" y="9" width="1" height="1"/>
+              </g>
 
-    <!-- Fanning Arm (closer to body) -->
-    <g class="arm-fan">
-      <rect x="13" y="11" width="2" height="2" fill="#DE886D"/>
-    </g>
+              <!-- Torso Sploot -->
+              <g fill="#DE886D">
+                <rect x="1" y="10" width="13" height="5"/>
+                <rect x="-1" y="13" width="2" height="2"/>
+              </g>
 
-    <!-- XX Eyes -->
-    <g fill="#000000">
-      <!-- Left X -->
-      <rect x="3" y="12" width="0.6" height="2.2" transform="rotate(45 3.3 13.1)"/>
-      <rect x="3" y="12" width="0.6" height="2.2" transform="rotate(-45 3.3 13.1)"/>
-      <!-- Right X -->
-      <rect x="10" y="12" width="0.6" height="2.2" transform="rotate(45 10.3 13.1)"/>
-      <rect x="10" y="12" width="0.6" height="2.2" transform="rotate(-45 10.3 13.1)"/>
+              <!-- Fanning Arm (closer to body) -->
+              <g class="arm-fan">
+                <rect x="13" y="11" width="2" height="2" fill="#DE886D"/>
+              </g>
+
+              <!-- XX Eyes -->
+              <g fill="#000000">
+                <!-- Left X -->
+                <rect x="3" y="12" width="0.6" height="2.2" transform="rotate(45 3.3 13.1)"/>
+                <rect x="3" y="12" width="0.6" height="2.2" transform="rotate(-45 3.3 13.1)"/>
+                <!-- Right X -->
+                <rect x="10" y="12" width="0.6" height="2.2" transform="rotate(45 10.3 13.1)"/>
+                <rect x="10" y="12" width="0.6" height="2.2" transform="rotate(-45 10.3 13.1)"/>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
     </g>
   </g>
 
   <!-- Error Warning (flashing) -->
-  <g class="error-warning">
-    <!-- Error text only -->
-    <text x="7.5" y="6" text-anchor="middle" font-family="'Söhne', 'Helvetica Neue', Arial, sans-serif" font-size="3.5" font-weight="700" fill="#FF3B30">ERROR</text>
+  <g class="warn-fade">
+    <g class="error-warning">
+      <!-- Error text only -->
+      <text x="7.5" y="6" text-anchor="middle" font-family="'Söhne', 'Helvetica Neue', Arial, sans-serif" font-size="3.5" font-weight="700" fill="#FF3B30">ERROR</text>
+    </g>
   </g>
 </svg>
