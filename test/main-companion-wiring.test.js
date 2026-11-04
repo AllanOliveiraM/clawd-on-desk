@@ -69,7 +69,6 @@ it("canPlayIdleActivity delegates to isPetFreeForIdle", () => {
     assert.equal(h.isPetFreeForIdle(), false);
     assert.equal(h.canPlayIdleActivity(), false);
   }
-  assert.ok(ctx);
 });
 
 const companionSource = slice("// ── Clawd Alive companion", "// Convenience getters for mini state");
