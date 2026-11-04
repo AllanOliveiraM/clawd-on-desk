@@ -1795,14 +1795,27 @@ function createPetWindowRuntime(options = {}) {
     const bottomInset = physicalBounds
       ? 0
       : getNearestDisplayBottomInset(insetProbeX, insetProbeY);
-    const mLeft = Math.round(w * 0.25);
-    const mRight = Math.round(w * 0.25);
-    const clampMargins = getRestClampMargins({
+    // Clawd Alive edge mimes (wall, sit-edge, reach-close, poke) may ask a
+    // roam walk to hang a little further past the edge than the rest clamp;
+    // an overhang only ever widens a side, never tightens it.
+    const overhang = optionsArg.overhang && typeof optionsArg.overhang === "object"
+      ? optionsArg.overhang
+      : null;
+    const widen = (base, key) => {
+      const extra = overhang ? overhang[key] : null;
+      return Number.isFinite(extra) && extra > base ? extra : base;
+    };
+    const mLeft = widen(Math.round(w * 0.25), "left");
+    const mRight = widen(Math.round(w * 0.25), "right");
+    const restMargins = getRestClampMargins({
       height: h,
       visibleMargins: margins,
       allowEdgePinning,
       bottomInset,
     });
+    const clampMargins = overhang
+      ? { top: widen(restMargins.top, "top"), bottom: widen(restMargins.bottom, "bottom") }
+      : restMargins;
     return {
       x: Math.max(
         clampArea.x - mLeft,

@@ -11,6 +11,16 @@
 // the scene still owns the screen. The player owns no timer: the runtime's
 // per-playback timer drives the end of each part.
 
+const {
+  POKE_FINGERTIP,
+  WALL_PUSH_HANDS_U,
+  WALL_PEEK_EDGE_U,
+  SIT_EDGE_LEDGE_V,
+  REACH_CLOSE_TIP,
+  REACH_CLOSE_TITLEBAR_PX,
+  REACH_CLOSE_SIDE_INSET_PX,
+} = require("./companion-geometry");
+
 const SCENE_DEFAULT_DURATION_MS = 3500;
 const SCENE_MIN_DURATION_MS = 1000;
 const SCENE_MAX_DURATION_MS = 8000;
@@ -60,6 +70,8 @@ function sceneSpec(id, opts, hasKey, random) {
     case "sitEdge":
       return { parts: [{ key: "sitEdge", loop: true, maxMs: SIT_EDGE_MAX_MS }] };
     case "wall": {
+      // An art-anchored walk fixed push or peek when it was planned.
+      if (typeof opts.variant === "string" && hasKey(opts.variant)) return { parts: [{ key: opts.variant }] };
       const open = [sided("wallPush", opts.side), sided("wallPeek", opts.side)].filter(hasKey);
       if (open.length === 0) return null;
       const index = clamp(Math.floor(random() * open.length), 0, open.length - 1);
@@ -69,6 +81,8 @@ function sceneSpec(id, opts, hasKey, random) {
     case "toy":
       return typeof opts.variant === "string" ? { parts: [{ key: opts.variant }] } : null;
     case "reachClose":
+      // reachCloseLeft (macOS corner) when the walk planned it and the art exists.
+      return { parts: [{ key: opts.variant === "reachCloseLeft" && hasKey("reachCloseLeft") ? "reachCloseLeft" : "reachClose" }] };
     case "welcome":
     case "stretchBack":
       return { parts: [{ key: id }] };
@@ -132,9 +146,91 @@ const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const REACH_CLOSE_INSET_X = 1.5;
 const REACH_CLOSE_INSET_Y = 0.4;
 
+// Arrival tolerance of an art-anchored walk: the anchor (fingertip, hands,
+// ledge, hand tip) may end this fraction of the pet width off its spot.
+const SPOT_TOLERANCE_RATIO = 0.05;
+// Same sideways overhang the rest clamp allows (clampToScreenVisual, 0.25 w).
+const SCREEN_SIDE_OVERHANG_RATIO = 0.25;
+
+function overhangOf(spot, area, W, H) {
+  return {
+    left: Math.max(0, area.x - spot.x),
+    right: Math.max(0, spot.x + W - (area.x + area.width)),
+    top: Math.max(0, area.y - spot.y),
+    bottom: Math.max(0, spot.y + H - (area.y + area.height)),
+  };
+}
+
+// Art-anchored walk (Ruling P4): the exact window top-left that puts an art
+// anchor on its screen point. undefined -> the art cannot be placed (keep the
+// whole-window walk); null -> skip this walk (it would never line up).
+function artWalkTarget(walk, { area, bounds, art, platform, random, petWidth }) {
+  const W = art.width;
+  const H = art.height;
+  if (!W || !H) return undefined;
+  const hasBounds = !!bounds && [bounds.x, bounds.y, bounds.width, bounds.height].every(isNum);
+  const right = area.x + area.width;
+  const bottom = area.y + area.height;
+  const done = (spot, extra = {}) => ({ spot, overhang: overhangOf(spot, area, W, H), side: null, petWidth, ...extra });
+  if (walk.id === "reachClose") {
+    const darwin = platform === "darwin";
+    const key = darwin && art.has("reachCloseLeft") ? "reachCloseLeft" : "reachClose";
+    const u = darwin ? art.mirrorU(key, REACH_CLOSE_TIP.u) : REACH_CLOSE_TIP.u;
+    const tip = art.point(key, u, REACH_CLOSE_TIP.v);
+    if (!tip) return undefined;
+    const x = darwin ? area.x + REACH_CLOSE_SIDE_INSET_PX - tip.x : right - REACH_CLOSE_SIDE_INSET_PX - tip.x;
+    return done({ x, y: area.y + Math.max(0, REACH_CLOSE_TITLEBAR_PX - tip.y) }, { variant: key });
+  }
+  if (walk.id === "wall") {
+    const cx = hasBounds ? bounds.x + bounds.width / 2 : area.x + area.width / 2;
+    const side = cx - area.x <= right - cx ? "left" : "right";
+    const open = [sided("wallPush", side), sided("wallPeek", side)].filter((key) => art.has(key));
+    if (open.length === 0) return undefined;
+    const index = clamp(Math.floor(random() * open.length), 0, open.length - 1);
+    const key = open[Number.isFinite(index) ? index : 0];
+    const leftU = key.startsWith("wallPush") ? WALL_PUSH_HANDS_U : WALL_PEEK_EDGE_U;
+    const anchor = art.point(key, side === "left" ? leftU : art.mirrorU(key, leftU), 0);
+    if (!anchor) return undefined;
+    const y = hasBounds ? bounds.y : area.y + (area.height - H) / 2;
+    return done({ x: side === "left" ? area.x - anchor.x : right - anchor.x, y }, { side, variant: key });
+  }
+  if (walk.id === "sitEdge") {
+    const ledge = art.point("sitEdge", 0, SIT_EDGE_LEDGE_V);
+    if (!ledge) return undefined;
+    const x = hasBounds ? bounds.x : area.x + (area.width - W) / 2;
+    return done({ x, y: bottom - ledge.y });
+  }
+  if (walk.id === "poke" && walk.target && isNum(walk.target.x) && isNum(walk.target.y)) {
+    const cx = hasBounds ? bounds.x + bounds.width / 2 : area.x + area.width / 2;
+    const side = cx < walk.target.x ? "right" : "left";
+    const key = sided("poke", side);
+    const u = side === "left" ? POKE_FINGERTIP.u : art.mirrorU(key, POKE_FINGERTIP.u);
+    const tip = art.point(key, u, POKE_FINGERTIP.v);
+    if (!tip) return undefined;
+    const spot = { x: walk.target.x - tip.x, y: walk.target.y - tip.y };
+    // Screen-visual limits (not roam's margin band): the rest clamp's sideways
+    // overhang and the theme margin box top / bottom.
+    const margins = art.visualMargins(key) || { top: 0, bottom: 0 };
+    const side25 = SCREEN_SIDE_OVERHANG_RATIO * W;
+    const yMin = area.y - margins.top;
+    const yMax = bottom - H + margins.bottom;
+    const cxSpot = clamp(spot.x, area.x - side25, right - W + side25);
+    if (spot.y < yMin || spot.y > yMax || Math.abs(cxSpot - spot.x) > SPOT_TOLERANCE_RATIO * W) return null;
+    return done(spot, { side });
+  }
+  return undefined;
+}
+
 // Center point a walking mischief heads to, on the pet's current work area,
 // plus the scene side fixed for the arrival. null when it cannot be placed.
-function walkTarget(walk, { area, bounds, size, platform }) {
+// With `art` (companion-geometry.createArt) the art-anchored spot wins when
+// the theme can place it: { spot, overhang, side, variant, petWidth }.
+function walkTarget(walk, { area, bounds, size, platform, art, random = Math.random }) {
+  if (art) {
+    const width0 = size && isNum(size.width) ? size.width : (bounds && isNum(bounds.width) ? bounds.width : 0);
+    const anchored = artWalkTarget(walk, { area, bounds, art, platform, random, petWidth: width0 });
+    if (anchored !== undefined) return anchored;
+  }
   const width = size && isNum(size.width) ? size.width : 0;
   const height = size && isNum(size.height) ? size.height : 0;
   const hasBounds = !!bounds && [bounds.x, bounds.y, bounds.width, bounds.height].every(isNum);
@@ -178,7 +274,12 @@ function walkEdgeDistance(walk, { area, bounds, goal, platform }) {
   const topGap = bounds.y - area.y;
   const bottomGap = area.y + area.height - (bounds.y + bounds.height);
   let distance = Infinity;
-  if (walk.id === "reachClose") {
+  if (walk.spot && isNum(walk.spot.x) && isNum(walk.spot.y)) {
+    // Art-anchored walk: how far the window is from the exact spot the art
+    // needs (fingertip on the cursor, hands on the wall, ledge on the edge).
+    distance = Math.hypot(bounds.x - walk.spot.x, bounds.y - walk.spot.y);
+  }
+  else if (walk.id === "reachClose") {
     // Distance to the inset spot next to the corner, not to the corner itself.
     const sideGap = platform === "darwin" ? leftGap : rightGap;
     distance = Math.max(
@@ -276,6 +377,7 @@ module.exports = {
   REACH_CLOSE_INSET_X,
   REACH_CLOSE_INSET_Y,
   SIT_EDGE_MAX_MS,
+  SPOT_TOLERANCE_RATIO,
   partDurationMs,
   buildScene,
   createScenePlayer,

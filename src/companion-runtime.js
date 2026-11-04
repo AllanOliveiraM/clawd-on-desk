@@ -39,7 +39,9 @@ const {
   mischiefAvailable,
   walkTarget,
   walkEdgeDistance,
+  SPOT_TOLERANCE_RATIO,
 } = require("./companion-scenes");
+const { createArt } = require("./companion-geometry");
 
 const BEAT_DEFAULT_DURATION_MS = 3500;
 const BEAT_MIN_DURATION_MS = 2000;
@@ -535,7 +537,42 @@ function createCompanionRuntime(options = {}) {
     if (mischiefOn() && pendingWalk) {
       const walk = pendingWalk;
       pendingWalk = null;
-      const spot = walkTarget(walk, { area, bounds, size, platform: getPlatform() });
+      const artSize = size && isNum(size.width) && isNum(size.height)
+        ? size
+        : (bounds && isNum(bounds.width) && isNum(bounds.height) ? { width: bounds.width, height: bounds.height } : null);
+      const art = createArt(getTheme(), artSize);
+      const spot = walkTarget(walk, { area, bounds, size, platform: getPlatform(), art, random });
+      if (spot && spot.spot) {
+        // Art-anchored (Ruling P4): walk the window to the exact spot; past the
+        // work area only by the art's overhang and never with a fence.
+        const edge = validEdgeBounds(args.edgeBounds);
+        const overhang = args.fence ? null : spot.overhang;
+        const ov = (k) => (overhang && isNum(overhang[k]) ? overhang[k] : 0);
+        const box = edge
+          ? { xMin: edge.xMin - ov("left"), xMax: edge.xMax + ov("right"), yMin: edge.yMin - ov("top"), yMax: edge.yMax + ov("bottom") }
+          : { xMin, xMax: Math.max(xMin, xMax), yMin, yMax: Math.max(yMin, yMax) };
+        const target = {
+          x: clamp(spot.spot.x, box.xMin, box.xMax),
+          y: clamp(spot.spot.y, box.yMin, box.yMax),
+          preferred: true,
+          mischief: walk.id,
+          spot: { ...spot.spot },
+        };
+        if (overhang && (ov("left") || ov("right") || ov("top") || ov("bottom"))) target.overhang = { ...overhang };
+        if (spot.side && walk.id === "wall") target.side = spot.side;
+        walkingMischief = {
+          id: walk.id,
+          at: now(),
+          side: spot.side,
+          variant: spot.variant || null,
+          spot: { ...spot.spot },
+          petWidth: spot.petWidth,
+          area,
+          bounds,
+          goal: { x: target.x, y: target.y },
+        };
+        return target;
+      }
       if (spot) {
         // Edge/corner kinds may leave the margin band: roam's edgeBounds is the
         // work area (whole window) narrowed by an active fence.
@@ -588,6 +625,12 @@ function createCompanionRuntime(options = {}) {
     return null;
   }
 
+  // An art-anchored walk must end with its anchor on the spot; the older
+  // whole-window walks only need to be within a pet width of their edge.
+  function arrivalTolerance(walk) {
+    return walk.spot ? SPOT_TOLERANCE_RATIO * walk.petWidth : walk.petWidth;
+  }
+
   // Roam did not use the proposed target (too close, or holding): the explore
   // cell must not be credited on the next arrival. A mischief walk discarded
   // because the pet is already there plays its scene in place; otherwise it
@@ -601,8 +644,8 @@ function createCompanionRuntime(options = {}) {
     pendingWalk = null;
     if (!walk) return;
     const distance = walkEdgeDistance(walk, { area: walk.area, bounds: walk.bounds, goal: walk.goal, platform: getPlatform() });
-    const played = mischiefOn() && autonomous() && getIdleMode() === "roam" && distance <= walk.petWidth
-      && startScene(walk.id, { side: walk.side });
+    const played = mischiefOn() && autonomous() && getIdleMode() === "roam" && distance <= arrivalTolerance(walk)
+      && startScene(walk.id, { side: walk.side, variant: walk.variant });
     if (!played) spendWalk(walk);
   }
 
@@ -635,8 +678,12 @@ function createCompanionRuntime(options = {}) {
       walkingMischief = null;
       // Fence or clamp may stop the pet short of the edge: then skip the scene.
       const reached = info.reachedEdgeDistancePx;
-      const close = walk.id === "poke" || (isNum(reached) && reached <= walk.petWidth);
-      if (close && autonomous() && getIdleMode() === "roam") played = startScene(walk.id, { side: walk.side });
+      const close = walk.spot
+        ? isNum(reached) && reached <= arrivalTolerance(walk)
+        : walk.id === "poke" || (isNum(reached) && reached <= walk.petWidth);
+      if (close && autonomous() && getIdleMode() === "roam") {
+        played = startScene(walk.id, { side: walk.side, variant: walk.variant });
+      }
       // Spend the cooldown anyway so a fenced pet does not keep walking there.
       if (!played) brain.markPlayed(walk.id, now(), traits);
     }

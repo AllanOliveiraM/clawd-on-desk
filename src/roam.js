@@ -32,6 +32,9 @@
 //     {mischief, reachedEdgeDistancePx} when the target carried a mischief
 //     kind: the final bounds' gap to the work-area edge that kind aims at),
 //     ctx.onPreferredTargetDiscarded() reports a proposal roam did not walk, and
+//     a mischief proposal may carry {spot, overhang}: the exact top-left the
+//     art needs and how far it may hang past the work area (no fence only;
+//     the gap then reported is the distance to that spot), and
 //     ctx.isCompanionPlaying() holds walks while a companion beat owns the
 //     visual. Hook failures never break the scheduling chain.
 
@@ -195,8 +198,23 @@ module.exports = function initRoam(ctx) {
     )
       return undefined;
     const mischief = typeof proposal.mischief === "string" && proposal.mischief ? proposal.mischief : null;
-    const band = edgeBounds && EDGE_MISCHIEF_KINDS.has(mischief)
-      ? edgeBounds
+    // Clawd Polish: an art-anchored mischief carries the exact top-left it
+    // wants (spot) and how far that spot hangs past the work area (overhang,
+    // only honored without an active fence, capped at half the pet).
+    const spot = mischief ? readSpot(proposal.spot) : null;
+    const petW = size ? size.width : bounds.width;
+    const petH = size ? size.height : bounds.height;
+    const overhang = spot && !fenceRect ? readOverhang(proposal.overhang, petW, petH) : null;
+    const useEdge = edgeBounds && (EDGE_MISCHIEF_KINDS.has(mischief) || (mischief === "poke" && spot));
+    const band = useEdge
+      ? (overhang
+        ? {
+          xMin: edgeBounds.xMin - overhang.left,
+          xMax: edgeBounds.xMax + overhang.right,
+          yMin: edgeBounds.yMin - overhang.top,
+          yMax: edgeBounds.yMax + overhang.bottom,
+        }
+        : edgeBounds)
       : { xMin, xMax, yMin, yMax };
     const x = Math.round(Math.min(band.xMax, Math.max(band.xMin, proposal.x)));
     const y = Math.round(Math.min(band.yMax, Math.max(band.yMin, proposal.y)));
@@ -223,8 +241,32 @@ module.exports = function initRoam(ctx) {
       // The side the companion will animate (wall); arrival is measured there.
       if (proposal.side === "left" || proposal.side === "right") target.side = proposal.side;
       target.workArea = { x: wa.x, y: wa.y, width: wa.width, height: wa.height };
+      if (spot) target.spot = spot;
+      if (overhang) target.overhang = overhang;
     }
     return target;
+  }
+
+  function readSpot(value) {
+    if (!value || typeof value !== "object") return null;
+    const { x, y } = value;
+    return typeof x === "number" && typeof y === "number" && Number.isFinite(x) && Number.isFinite(y)
+      ? { x, y }
+      : null;
+  }
+
+  function readOverhang(value, petW, petH) {
+    if (!value || typeof value !== "object") return null;
+    const side = (v, cap) => (typeof v === "number" && Number.isFinite(v) && v > 0
+      ? Math.round(Math.min(v, cap))
+      : 0);
+    const out = {
+      left: side(value.left, petW / 2),
+      right: side(value.right, petW / 2),
+      top: side(value.top, petH / 2),
+      bottom: side(value.bottom, petH / 2),
+    };
+    return out.left || out.right || out.top || out.bottom ? out : null;
   }
 
   // Gap between the final pet bounds and the work-area edge the mischief kind
@@ -236,7 +278,7 @@ module.exports = function initRoam(ctx) {
     const rightGap = area.x + area.width - (finalBounds.x + finalBounds.width);
     const platform = typeof ctx.getPlatform === "function" ? ctx.getPlatform() : process.platform;
     const reachedEdgeDistancePx = walkEdgeDistance(
-      { id: target.mischief, side: target.side || (leftGap <= rightGap ? "left" : "right") },
+      { id: target.mischief, side: target.side || (leftGap <= rightGap ? "left" : "right"), spot: target.spot || null },
       { area, bounds: finalBounds, goal: { x: target.x, y: target.y }, platform },
     );
     return { mischief: target.mischief, reachedEdgeDistancePx };
@@ -637,7 +679,10 @@ module.exports = function initRoam(ctx) {
     let finalX = target.x;
     let finalY = target.y;
     if (ctx.clampToScreenVisual) {
-      const clamped = ctx.clampToScreenVisual(finalX, finalY, roamW, roamH);
+      // A mischief overhang widens the rest clamp for this walk only.
+      const clamped = target.overhang
+        ? ctx.clampToScreenVisual(finalX, finalY, roamW, roamH, { overhang: { ...target.overhang } })
+        : ctx.clampToScreenVisual(finalX, finalY, roamW, roamH);
       finalX = clamped.x;
       finalY = clamped.y;
     }

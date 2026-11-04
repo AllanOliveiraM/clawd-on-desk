@@ -1242,6 +1242,144 @@ test("poke and normal targets ignore edgeBounds", () => {
   assert.ok(checked > 0, "at least one normal target was checked");
 });
 
+// ---- polish: art-anchored edge mimes (clawd layout, 100 px pet) ----
+// px offset of viewBox (u, v) in a 100x100 window: x = -15.25 + (u + 15) * 2.9,
+// y = -26.8 + (v + 25) * 2.9.
+function geoTheme(keys) {
+  return {
+    ...themeWith(keys),
+    viewBox: { x: -15, y: -25, width: 45, height: 45 },
+    layout: {
+      contentBox: { x: -4, y: -3, width: 23, height: 20 },
+      marginBox: { x: -8, y: -7, width: 30, height: 24 },
+      centerX: 7.5, centerXRatio: 0.5, baselineY: 17, visibleHeightRatio: 0.58, baselineBottomRatio: 0.05,
+    },
+  };
+}
+const approx = (actual, expected, label) => {
+  assert.ok(actual && Math.abs(actual.x - expected.x) < 0.01 && Math.abs(actual.y - expected.y) < 0.01,
+    `${label}: ${JSON.stringify(actual)} vs ${JSON.stringify(expected)}`);
+};
+
+function edgeWalk(keys, { platform = "linux", args = BAND_ARGS, randomAtPick } = {}) {
+  const env = setup({ options: { getPlatform: () => platform } });
+  env.theme = geoTheme(keys);
+  env.runtime.configure(MON);
+  tickUntilBeat(env, 200000);
+  if (randomAtPick !== undefined) env.randomValue = randomAtPick;
+  return { env, target: env.runtime.pickRoamTarget(args) };
+}
+
+test("reach-close parks the hand tip under the titlebar near the close corner", () => {
+  const linux = edgeWalk(["reachClose", "reachCloseLeft"]);
+  approx(linux.target, { x: 2000 - 20 - 74.65, y: 48 - 19.6 }, "linux");
+  assert.equal(linux.target.mischief, "reachClose");
+  approx(linux.target.spot, linux.target, "spot");
+  assert.ok(Math.abs(linux.target.overhang.right - 5.35) < 0.01 && linux.target.overhang.left === 0);
+  linux.env.runtime.noteWalkFinished({ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 0 });
+  assert.equal(linux.env.sends[0].file, "reachClose.svg");
+
+  for (const [keys, file] of [[["reachClose", "reachCloseLeft"], "reachCloseLeft.svg"], [["reachClose"], "reachClose.svg"]]) {
+    const mac = edgeWalk(keys, { platform: "darwin" });
+    // Mirrored tip (u -1): x = 20 - 25.35.
+    approx(mac.target, { x: 20 - 25.35, y: 28.4 }, `darwin ${keys}`);
+    assert.ok(Math.abs(mac.target.overhang.left - 5.35) < 0.01);
+    mac.env.runtime.noteWalkFinished({ preferred: true, mischief: "reachClose", reachedEdgeDistancePx: 2 });
+    assert.equal(mac.env.sends[0].file, file);
+  }
+});
+
+test("wall walks plan push or peek and put its hands or edge on the wall", () => {
+  const nearLeft = { ...BAND_ARGS, bounds: { x: 300, y: 600, width: 100, height: 100 } };
+  const nearRight = { ...BAND_ARGS, bounds: { x: 1600, y: 200, width: 100, height: 100 } };
+  const keys = ["wallPushLeft", "wallPushRight", "wallPeekLeft", "wallPeekRight"];
+  const push = edgeWalk(keys, { args: nearLeft, randomAtPick: 0.1 });
+  approx(push.target, { x: -21, y: 600 }, "push left");
+  assert.equal(push.target.side, "left");
+  push.env.randomValue = 0.99; // the variant is fixed at planning, not at arrival
+  push.env.runtime.noteWalkFinished({ preferred: true, mischief: "wall", reachedEdgeDistancePx: 0 });
+  assert.equal(push.env.sends[0].file, "wallPushLeft.svg");
+
+  const peek = edgeWalk(keys, { args: nearLeft, randomAtPick: 0.99 });
+  approx(peek.target, { x: -25.002, y: 600 }, "peek left");
+  peek.env.runtime.noteWalkFinished({ preferred: true, mischief: "wall", reachedEdgeDistancePx: 0 });
+  assert.equal(peek.env.sends[0].file, "wallPeekLeft.svg");
+
+  const right = edgeWalk(keys, { args: nearRight, randomAtPick: 0.1 });
+  approx(right.target, { x: 2000 - 79, y: 200 }, "push right");
+  assert.ok(Math.abs(right.target.overhang.right - 21) < 0.01);
+
+  // Too far from the planned spot (fence, clamp): skipped.
+  const far = edgeWalk(keys, { args: nearLeft, randomAtPick: 0.1 });
+  far.env.runtime.noteWalkFinished({ preferred: true, mischief: "wall", reachedEdgeDistancePx: 10 });
+  assert.equal(far.env.sends.length, 0);
+});
+
+test("sit-edge puts the ledge on the work-area bottom, legs over the taskbar", () => {
+  const nearLeft = { ...BAND_ARGS, bounds: { x: 300, y: 600, width: 100, height: 100 } };
+  const edge = edgeWalk(["sitEdge"], { args: nearLeft });
+  approx(edge.target, { x: 300, y: 1000 - 89.2 }, "sitEdge");
+  assert.ok(Math.abs(edge.target.overhang.bottom - 10.8) < 0.01);
+  edge.env.runtime.noteWalkFinished({ preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 0 });
+  assert.equal(edge.env.sends[0].file, "sitEdge.svg");
+});
+
+test("an active fence drops the overhang and the spot is judged on arrival", () => {
+  const nearLeft = { ...BAND_ARGS, bounds: { x: 300, y: 600, width: 100, height: 100 }, fence: { left: 0, top: 0, right: 2000, bottom: 1000 } };
+  const fenced = edgeWalk(["sitEdge"], { args: nearLeft });
+  assert.deepEqual({ x: fenced.target.x, y: fenced.target.y }, { x: 300, y: 900 });
+  assert.equal(fenced.target.overhang, undefined);
+  fenced.env.runtime.noteWalkFinished({ preferred: true, mischief: "sitEdge", reachedEdgeDistancePx: 10.8 });
+  assert.equal(fenced.env.sends.length, 0);
+});
+
+function parkCursor(env, cursor, petRect = { x: 950, y: 450, width: 100, height: 100 }) {
+  for (let t = 0; t < 21000; t += 250) {
+    env.clock.advance(250);
+    env.runtime.tick({ ...cursor, petRect, overPet: false });
+  }
+}
+
+test("poke puts the fingertip on the parked cursor", () => {
+  const env = setup();
+  env.theme = geoTheme(["pokeLeft", "pokeRight"]);
+  env.runtime.configure({ ...MON, personality: "curious" });
+  parkCursor(env, { x: 1500, y: 300 });
+  const target = env.runtime.pickRoamTarget(BAND_ARGS);
+  // Pet left of the cursor: pokeRight, fingertip u 20.5 -> (87.7, 74.7).
+  approx(target, { x: 1500 - 87.7, y: 300 - 74.7 }, "poke right");
+  assert.equal(target.mischief, "poke");
+  env.runtime.noteWalkFinished({ preferred: true, mischief: "poke", reachedEdgeDistancePx: 6 });
+  assert.equal(env.sends.length, 0, "fingertip more than 0.05 W off: skipped");
+
+  const ok = setup();
+  ok.theme = geoTheme(["pokeLeft", "pokeRight"]);
+  ok.runtime.configure({ ...MON, personality: "curious" });
+  parkCursor(ok, { x: 400, y: 600 });
+  const left = ok.runtime.pickRoamTarget({ ...BAND_ARGS, bounds: { x: 950, y: 450, width: 100, height: 100 } });
+  approx(left, { x: 400 - 12.3, y: 600 - 74.7 }, "poke left");
+  ok.runtime.noteWalkFinished({ preferred: true, mischief: "poke", reachedEdgeDistancePx: 4 });
+  assert.equal(ok.sends[0].file, "pokeLeft.svg");
+});
+
+test("poke skips (and spends its cooldown) when the screen clamp would move the fingertip", () => {
+  // Too high: the window would sit above the visual top limit (74.7 - 25.4 px).
+  // Too low: the window would hang below the visual bottom limit (5 px).
+  // (Sideways the fingertip never needs more than the 0.25 W side limit.)
+  for (const cursor of [{ x: 1500, y: 40 }, { x: 1500, y: 990 }]) {
+    const env = setup();
+    env.theme = geoTheme(["pokeLeft", "pokeRight"]);
+    env.runtime.configure({ ...MON, personality: "curious" });
+    parkCursor(env, cursor);
+    assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000, "the poke walk was queued");
+    const target = env.runtime.pickRoamTarget(BAND_ARGS);
+    assert.ok(!target || target.mischief !== "poke", JSON.stringify(cursor));
+    parkCursor(env, { x: cursor.x + 1, y: 500 });
+    const again = env.runtime.pickRoamTarget(BAND_ARGS);
+    assert.ok(!again || again.mischief !== "poke", "on cooldown");
+  }
+});
+
 test("welcome needs a long sleep", () => {
   for (const [awayMs, queued] of [[599999, false], [600000, true], [undefined, false]]) {
     const env = setup();

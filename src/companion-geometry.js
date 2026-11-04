@@ -18,11 +18,10 @@ const hitGeometry = require("./hit-geometry");
 
 // clawd-alive-poke-left.svg: the poking fingertip.
 const POKE_FINGERTIP = Object.freeze({ u: -5.5, v: 10 });
-// clawd-alive-pounce-strike-left.svg: the strike hand tip at full reach. The
-// art brief keeps the tip at u >= -9.5 so it is never clipped by the window
-// (extra reach comes from a forward lean). Tune here if the artist reports a
-// different reach.
-const POUNCE_STRIKE_TIP = Object.freeze({ u: -9.5, v: 10 });
+// clawd-alive-pounce-strike-left.svg: the strike hand tip during the hold
+// (artist report: lands at ~53% of the 1800 ms loop, holds until ~72%; the
+// right file mirrors it to u 24.0). Tune here if the art changes.
+const POUNCE_STRIKE_TIP = Object.freeze({ u: -9.0, v: 9.6 });
 // clawd-alive-wall-push-left.svg: the line of the pushing hands.
 const WALL_PUSH_HANDS_U = -2.5;
 // clawd-alive-wall-peek-left.svg: the edge the pet peeks around.

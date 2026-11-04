@@ -420,6 +420,29 @@ describe("macOS physical edge pinning (#241)", () => {
     );
   });
 
+  it("widens the rest clamp by a call-site overhang only", () => {
+    const display = {
+      id: 1,
+      bounds: { x: 100, y: 50, width: 1000, height: 800 },
+      workArea: { x: 160, y: 90, width: 900, height: 700 },
+    };
+    const { runtime } = createRuntime({ isWin: false, isMac: true, allowEdgePinning: true, displays: [display] });
+    // Default limits: x 50..950 (0.25w), y -70..650.
+    assert.deepStrictEqual(
+      runtime.clampToScreenVisual(-10_000, -10_000, 200, 200, { overhang: { left: 80, top: 130 } }),
+      { x: 20, y: -80 },
+    );
+    assert.deepStrictEqual(
+      runtime.clampToScreenVisual(10_000, 10_000, 200, 200, { overhang: { right: 90, bottom: 60 } }),
+      { x: 990, y: 710 },
+    );
+    // A smaller overhang never tightens the clamp; junk is ignored.
+    assert.deepStrictEqual(
+      runtime.clampToScreenVisual(-10_000, -10_000, 200, 200, { overhang: { left: 10, top: "x" } }),
+      { x: 50, y: -70 },
+    );
+  });
+
   it("materializes a normal-mode top pin at the physical display top", () => {
     const display = {
       id: 1,

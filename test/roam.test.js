@@ -3490,6 +3490,58 @@ describe("roam companion hooks", () => {
     assert.deepStrictEqual(bare.reports, [{ preferred: true, mischief: "wall", reachedEdgeDistancePx: 648 }]);
   });
 
+  it("an art-anchored mischief spot may hang past the work area by its overhang", () => {
+    // Work area 1920x1080, pet 120x120: edgeBounds x 0..1800, y 0..960.
+    const clampCalls = [];
+    const run = edgeRun([
+      { x: -25, y: 700, preferred: true, mischief: "wall", side: "left", spot: { x: -25, y: 700 }, overhang: { left: 25, right: 0, top: 0, bottom: 0 } },
+      { x: 400, y: 973, preferred: true, mischief: "sitEdge", spot: { x: 400, y: 973 }, overhang: { left: 0, right: 0, top: 0, bottom: 13 } },
+      // Poke with a spot skips the margin band (screen-visual limits apply).
+      { x: 1700, y: -10, preferred: true, mischief: "poke", spot: { x: 1700, y: -10 }, overhang: { left: 0, right: 0, top: 10, bottom: 0 } },
+      // An overhang is capped at half the pet: the spot stays out of reach.
+      { x: -500, y: 300, preferred: true, mischief: "wall", side: "left", spot: { x: -500, y: 300 }, overhang: { left: 500, right: 0, top: 0, bottom: 0 } },
+    ], {
+      clampToScreenVisual: (x, y, w, h, options) => {
+        clampCalls.push(options === undefined ? "none" : JSON.parse(JSON.stringify(options)));
+        return { x, y, width: w, height: h };
+      },
+    });
+    assert.deepStrictEqual(run.ends, [{ x: -25, y: 700 }, { x: 400, y: 973 }, { x: 1700, y: -10 }, { x: -60, y: 300 }]);
+    assert.deepStrictEqual(run.reports.map((r) => r.reachedEdgeDistancePx), [0, 0, 0, 440]);
+    assert.deepStrictEqual(clampCalls, [
+      { overhang: { left: 25, right: 0, top: 0, bottom: 0 } },
+      { overhang: { left: 0, right: 0, top: 0, bottom: 13 } },
+      { overhang: { left: 0, right: 0, top: 10, bottom: 0 } },
+      { overhang: { left: 60, right: 0, top: 0, bottom: 0 } },
+    ]);
+  });
+
+  it("a spot clamped by the screen reports the distance to the spot", () => {
+    const run = edgeRun([
+      { x: 1700, y: 400, preferred: true, mischief: "poke", spot: { x: 1700, y: 400 } },
+    ], { clampToScreenVisual: (x, y, w, h) => ({ x: Math.min(x, 1690), y, width: w, height: h }) });
+    assert.deepStrictEqual(run.ends, [{ x: 1690, y: 400 }]);
+    assert.deepStrictEqual(run.reports, [{ preferred: true, mischief: "poke", reachedEdgeDistancePx: 10 }]);
+  });
+
+  it("an active fence ignores the overhang and keeps the window inside", () => {
+    const fence = { active: true, left: 0, top: 0, right: 1, bottom: 0.9 };
+    const clampCalls = [];
+    const run = edgeRun([
+      { x: -25, y: 700, preferred: true, mischief: "wall", side: "left", spot: { x: -25, y: 700 }, overhang: { left: 25, right: 0, top: 0, bottom: 0 } },
+    ], {
+      roamFence: { get: () => fence, refresh: () => {} },
+      getEffectiveCurrentPixelSize: () => ({ width: 120, height: 120 }),
+      clampToScreenVisual: (x, y, w, h, options) => {
+        clampCalls.push(options === undefined ? "none" : options);
+        return { x, y, width: w, height: h };
+      },
+    });
+    assert.deepStrictEqual(run.ends, [{ x: 0, y: 700 }]);
+    assert.deepStrictEqual(run.reports.map((r) => r.reachedEdgeDistancePx), [25]);
+    assert.deepStrictEqual(clampCalls, ["none"]);
+  });
+
   it("onWalkFinished is not reported for a cancelled walk and a throwing hook keeps the chain", () => {
     let reports = 0;
     const ctx = makeCtx({ onWalkFinished: () => { reports += 1; throw new Error("boom"); } });
