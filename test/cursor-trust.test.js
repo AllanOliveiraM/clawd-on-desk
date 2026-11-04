@@ -128,3 +128,24 @@ test("the window list is read at most once per second", () => {
   env.at(1000, 400, 300);
   assert.equal(env.reads, 2);
 });
+
+test("a pinned window opened inside the 1 s cache gap arms on later motion inside it", () => {
+  const env = setup({ windows: [HUD] });
+  env.at(5000, 5000, 100); // cache read: no Settings yet
+  env.windows = [HUD, SETTINGS]; // opened inside the cache gap
+  env.at(990, 400, 100);
+  env.at(1000, 400, 100);
+  env.at(1010, 400, 100);
+  assert.equal(env.at(1010, 400, 5000), true, "parked in the freshly opened Settings");
+});
+
+test("a pinned window closed and reopened (new id) inside the cache gap is not armed", () => {
+  const env = setup();
+  env.at(990, 400);
+  assert.equal(env.at(1000, 400), true);
+  env.windows = [HUD, { ...SETTINGS, id: 9 }]; // closed + reopened within 1 s
+  env.at(1010, 400, 100);
+  env.at(1020, 400, 100);
+  assert.equal(env.at(1020, 400, 5000), false, "no motion since the new window appeared");
+  assert.equal(env.at(1030, 400, 100), true, "motion after the re-read arms it");
+});

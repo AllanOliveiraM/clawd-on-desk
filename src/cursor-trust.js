@@ -42,6 +42,11 @@ function createCursorTrust({ enabled = false, getWindows = () => [], now = Date.
   let leftSinceMotion = false;
   // Pinned windows the point moved inside since they last appeared.
   let armed = new Set();
+  // Pinned window keys seen by the latest read, and the points that moved
+  // while reads were served from the cache without landing in a known pinned
+  // window (a window may have opened inside that gap).
+  let knownPinned = new Set();
+  let gapMoves = [];
 
   function keyOf(w) {
     return w.id !== undefined && w.id !== null
@@ -60,8 +65,18 @@ function createCursorTrust({ enabled = false, getWindows = () => [], now = Date.
     windows = Array.isArray(list) ? list.filter((w) => w && validBounds(w.bounds)) : [];
     windowsAt = t;
     // A pinned window that closed or hid must be moved in again once back.
-    const present = new Set(windows.filter((w) => w.pinned === true).map(keyOf));
+    const pinnedNow = windows.filter((w) => w.pinned === true);
+    const present = new Set(pinnedNow.map(keyOf));
     armed = new Set([...armed].filter((key) => present.has(key)));
+    // A pinned window that appeared in the cache gap and was moved in before
+    // this read arms now; one that was already known (or replaced a known one)
+    // does not, since those moves landed in the old window.
+    for (const w of pinnedNow) {
+      const key = keyOf(w);
+      if (!knownPinned.has(key) && gapMoves.some((p) => contains(w.bounds, p.x, p.y))) armed.add(key);
+    }
+    knownPinned = present;
+    gapMoves = [];
     return windows;
   }
 
@@ -75,6 +90,11 @@ function createCursorTrust({ enabled = false, getWindows = () => [], now = Date.
       leftSinceMotion = false;
     }
     lastPoint = { x: point.x, y: point.y };
+    const cached = !!windows && t - windowsAt >= 0 && t - windowsAt < WINDOWS_CACHE_MS;
+    if (cached && moved && !windows.some((w) => w.pinned === true && contains(w.bounds, point.x, point.y))) {
+      gapMoves.push({ x: point.x, y: point.y });
+      if (gapMoves.length > 64) gapMoves.shift();
+    }
     const list = readWindows(t);
     const inside = list.filter((w) => contains(w.bounds, point.x, point.y));
     if (moved) for (const w of inside) if (w.pinned === true) armed.add(keyOf(w));
