@@ -207,6 +207,54 @@ describe("i18n locales", () => {
     assert.strictEqual(strings["pt-BR"].sectionPetCompanion, "Personalidade e comportamento");
   });
 
+  it("mood card strings are present and well-formed in every locale (item 10)", () => {
+    const strings = loadSettingsI18nStrings();
+    const keys = [
+      "companionMoodTitle", "companionMoodEnergy", "companionMoodContentment", "companionMoodFamiliarity",
+      "companionMoodLabelContent", "companionMoodLabelTired", "companionMoodLabelGrumpy", "companionMoodLabelNeutral",
+      "companionMoodLastNever", "companionMoodLastJustNow", "companionMoodLastMinutes",
+      "companionMoodLastHours", "companionMoodLastDays", "companionMoodUnavailable", "companionMoodSummary",
+    ];
+    for (const lang of SUPPORTED_LANGS) {
+      for (const key of keys) {
+        assert.strictEqual(typeof strings[lang][key], "string", `${lang}.${key}`);
+        assert.ok(strings[lang][key].trim(), `${lang}.${key}`);
+      }
+      for (const key of ["companionMoodLastMinutes", "companionMoodLastHours", "companionMoodLastDays"]) {
+        assert.ok(strings[lang][key].includes("{n}"), `${lang}.${key} needs {n}`);
+      }
+      assert.ok(strings[lang].companionMoodSummary.includes("{mood}"), lang);
+      assert.ok(strings[lang].companionMoodSummary.includes("{personality}"), lang);
+    }
+  });
+
+  it("fetch and search-mouse card labels are present and translated in every locale (item 11)", () => {
+    const strings = loadSettingsI18nStrings();
+    const { COMPANION_OVERRIDE_SECTIONS, companionCardLabelKey } = require("../src/companion-override-slots");
+    const fetchSection = COMPANION_OVERRIDE_SECTIONS.find((section) => section.id === "companionFetch");
+    const keys = [
+      "animOverridesSectionCompanionFetch",
+      ...fetchSection.keys.map(companionCardLabelKey),
+      "animCompanionSearchMouse",
+    ];
+    for (const lang of SUPPORTED_LANGS) {
+      for (const key of keys) {
+        assert.ok(String(strings[lang][key]).trim(), `${lang}.${key}`);
+        if (lang !== "en") {
+          assert.notStrictEqual(strings[lang][key], strings.en[key], `${lang}.${key} should be translated`);
+        }
+      }
+    }
+  });
+
+  it("pins the S8 wording fixes (zh memory row, pt-BR reset verb)", () => {
+    const strings = loadSettingsI18nStrings();
+    assert.strictEqual(strings.zh.rowCompanionMemory, "重启后保留记忆");
+    assert.strictEqual(strings["pt-BR"].companionResetConfirmAction, "Redefinir");
+    assert.strictEqual(strings["pt-BR"].rowCompanionReset, "Redefinir memória do Clawd");
+    assert.ok(!/Resetar|resetad/.test(strings["pt-BR"].toastCompanionResetDone + strings["pt-BR"].companionResetConfirmTitle));
+  });
+
   it("labels every Clawd Alive animation card and section in every Settings locale", () => {
     const strings = loadSettingsI18nStrings();
     const { COMPANION_OVERRIDE_SECTIONS, companionCardLabelKey, companionSectionLabelKey } =
