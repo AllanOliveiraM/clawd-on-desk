@@ -124,6 +124,26 @@ test("a point that changed across a sample gap longer than 2 s is not motion", (
   assert.equal(pinned.at(1000, 400), false, "not armed by the stale change");
 });
 
+test("a hovered pet (hit window) is trusted while still; the report ends it", () => {
+  const PET = { id: 2, bounds: { x: 500, y: 500, width: 100, height: 100 }, pet: true };
+  const env = setup({ windows: [SETTINGS, HUD, PET] });
+  assert.equal(env.at(550, 550), false, "no hover report yet: a still point is untrusted");
+  env.trust.notePetHover(true);
+  assert.equal(env.at(550, 550), true, "resting on the pet");
+  assert.equal(env.at(550, 550, 600000), true, "for as long as it rests there");
+  env.trust.notePointerLeft(); // a Settings leave report does not end the pet hover
+  assert.equal(env.at(550, 550), true);
+  assert.equal(env.at(150, 120, 5000), false, "a frozen point outside the pet is not covered");
+  env.at(550, 550);
+  env.trust.notePetHover(false);
+  assert.equal(env.at(550, 550, 5000), false, "left the pet: the frozen point is untrusted");
+  const plain = setup({ windows: [{ ...PET, pet: "true" }] });
+  plain.trust.notePetHover(true);
+  assert.equal(plain.at(550, 550), false, "pet must be exactly true");
+  const off = setup({ enabled: false });
+  assert.doesNotThrow(() => off.trust.notePetHover(true));
+});
+
 test("anywhere else (another app, the transparent pet window area) is never trusted", () => {
   const env = setup();
   assert.equal(env.at(600, 400), false);

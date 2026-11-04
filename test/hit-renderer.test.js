@@ -990,3 +990,33 @@ describe("hit-renderer pet gesture gaps", () => {
     assert.deepStrictEqual(gestures(h), []);
   });
 });
+
+describe("hit-renderer pet hover reports (XWayland cursor trust, F7)", () => {
+  function hovers(h) {
+    return h.apiCalls.filter((c) => c[0] === "petGesture").map((c) => c[1]);
+  }
+
+  it("silent by default and while Clawd Alive is off", () => {
+    const h = createHarness();
+    h.pointerenter();
+    h.pointerleave();
+    assert.deepStrictEqual(h.apiCalls, []);
+  });
+
+  it("reports enter and leave once each while Clawd Alive is on, even without gestures", () => {
+    const h = createHarness({ sendState: { currentState: "idle", miniMode: false, dndEnabled: false, petHoverReports: true } });
+    h.pointerenter();
+    h.pointerleave();
+    h.pointerleave();
+    assert.deepStrictEqual(hovers(h), ["pointer-enter", "pointer-leave"]);
+  });
+
+  it("turning the reports off mid-hover drops the pending leave", () => {
+    const h = createHarness({ sendState: { petHoverReports: true } });
+    h.pointerenter();
+    h.apiHandlers.stateSync({ petHoverReports: false });
+    h.pointerleave();
+    h.pointerenter();
+    assert.deepStrictEqual(hovers(h), ["pointer-enter"]);
+  });
+});

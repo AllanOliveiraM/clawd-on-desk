@@ -13,7 +13,10 @@
 //     most PINNED_STILL_TRUST_MS without motion (a lost leave event);
 //   - every other app window (HUD, bubbles, hit window) is trusted only while
 //     the point moved within MOTION_TRUST_MS;
-//   - after a leave report the point is untrusted until it moves again.
+//   - after a leave report the point is untrusted until it moves again;
+//   - the hit window ("pet") reports pointer enter / leave: while the pointer
+//     rests on the pet, a point inside it is trusted however long it stays
+//     still (searchMouse never plays while the cursor is on the pet).
 // Outside XWayland every sample is trusted. No timer, no polling: the window
 // list is read at sample time, at most once per WINDOWS_CACHE_MS.
 
@@ -31,9 +34,10 @@ function contains(bounds, x, y) {
   return validBounds(bounds) && x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
 }
 
-// getWindows() -> [{ id, bounds, pinned }] of the visible app windows except
-// the render pet window; pinned = Settings / Dashboard (they report pointer
-// leave); id tells a window apart across reads (BrowserWindow.id).
+// getWindows() -> [{ id, bounds, pinned, pet }] of the visible app windows
+// except the render pet window; pinned = Settings / Dashboard (they report
+// pointer leave); pet = the hit window (reports enter / leave); id tells a
+// window apart across reads (BrowserWindow.id).
 function createCursorTrust({ enabled = false, getWindows = () => [], now = Date.now } = {}) {
   let windows = null;
   let windowsAt = 0;
@@ -41,6 +45,7 @@ function createCursorTrust({ enabled = false, getWindows = () => [], now = Date.
   let lastPointAt = null;
   let movedAt = null;
   let leftSinceMotion = false;
+  let petHovered = false;
   // Pinned windows the point moved inside since they last appeared.
   let armed = new Set();
   // Pinned window keys seen by the latest read, and the points that moved
@@ -103,6 +108,7 @@ function createCursorTrust({ enabled = false, getWindows = () => [], now = Date.
     const list = readWindows(t);
     const inside = list.filter((w) => contains(w.bounds, point.x, point.y));
     if (moved) for (const w of inside) if (w.pinned === true) armed.add(keyOf(w));
+    if (petHovered && inside.some((w) => w.pet === true)) return true;
     if (leftSinceMotion) return false;
     const still = movedAt !== null && t - movedAt >= 0 ? t - movedAt : Infinity;
     return inside.some((w) => (w.pinned === true && armed.has(keyOf(w)) && still <= PINNED_STILL_TRUST_MS)
@@ -117,7 +123,13 @@ function createCursorTrust({ enabled = false, getWindows = () => [], now = Date.
     armed = new Set();
   }
 
-  return { enabled: !!enabled, isTrusted, notePointerLeft };
+  // The hit window reported the pointer entering (true) / leaving (false).
+  function notePetHover(over) {
+    if (!enabled) return;
+    petHovered = over === true;
+  }
+
+  return { enabled: !!enabled, isTrusted, notePointerLeft, notePetHover };
 }
 
 module.exports = { MOTION_TRUST_MS, PINNED_STILL_TRUST_MS, WINDOWS_CACHE_MS, createCursorTrust };

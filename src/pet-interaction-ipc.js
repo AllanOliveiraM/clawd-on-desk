@@ -18,6 +18,9 @@ function isTrustedMainFrameEvent(event, webContents) {
 
 // Clawd Alive gesture kinds the hit renderer may report.
 const PET_GESTURE_KINDS = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell", "hover-move"]);
+// Pointer enter / leave of the hit window (Clawd Alive XWayland cursor trust),
+// on the same channel; they skip the mini / drag gates so a leave always lands.
+const PET_HOVER_KINDS = new Set(["pointer-enter", "pointer-leave"]);
 // A drag whose lock lasted longer than this counts as "dragLong" for the mood.
 const DRAG_LONG_MS = 1500;
 
@@ -112,7 +115,9 @@ function registerPetInteractionIpc(options = {}) {
   //   fraction of its display's work area, needs getDisplayNearestPoint.
   // isCompanionEnabled(): when supplied and not true, the click / drag
   //   observers skip all work (no theme lookup, no display query).
+  // notePetHover(over): the hit window's pointer enter (true) / leave (false).
   const handlePetGesture = typeof options.handlePetGesture === "function" ? options.handlePetGesture : null;
+  const notePetHover = typeof options.notePetHover === "function" ? options.notePetHover : null;
   const noteCompanionEvent = typeof options.noteCompanionEvent === "function" ? options.noteCompanionEvent : null;
   const noteCompanionDragEnd = typeof options.noteCompanionDragEnd === "function"
     ? options.noteCompanionDragEnd
@@ -252,9 +257,11 @@ function registerPetInteractionIpc(options = {}) {
     }
   });
 
-  if (handlePetGesture) {
+  if (handlePetGesture || notePetHover) {
     on("pet-interaction:gesture", (event, kind) => {
-      if (typeof kind !== "string" || !PET_GESTURE_KINDS.has(kind)) return;
+      if (typeof kind !== "string") return;
+      const hover = PET_HOVER_KINDS.has(kind);
+      if (hover ? !notePetHover : (!handlePetGesture || !PET_GESTURE_KINDS.has(kind))) return;
       if (hitWebContents) {
         let wc = null;
         try {
@@ -263,6 +270,10 @@ function registerPetInteractionIpc(options = {}) {
           return;
         }
         if (!isTrustedMainFrameEvent(event, wc)) return;
+      }
+      if (hover) {
+        observeCompanion(() => notePetHover(kind === "pointer-enter"));
+        return;
       }
       if (isMiniMode() || isMiniTransitioning()) return;
       if (isDragLockedOption ? isDragLockedOption() : localDragLocked) return;

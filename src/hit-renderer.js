@@ -25,6 +25,9 @@ let miniMode = false;
 let dndEnabled = false;
 // Clawd Alive (opt-in): companionEnabled && companionInteractions, pushed by main.
 let petGesturesEnabled = false;
+// Clawd Alive on: report pointer enter / leave (XWayland cursor trust).
+let petHoverReports = false;
+let petHoverReported = false;
 
 window.hitAPI.onStateSync((data) => {
   if (data.currentState !== undefined) currentState = data.currentState;
@@ -34,6 +37,11 @@ window.hitAPI.onStateSync((data) => {
   }
   if (data.dndEnabled !== undefined) dndEnabled = data.dndEnabled;
   if (data.petGesturesEnabled !== undefined) petGesturesEnabled = data.petGesturesEnabled === true;
+  if (data.petHoverReports !== undefined) {
+    petHoverReports = data.petHoverReports === true;
+    // Main forgets the hover itself when the feature goes off.
+    if (!petHoverReports) petHoverReported = false;
+  }
   if (!petGesturesEnabled || miniMode || dndEnabled) endPetGestures();
 });
 
@@ -187,6 +195,10 @@ function armHoverDwell(x, y) {
 }
 
 area.addEventListener("pointerenter", (e) => {
+  if (petHoverReports && !petHoverReported) {
+    petHoverReported = true;
+    sendPetGesture("pointer-enter");
+  }
   cancelHoverDwell();
   hoverMoveArmed = false;
   // A new entry always starts a fresh dwell budget, even when this entry is
@@ -202,6 +214,10 @@ area.addEventListener("pointerenter", (e) => {
 area.addEventListener("pointerleave", () => {
   sendHoverMoveOnce();
   endPetGestures();
+  if (petHoverReported) {
+    petHoverReported = false;
+    sendPetGesture("pointer-leave");
+  }
 });
 window.addEventListener("blur", () => endPetGestures());
 

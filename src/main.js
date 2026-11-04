@@ -1782,6 +1782,7 @@ function syncHitStateAfterLoad() {
     miniMode: _mini.getMiniMode(),
     dndEnabled: doNotDisturb,
     petGesturesEnabled: isPetGesturesEnabled(),
+    petHoverReports: isPetHoverReportsEnabled(),
   });
 }
 
@@ -2753,7 +2754,8 @@ const _cursorTrust = require("./cursor-trust").createCursorTrust({
     return BrowserWindow.getAllWindows()
       .filter((w) => w && w !== win && !w.isDestroyed() && w.isVisible() && !w.isMinimized())
       // id: a reopened Settings / Dashboard is a new window to the trust check.
-      .map((w) => ({ id: w.id, bounds: w.getBounds(), pinned: pinned.has(w) }));
+      // pet: the hit window, trusted while it reports the pointer resting on it.
+      .map((w) => ({ id: w.id, bounds: w.getBounds(), pinned: pinned.has(w), pet: w === hitWin }));
   },
 });
 // The renderers of Settings and Dashboard (the Dashboard page lives in a view
@@ -5690,6 +5692,7 @@ function createWindow() {
     noteCompanionEvent: (kind) => nudgeCompanionMood(_companion.noteEvent(kind)),
     noteCompanionDragEnd: (spot) => nudgeCompanionMood(_companion.noteDragEnd(spot)),
     isCompanionEnabled: () => _settingsController.get("companionEnabled") === true,
+    notePetHover: (over) => _cursorTrust.notePetHover(over),
     hitWebContents: () => (hitWin && !hitWin.isDestroyed() ? hitWin.webContents : null),
     isDragLocked: () => petWindowRuntime.isDragLocked(),
     getThemeReactions: () => {
@@ -6162,6 +6165,11 @@ function isPetGesturesEnabled(snapshot) {
   const config = readCompanionConfig(snapshot);
   return config.enabled && config.interactions;
 }
+// The hit window reports pointer enter / leave only while Clawd Alive is on
+// and the session needs it (XWayland cursor trust).
+function isPetHoverReportsEnabled(snapshot) {
+  return _cursorTrust.enabled === true && readCompanionConfig(snapshot).enabled;
+}
 // Clawd Alive test mode: why the pet cannot play a test animation right now
 // (runtime debugPlay re-checks this on every play). isPetFreeForIdle minus
 // the context menu (the item is clicked from it), the click-reaction pause
@@ -6236,8 +6244,14 @@ try {
       if (key === "companionEnabled" && snapshot && snapshot.companionEnabled !== true) {
         dropCompanionVisualsAfterDisable();
       }
-      if (key === "companionEnabled") pushCompanionPointerTracking();
-      if (key === "companionEnabled" || key === "companionInteractions") {
+      if (key === "companionEnabled") {
+        pushCompanionPointerTracking();
+        if (!(snapshot && snapshot.companionEnabled === true)) _cursorTrust.notePetHover(false);
+        sendToHitWin("hit-state-sync", {
+          petGesturesEnabled: isPetGesturesEnabled(snapshot),
+          petHoverReports: isPetHoverReportsEnabled(snapshot),
+        });
+      } else if (key === "companionInteractions") {
         sendToHitWin("hit-state-sync", { petGesturesEnabled: isPetGesturesEnabled(snapshot) });
       }
     });

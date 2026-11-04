@@ -692,6 +692,30 @@ test("gesture ignored from untrusted sender", () => {
   assert.deepStrictEqual(gone.companion, []);
 });
 
+test("pet hover reports reach notePetHover from the hit window only, in any mode", () => {
+  const hovers = [];
+  const mainFrame = { name: "hit-main-frame" };
+  const hitWc = { mainFrame };
+  const h = companionHarness({ extra: { notePetHover: (over) => hovers.push(over), hitWebContents: hitWc } });
+  const listener = h.ipcMain.listeners.get("pet-interaction:gesture");
+  listener({ sender: hitWc, senderFrame: mainFrame }, "pointer-enter");
+  listener({ sender: "other" }, "pointer-leave");
+  // A leave must land even in mini or under the drag lock.
+  h.state.miniMode = true;
+  h.flags.dragLocked = true;
+  listener({ sender: hitWc, senderFrame: mainFrame }, "pointer-leave");
+  assert.deepStrictEqual(hovers, [true, false]);
+  assert.deepStrictEqual(h.companion, [], "hover reports are not gestures");
+  // Without notePetHover the kinds are just unknown gestures.
+  const plain = companionHarness();
+  plain.ipcMain.send("pet-interaction:gesture", "pointer-enter");
+  assert.deepStrictEqual(plain.companion, []);
+  // notePetHover alone registers the channel.
+  const only = createHarness({ extra: { notePetHover: (over) => hovers.push(over) } });
+  only.ipcMain.send("pet-interaction:gesture", "pointer-enter");
+  assert.deepStrictEqual(hovers, [true, false, true]);
+});
+
 test("click reaction notes click vs clickBurst", () => {
   const h = companionHarness();
   h.ipcMain.send("play-click-reaction", "left.svg", 2500);

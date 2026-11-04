@@ -297,11 +297,34 @@ it("toggling either gesture pref pushes hit-state-sync, other companion keys do 
   assert.equal(h.trackingPushes.length, 1);
   h.subscriptions.get("companionInteractions")(false, { ...snapshot, companionInteractions: false });
   assert.deepEqual(h.hitSends, [
-    ["hit-state-sync", { petGesturesEnabled: true }],
+    ["hit-state-sync", { petGesturesEnabled: true, petHoverReports: false }],
     ["hit-state-sync", { petGesturesEnabled: false }],
   ]);
   // configure() still runs for every key.
   assert.equal(h.configureCalls.length, 1 + 5);
+});
+
+it("pet hover reports: on with Clawd Alive under XWayland only; Alive off forgets the hover", () => {
+  const h = companionHarness();
+  const hovers = [];
+  h.ctx._cursorTrust = { enabled: true, notePetHover: (over) => hovers.push(over) };
+  assert.equal(h.ctx.isPetHoverReportsEnabled({ companionEnabled: true }), true);
+  assert.equal(h.ctx.isPetHoverReportsEnabled({ companionEnabled: false }), false);
+  h.subscriptions.get("companionEnabled")(true, { companionEnabled: true, companionInteractions: false });
+  h.subscriptions.get("companionEnabled")(false, { companionEnabled: false });
+  assert.deepEqual(h.hitSends, [
+    ["hit-state-sync", { petGesturesEnabled: false, petHoverReports: true }],
+    ["hit-state-sync", { petGesturesEnabled: false, petHoverReports: false }],
+  ]);
+  assert.deepEqual(hovers, [false]);
+  h.ctx._cursorTrust = { enabled: false, notePetHover() {} };
+  assert.equal(h.ctx.isPetHoverReportsEnabled({ companionEnabled: true }), false, "outside XWayland");
+  const sync = slice("function syncHitStateAfterLoad() {", "\n}");
+  assert.ok(sync.includes("petHoverReports: isPetHoverReportsEnabled(),"));
+  const registration = slice("registerPetInteractionIpc({", "registerPermissionIpc({");
+  assert.ok(registration.includes("notePetHover: (over) => _cursorTrust.notePetHover(over),"));
+  const trust = slice("// ── Clawd Alive: XWayland cursor trust", "const _tickCtx = {");
+  assert.ok(trust.includes("pet: w === hitWin"));
 });
 
 it("pet interaction IPC reaches the companion and trusts only the hit window", () => {
@@ -474,6 +497,7 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
     app: { commandLine: { getSwitchValue: () => "x11" } },
     BrowserWindow: { getAllWindows: () => [render, hit, settings, dashboard, hud, hidden] },
     win: render,
+    hitWin: hit,
     settingsWindowRuntime: { getWindow: () => settings },
     // The Dashboard page lives in a view: its window has no webContents.
     _dashboard: { getWindow: () => dashboard, getWebContents: () => dashboard.webContents },
@@ -482,9 +506,9 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
   };
   const prefs = { companionEnabled: false };
   vm.runInNewContext(trust, ctx);
-  const listed = trustOptions.getWindows().map((w) => [w.id, w.bounds.x, w.pinned]);
+  const listed = trustOptions.getWindows().map((w) => [w.id, w.bounds.x, w.pinned, w.pet]);
   assert.deepEqual(JSON.parse(JSON.stringify(listed)),
-    [["hit", 200, false], ["settings", 900, true], ["dashboard", 1400, true], ["hud", 600, false]]);
+    [["hit", 200, false, true], ["settings", 900, true, false], ["dashboard", 1400, true, false], ["hud", 600, false, false]]);
   const onLeft = handlers.get("companion:pointer-left");
   onLeft({ sender: hud.webContents });
   onLeft({ sender: { id: "settings" } });
@@ -518,7 +542,7 @@ it("pointer tracking is pushed on Settings / Dashboard load and on the Alive tog
   const dashboardOpts = slice('const _dashboard = require("./dashboard")({', "\n});\n");
   assert.ok(dashboardOpts.includes("onPageLoaded: () => pushCompanionPointerTracking(),"));
   const subscribe = slice("for (const key of COMPANION_PREF_KEYS) {", "\n  }\n");
-  assert.match(subscribe, /if \(key === "companionEnabled"\) pushCompanionPointerTracking\(\);/);
+  assert.match(subscribe, /if \(key === "companionEnabled"\) \{\n\s+pushCompanionPointerTracking\(\);/);
 });
 
 // F3 / F4: Alive off re-applies the current state only when a companion file
