@@ -596,8 +596,13 @@ function runMainTickOnce() {
       if (ctx.idleActivity && !isMouseIdle) ctx.idleActivity.tick();
       // Clawd Alive: the companion arbiter rides the same idle tick (no loop of
       // its own) and, like idle activities, stays out while idle-look plays.
-      // It gets the cursor sample this tick already read (Clawd Mischief).
-      if (ctx.companion && !isMouseIdle) ctx.companion.tick(companionCursorSample(cursor));
+      // It gets the cursor sample this tick already read (Clawd Mischief);
+      // an untrusted read (XWayland outside the app's windows, spec
+      // 2026-11-04 §4) reaches it as null, flagged for searchMouse.
+      if (ctx.companion && !isMouseIdle) {
+        const cursorTrusted = typeof ctx.isCursorTrusted === "function" ? ctx.isCursorTrusted(cursor) !== false : true;
+        ctx.companion.tick(cursorTrusted ? companionCursorSample(cursor) : null, { cursorTrusted });
+      }
 
       if (ctx.roam) ctx.roam.tick();
     }

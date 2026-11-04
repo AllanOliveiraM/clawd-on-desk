@@ -156,7 +156,21 @@ function planXWaylandRelaunch(options = {}) {
   return { args };
 }
 
+// True for an XWayland client on a Wayland session (the relaunch above, or a
+// user's own --ozone-platform=x11): the X server only reports the real cursor
+// position over this app's own windows, elsewhere it keeps the last one.
+// `ozonePlatform` is the resolved backend (app.commandLine "ozone-platform").
+function isXWaylandSession(options = {}) {
+  const platform = options.platform || process.platform;
+  if (platform !== "linux") return false;
+  if (String(options.ozonePlatform || "").trim().toLowerCase() !== "x11") return false;
+  const env = options.env || process.env;
+  const sessionType = String(env.XDG_SESSION_TYPE || "").trim().toLowerCase();
+  return sessionType === "wayland" || !!String(env.WAYLAND_DISPLAY || "").trim();
+}
+
 module.exports = {
+  isXWaylandSession,
   resolveLinuxOzonePlatform,
   parseOzonePlatformFromArgv,
   planXWaylandRelaunch,

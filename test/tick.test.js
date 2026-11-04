@@ -2097,6 +2097,40 @@ describe("tick companion coordination", () => {
     assert.equal(cold.samples[0], null);
   });
 
+  it("an untrusted cursor (XWayland outside the app windows) reaches the companion as null", () => {
+    const seen = [];
+    let trusted = true;
+    const points = [];
+    ctx.isCursorTrusted = (point) => { points.push({ ...point }); return trusted; };
+    ctx.forceEyeResend = true;
+    ctx.companion.tick = (sample, info) => seen.push([sample, info]);
+    start();
+    advance(1000);
+    assert.ok(seen.length > 0);
+    const [sample, info] = seen[seen.length - 1];
+    assert.equal(sample && sample.x, 300);
+    assert.deepStrictEqual(info, { cursorTrusted: true });
+    assert.deepStrictEqual(points[points.length - 1], { x: 300, y: 260 });
+    trusted = false;
+    const before = seen.length;
+    advance(1000);
+    assert.ok(seen.length > before);
+    for (const [s, i] of seen.slice(before)) {
+      assert.equal(s, null);
+      assert.deepStrictEqual(i, { cursorTrusted: false });
+    }
+  });
+
+  it("without a trust hook every cursor read is trusted", () => {
+    const seen = [];
+    ctx.forceEyeResend = true;
+    ctx.companion.tick = (sample, info) => seen.push(info);
+    start();
+    advance(1000);
+    assert.ok(seen.length > 0);
+    assert.ok(seen.every((info) => info && info.cursorTrusted === true));
+  });
+
   it("tick reports sleep and work origins", () => {
     const entries = [];
     ctx.companion.noteIdleEntered = (info) => entries.push(info);

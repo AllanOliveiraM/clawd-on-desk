@@ -2720,7 +2720,22 @@ function getUpdateBubbleAnchorRect(bounds) { return petWindowRuntime.getUpdateBu
 function getSessionHudAnchorRect(bounds) { return petWindowRuntime.getSessionHudAnchorRect(bounds); }
 
 // ── Main tick — delegated to src/tick.js ──
+// ── Clawd Alive: XWayland cursor trust (spec 2026-11-04 §4) ──
+// Under XWayland the cursor is only real over this app's windows; the tick
+// hands the companion a null sample elsewhere. X11, Windows and macOS trust
+// every read. Bounds are read at sample time (cached per point for 1 s).
+const _cursorTrust = require("./cursor-trust").createCursorTrust({
+  enabled: require("./linux-ozone").isXWaylandSession({
+    platform: process.platform,
+    env: process.env,
+    ozonePlatform: app.commandLine.getSwitchValue("ozone-platform"),
+  }),
+  getWindowBounds: () => BrowserWindow.getAllWindows()
+    .filter((w) => w && !w.isDestroyed() && w.isVisible() && !w.isMinimized())
+    .map((w) => w.getBounds()),
+});
 const _tickCtx = {
+  isCursorTrusted: (point) => _cursorTrust.isTrusted(point),
   get theme() { return getActiveTheme(); },
   get win() { return win; },
   getPetWindowBounds,
