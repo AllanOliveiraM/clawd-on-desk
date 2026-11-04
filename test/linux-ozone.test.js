@@ -6,6 +6,7 @@ const {
   resolveLinuxOzonePlatform,
   parseOzonePlatformFromArgv,
   planXWaylandRelaunch,
+  isXWaylandSession,
 } = require("../src/linux-ozone");
 
 // resolve(platform, env, userOzonePlatform)
@@ -246,5 +247,39 @@ describe("planXWaylandRelaunch()", () => {
     const env = { XDG_SESSION_TYPE: "wayland", DISPLAY: ":0" };
     assert.strictEqual(plan("darwin", env, [ARGV0]), null);
     assert.strictEqual(plan("win32", env, [ARGV0]), null);
+  });
+});
+
+describe("isXWaylandSession()", () => {
+  const x = (env, ozonePlatform = "x11", platform = "linux") => isXWaylandSession({ platform, env, ozonePlatform });
+
+  it("needs Linux and the x11 backend (case/space-insensitive)", () => {
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "wayland" }, " X11 "), true);
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "wayland" }, "wayland"), false);
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "wayland" }, ""), false);
+    assert.strictEqual(isXWaylandSession({ platform: "linux", env: { XDG_SESSION_TYPE: "wayland" } }), false);
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "wayland" }, null), false);
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "wayland" }, "x11", "win32"), false);
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "wayland" }, "x11", "darwin"), false);
+  });
+
+  it("XDG_SESSION_TYPE wins when set, even when odd (G4)", () => {
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "tty", WAYLAND_DISPLAY: "wayland-0" }), false);
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "x11", WAYLAND_DISPLAY: "wayland-0" }), false);
+    assert.strictEqual(x({ XDG_SESSION_TYPE: " Wayland " }), true);
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "wayland" }), true, "no WAYLAND_DISPLAY needed");
+  });
+
+  it("falls back to WAYLAND_DISPLAY only when the session type is empty or unset", () => {
+    assert.strictEqual(x({ WAYLAND_DISPLAY: "wayland-0" }), true);
+    assert.strictEqual(x({ XDG_SESSION_TYPE: "  ", WAYLAND_DISPLAY: "wayland-0" }), true);
+    assert.strictEqual(x({ WAYLAND_DISPLAY: "   " }), false);
+    assert.strictEqual(x({ DISPLAY: ":0" }), false);
+    assert.strictEqual(x({}), false);
+  });
+
+  it("defaults to the real platform and environment without options", () => {
+    assert.strictEqual(typeof isXWaylandSession(), "boolean");
+    assert.strictEqual(isXWaylandSession({ ozonePlatform: "wayland" }), false);
   });
 });
