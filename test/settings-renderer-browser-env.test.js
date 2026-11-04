@@ -13209,6 +13209,49 @@ describe("settings renderer browser environment", () => {
       });
     });
 
+    describe("gap hunting: personality select race (item 22)", () => {
+      function raceHarness() {
+        const save = createDeferred();
+        const harness = loadGeneralTabForTest({
+          tab: "pet",
+          snapshot: companionSnapshot({ companionEnabled: true }),
+          settingsAPI: { update: () => save.promise },
+        });
+        harness.core.ops.showToast = () => {};
+        harness.renderContent();
+        return { harness, save, c: companionControls(harness) };
+      }
+
+      it("an unrelated broadcast keeps the select while a save is in flight", async () => {
+        const { harness, save, c } = raceHarness();
+        choosePickerOption(c.select, "playful");
+        applyBroadcast(harness, { freeRoam: false });
+        assert.strictEqual(getSelectedPickerValue(c.select), "playful");
+        save.resolve({ status: "ok" });
+        await flush();
+        assert.strictEqual(getSelectedPickerValue(c.select), "playful");
+      });
+
+      it("master off mid-save disables the select", async () => {
+        const { harness, save, c } = raceHarness();
+        choosePickerOption(c.select, "calm");
+        applyBroadcast(harness, { companionEnabled: false });
+        assert.strictEqual(c.trigger.disabled, true);
+        save.resolve({ status: "ok" });
+        await flush();
+        assert.strictEqual(c.trigger.disabled, true);
+      });
+
+      it("an external change during the save resolves to the last server value", async () => {
+        const { harness, save, c } = raceHarness();
+        choosePickerOption(c.select, "playful");
+        applyBroadcast(harness, { companionPersonality: "shy" });
+        save.resolve({ status: "ok" });
+        await flush();
+        assert.strictEqual(getSelectedPickerValue(c.select), "shy");
+      });
+    });
+
     describe("gap hunting: mood card and reset", () => {
       const BASE = {
         mood: { energy: 64, contentment: 80, familiarity: 12 },
