@@ -456,4 +456,41 @@ for (const name of ["calico", "cloudling"]) {
     assert.equal(everything.activity, null, "idle-activity falls back to the theme's own pick");
     assert.equal(everything.delay >= off.delay, true, "roam never walks more often than plain roam");
   });
+
+  test(`${name}: a welcome / stretch without art never holds roam`, () => {
+    themeLoader.init(path.join(__dirname, "..", "src"));
+    const theme = themeLoader.loadTheme(name);
+    for (const info of [{ from: "work", awayMs: 700000 }, { from: "sleep", awayMs: 9e9 }]) {
+      const env = harness([]);
+      env.theme = theme;
+      env.setNow(1e9);
+      env.runtime.configure({ ...ON, mischief: true });
+      env.runtime.noteIdleEntered(info);
+      assert.equal(env.runtime.holdsRoam(), false, `right after ${info.from}`);
+      env.advance(5000);
+      env.runtime.tick(null, {});
+      assert.equal(env.runtime.holdsRoam(), false, `5 s after ${info.from}`);
+    }
+  });
 }
+
+test("a queued welcome whose art disappeared is dropped at the first open gate", () => {
+  const env = harness(["welcome"]);
+  env.setNow(1e9);
+  env.runtime.configure({ ...ON, mischief: true });
+  env.runtime.noteIdleEntered({ from: "sleep", awayMs: 9e9 });
+  assert.equal(env.runtime.holdsRoam(), true, "queued with art");
+  env.theme = { states: { idle: ["idle.svg"] }, companionAnimations: {} };
+  env.runtime.tick(null, {});
+  assert.equal(env.sends.length, 0);
+  assert.equal(env.runtime.holdsRoam(), false);
+});
+
+test("a welcome is not queued without Free Roam / idle mode", () => {
+  const env = harness(["welcome"]);
+  env.mode = "none";
+  env.setNow(1e9);
+  env.runtime.configure({ ...ON, mischief: true });
+  env.runtime.noteIdleEntered({ from: "sleep", awayMs: 9e9 });
+  assert.equal(env.runtime.holdsRoam(), false);
+});

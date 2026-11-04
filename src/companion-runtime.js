@@ -531,9 +531,15 @@ function createCompanionRuntime(options = {}) {
       return true;
     }
     if (getCurrentState() !== "idle") return true;
-    if (idleQueue && autonomous() && getIdleMode() !== "none" && startScene(idleQueue.id)) {
-      idleQueue = null;
-      return true;
+    if (idleQueue && autonomous() && getIdleMode() !== "none") {
+      const gateOpen = sceneGateOpen();
+      if (startScene(idleQueue.id)) {
+        idleQueue = null;
+        return true;
+      }
+      // An open gate that still builds no scene means the art is gone (theme
+      // switch): nothing to wait for, so roam is not held for a minute.
+      if (gateOpen) idleQueue = null;
     }
     // searchMouse does not wait for a beat: under XWayland it must come
     // before the 60 s doze (Ruling N1). Own cooldown only (Ruling N3).
@@ -1036,13 +1042,17 @@ function createCompanionRuntime(options = {}) {
     if (disposed || !autonomous()) return;
     scheduleBeat();
     if (!mischiefOn() || !info) return;
+    let id = null;
     // Only a long sleep celebrates: DND and short dozes also pass the sleep flow.
     if (info.from === "sleep") {
-      if (isNum(info.awayMs) && info.awayMs >= LONG_SLEEP_MS) idleQueue = { id: "welcome", at: now() };
+      if (isNum(info.awayMs) && info.awayMs >= LONG_SLEEP_MS) id = "welcome";
     }
     else if (info.from === "work" && isNum(info.awayMs) && info.awayMs >= LONG_WORK_MS) {
-      idleQueue = { id: "stretchBack", at: now() };
+      id = "stretchBack";
     }
+    // Without its art, or with idle animations off, the scene can never play:
+    // queueing it would only hold roam for IDLE_QUEUE_MAX_WAIT_MS.
+    if (id && hasArt(getTheme(), id) && getIdleMode() !== "none") idleQueue = { id, at: now() };
   }
 
   function noteWalkFinished(info) {
