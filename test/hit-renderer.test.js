@@ -901,3 +901,92 @@ describe("hit-renderer pet gestures", () => {
     assert.deepStrictEqual(gestures(h), []);
   });
 });
+
+// ── Clawd Alive: gap-hunting (dwell re-arm, DND teardown, blur/leave) ──
+describe("hit-renderer pet gesture gaps", () => {
+  const ON = { currentState: "idle", miniMode: false, dndEnabled: false, petGesturesEnabled: true };
+  const gestures = (h) => h.apiCalls.filter((c) => c[0] === "petGesture").map((c) => c[1]);
+  const live = (h, ms) => h.timers.filter((t) => !t.cleared && t.ms === ms);
+  const mk = (state = ON) => createHarness({ detector: true, sendState: state });
+
+  it("dwell re-arms after DND clears while still hovering (entered during DND)", () => {
+    const h = mk();
+    h.pointerenter({});
+    h.fireTimer((t) => t.ms === 1200);
+    h.pointerleave();
+    h.apiHandlers.stateSync({ dndEnabled: true });
+    h.pointerenter({}); // blocked by DND, but a fresh entry resets the dwell budget
+    h.apiHandlers.stateSync({ dndEnabled: false });
+    h.pointermove({ clientX: 101, clientY: 100, buttons: 0 });
+    assert.strictEqual(live(h, 1200).length, 1, "dwell should arm after DND ends");
+  });
+
+  it("dwell re-arms when gestures are enabled mid-hover after a fired dwell", () => {
+    const h = mk({ ...ON, petGesturesEnabled: false });
+    h.apiHandlers.stateSync({ petGesturesEnabled: true });
+    h.pointerenter({});
+    h.fireTimer((t) => t.ms === 1200);
+    h.pointerleave();
+    h.apiHandlers.stateSync({ petGesturesEnabled: false });
+    h.pointerenter({});
+    h.apiHandlers.stateSync({ petGesturesEnabled: true });
+    h.pointermove({ clientX: 101, clientY: 100, buttons: 0 });
+    assert.strictEqual(live(h, 1200).length, 1);
+  });
+
+  it("DND turning on mid-hover cancels the pending dwell and the poll", () => {
+    const h = mk();
+    h.pointerenter({});
+    assert.strictEqual(live(h, 1200).length, 1);
+    h.apiHandlers.stateSync({ dndEnabled: true });
+    assert.strictEqual(live(h, 1200).length, 0);
+
+    const p = mk();
+    p.pointerenter({ clientX: 100, clientY: 100 });
+    for (const x of [100, 120, 100, 120]) { p.clock.now += 100; p.pointermove({ clientX: x, clientY: 100, buttons: 0 }); }
+    assert.deepStrictEqual(gestures(p), ["pet-start"]);
+    assert.strictEqual(live(p, 500).length, 1);
+    p.apiHandlers.stateSync({ dndEnabled: true });
+    assert.deepStrictEqual(gestures(p), ["pet-start", "pet-end"]);
+    assert.strictEqual(live(p, 500).length, 0);
+  });
+
+  it("a dwell whose timer was cleared by DND never fires a gesture", () => {
+    const h = mk();
+    h.pointerenter({});
+    h.apiHandlers.stateSync({ dndEnabled: true });
+    assert.strictEqual(h.fireTimer((t) => t.ms === 1200), false);
+    assert.deepStrictEqual(gestures(h), []);
+  });
+
+  it("pointerleave after a dwell reports one hover-move, then nothing more", () => {
+    const h = mk();
+    h.pointerenter({});
+    h.fireTimer((t) => t.ms === 1200);
+    h.pointerleave();
+    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-move"]);
+    h.pointermove({ clientX: 300, clientY: 300, buttons: 0 });
+    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-move"]);
+  });
+
+  it("blur after a dwell drops timers but keeps the armed hover-move for the next big move", () => {
+    const h = mk();
+    h.pointerenter({});
+    h.fireTimer((t) => t.ms === 1200);
+    h.windowEvent("blur");
+    assert.strictEqual(live(h, 1200).length, 0);
+    assert.strictEqual(live(h, 500).length, 0);
+    h.pointermove({ clientX: 150, clientY: 100, buttons: 0 });
+    assert.deepStrictEqual(gestures(h), ["hover-dwell", "hover-move"]);
+  });
+
+  it("a missing hitAPI.petGesture never throws", () => {
+    const h = mk();
+    h.context.window.hitAPI.petGesture = undefined;
+    h.pointerenter({});
+    assert.doesNotThrow(() => h.fireTimer((t) => t.ms === 1200));
+    assert.doesNotThrow(() => h.pointerleave());
+    assert.doesNotThrow(() => h.windowEvent("blur"));
+    assert.deepStrictEqual(gestures(h), []);
+  });
+});

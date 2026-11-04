@@ -34,7 +34,7 @@ window.hitAPI.onStateSync((data) => {
   }
   if (data.dndEnabled !== undefined) dndEnabled = data.dndEnabled;
   if (data.petGesturesEnabled !== undefined) petGesturesEnabled = data.petGesturesEnabled === true;
-  if (!petGesturesEnabled || miniMode) endPetGestures();
+  if (!petGesturesEnabled || miniMode || dndEnabled) endPetGestures();
 });
 
 // --- Drag state ---
@@ -189,8 +189,11 @@ function armHoverDwell(x, y) {
 area.addEventListener("pointerenter", (e) => {
   cancelHoverDwell();
   hoverMoveArmed = false;
-  if (!petGesturesAllowed()) return;
+  // A new entry always starts a fresh dwell budget, even when this entry is
+  // blocked (DND, gestures off): otherwise a fired dwell from a previous
+  // entry would never re-arm once the block lifts mid-hover.
   hoverDwellFired = false;
+  if (!petGesturesAllowed()) return;
   hoverLastX = e.clientX;
   hoverLastY = e.clientY;
   armHoverDwell(e.clientX, e.clientY);
