@@ -256,7 +256,12 @@ function registerPetInteractionIpc(options = {}) {
     on("pet-interaction:gesture", (event, kind) => {
       if (typeof kind !== "string" || !PET_GESTURE_KINDS.has(kind)) return;
       if (hitWebContents) {
-        const wc = typeof hitWebContents === "function" ? hitWebContents() : hitWebContents;
+        let wc = null;
+        try {
+          wc = typeof hitWebContents === "function" ? hitWebContents() : hitWebContents;
+        } catch {
+          return;
+        }
         if (!isTrustedMainFrameEvent(event, wc)) return;
       }
       if (isMiniMode() || isMiniTransitioning()) return;

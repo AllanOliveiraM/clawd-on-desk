@@ -837,3 +837,113 @@ test("companion click/drag observers do no work while the feature is off", () =>
   assert.deepStrictEqual(h.companion.map((c) => c[0]), ["event", "event", "displayFor", "dragEnd"]);
   assert.equal(themeLookups, 1);
 });
+
+// ── gap-hunting ──
+
+test("drag duration boundary: 1500 ms is a drag, 1501 ms is a dragLong", () => {
+  for (const [ms, expected] of [[1499, "drag"], [1500, "drag"], [1501, "dragLong"], [60_000, "dragLong"]]) {
+    const h = companionHarness();
+    h.ipcMain.send("drag-lock", true);
+    h.clock.now += ms;
+    h.ipcMain.send("drag-end");
+    assert.deepStrictEqual(h.companion.filter((c) => c[0] === "event"), [["event", expected]], `${ms} ms`);
+  }
+});
+
+test("time held before the first move counts toward dragLong", () => {
+  const h = companionHarness();
+  h.ipcMain.send("drag-lock", true);
+  h.clock.now += 1400; // held still, then the first move arrives
+  h.ipcMain.send("drag-move");
+  h.clock.now += 200;
+  h.ipcMain.send("drag-end");
+  assert.deepStrictEqual(h.companion.filter((c) => c[0] === "event"), [["event", "dragLong"]]);
+});
+
+test("a clock that went backwards reads as a plain drag", () => {
+  const h = companionHarness();
+  h.ipcMain.send("drag-lock", true);
+  h.clock.now -= 60_000;
+  h.ipcMain.send("drag-end");
+  assert.deepStrictEqual(h.companion.filter((c) => c[0] === "event"), [["event", "drag"]]);
+});
+
+test("a long click-hold does not leak its duration into the next drag", () => {
+  const h = companionHarness();
+  h.ipcMain.send("drag-lock", true);
+  h.clock.now += 5000;
+  h.ipcMain.send("drag-lock", false); // a long press with no drag-end
+  h.clock.now += 100;
+  h.ipcMain.send("drag-lock", true);
+  h.clock.now += 100;
+  h.ipcMain.send("drag-end");
+  assert.deepStrictEqual(h.companion.filter((c) => c[0] === "event"), [["event", "drag"]]);
+});
+
+test("the duration is consumed by one drag-end", () => {
+  const h = companionHarness();
+  h.ipcMain.send("drag-lock", true);
+  h.clock.now += 5000;
+  h.ipcMain.send("drag-end");
+  h.ipcMain.send("drag-end");
+  assert.deepStrictEqual(h.companion.filter((c) => c[0] === "event"), [["event", "dragLong"], ["event", "drag"]]);
+});
+
+test("a hit window getter that is null, destroyed or throwing drops the gesture without throwing", () => {
+  const mainFrame = { name: "hit-main-frame" };
+  const live = { mainFrame };
+  const destroyed = { get mainFrame() { throw new Error("Object has been destroyed"); } };
+  for (const getter of [() => null, () => undefined, () => destroyed, () => { throw new Error("boom"); }]) {
+    const h = companionHarness({ extra: { hitWebContents: getter } });
+    const listener = h.ipcMain.listeners.get("pet-interaction:gesture");
+    for (const sender of [live, destroyed, null]) {
+      assert.doesNotThrow(() => listener({ sender, senderFrame: mainFrame }, "pet-start"));
+    }
+    assert.deepStrictEqual(h.companion, []);
+  }
+});
+
+test("show-context-menu forwards shiftKey only for a strict boolean true", () => {
+  const h = createHarness();
+  const payloads = [
+    [{ shiftKey: true }, true],
+    [{ shiftKey: "true" }, false],
+    [{ shiftKey: 1 }, false],
+    [{ shiftKey: false }, false],
+    [{}, false],
+    [undefined, false],
+    [null, false],
+    ["shift", false],
+    [true, false],
+    [[true], false],
+  ];
+  for (const [payload] of payloads) h.ipcMain.send("show-context-menu", payload);
+  const got = h.calls.filter((c) => c[0] === "showContextMenu").map((c) => c[2].shiftKey);
+  assert.deepStrictEqual(got, payloads.map(([, expected]) => expected));
+});
+
+test("throwing companion observers never break the drag-end clamp, persist and cleanup", () => {
+  const boom = () => { throw new Error("boom"); };
+  const logs = [];
+  const h = companionHarness({
+    extra: {
+      noteCompanionEvent: boom,
+      noteCompanionDragEnd: boom,
+      companionLog: (m) => logs.push(m),
+    },
+  });
+  h.ipcMain.send("drag-lock", true);
+  assert.doesNotThrow(() => h.ipcMain.send("drag-end"));
+  const names = h.calls.map((c) => c[0]);
+  for (const expected of ["applyPetWindowBounds", "flushRuntimeStateToPrefs", "reassertWinTopmost", "syncHitWin"]) {
+    assert.ok(names.includes(expected), expected);
+  }
+  assert.deepStrictEqual(h.calls.filter((c) => c[0] === "setDragLocked").map((c) => c[1]), [true, false]);
+  assert.ok(logs.length >= 2, logs.join("; "));
+
+  const display = companionHarness({ extra: { getDisplayNearestPoint: boom } });
+  display.ipcMain.send("drag-lock", true);
+  assert.doesNotThrow(() => display.ipcMain.send("drag-end"));
+  assert.ok(display.calls.some((c) => c[0] === "flushRuntimeStateToPrefs"));
+  assert.deepStrictEqual(display.calls.filter((c) => c[0] === "setDragLocked").map((c) => c[1]), [true, false]);
+});
