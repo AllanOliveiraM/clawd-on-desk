@@ -828,7 +828,10 @@ describe("hit-renderer pet gestures", () => {
       ["contextmenu", (h) => h.context.document._dispatch("contextmenu", { preventDefault() {} })],
       ["lostpointercapture", (h) => h.area.listeners.get("lostpointercapture")()],
       ["cancel-reaction", (h) => h.apiHandlers.cancelReaction()],
-      ["pointerleave", (h) => h.pointerleave()],
+      ["pointerleave past the grace", (h) => {
+        h.pointerleave();
+        h.fireTimer((t) => t.ms === 800);
+      }],
       ["blur", (h) => h.windowEvent("blur")],
     ];
     for (const [name, end] of enders) {
@@ -988,6 +991,116 @@ describe("hit-renderer pet gesture gaps", () => {
     assert.doesNotThrow(() => h.pointerleave());
     assert.doesNotThrow(() => h.windowEvent("blur"));
     assert.deepStrictEqual(gestures(h), []);
+  });
+});
+
+describe("hit-renderer petting survives a brief exit", () => {
+  const ON = { currentState: "idle", miniMode: false, dndEnabled: false, petGesturesEnabled: true };
+  const GRACE_MS = 800;
+  const mk = (opts = {}) => createHarness({ detector: true, sendState: ON, ...opts });
+  const gestures = (h) => h.apiCalls.filter((c) => c[0] === "petGesture").map((c) => c[1]);
+  const live = (h, ms) => h.timers.filter((t) => !t.cleared && t.ms === ms);
+  const stroke = (h, xs) => {
+    for (const x of xs) {
+      h.clock.now += 100;
+      h.pointermove({ clientX: x, clientY: 100, buttons: 0 });
+    }
+  };
+  const startPetting = (h) => {
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    stroke(h, [100, 120, 100, 120]);
+    assert.deepStrictEqual(gestures(h), ["pet-start"]);
+  };
+
+  it("leaving and coming back inside the grace keeps the session going", () => {
+    const h = mk();
+    startPetting(h);
+    h.pointerleave();
+    assert.deepStrictEqual(gestures(h), ["pet-start"]);
+    assert.strictEqual(live(h, GRACE_MS).length, 1);
+    h.clock.now += 400;
+    h.pointerenter({ clientX: 120, clientY: 100 });
+    assert.strictEqual(live(h, GRACE_MS).length, 0);
+    stroke(h, [100, 120, 100, 120, 100, 120]);
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-continue"]);
+  });
+
+  it("staying out past the grace ends the session once", () => {
+    const h = mk();
+    startPetting(h);
+    h.pointerleave();
+    h.clock.now += GRACE_MS;
+    assert.strictEqual(h.fireTimer((t) => t.ms === GRACE_MS), true);
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"]);
+    assert.strictEqual(live(h, 500).length, 0);
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    stroke(h, [100, 120]);
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"], "a late return starts from zero");
+  });
+
+  it("strokes counted before a brief exit still add up to pet-start", () => {
+    const h = mk();
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    stroke(h, [100, 120, 100]);
+    h.pointerleave();
+    h.clock.now += 200;
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    stroke(h, [120]);
+    assert.deepStrictEqual(gestures(h), ["pet-start"]);
+  });
+
+  it("the end poll waits while the cursor is out and restarts on the way back", () => {
+    const h = mk();
+    startPetting(h);
+    h.pointerleave();
+    h.clock.now += 1100; // past endAfterMs, grace timer still pending
+    h.fireTimer((t) => t.ms === 500);
+    assert.deepStrictEqual(gestures(h), ["pet-start"]);
+    assert.strictEqual(live(h, 500).length, 1);
+    h.pointerenter({ clientX: 120, clientY: 100 });
+    h.fireTimer((t) => t.ms === 500);
+    assert.deepStrictEqual(gestures(h), ["pet-start"], "coming back buys a fresh endAfterMs");
+    h.clock.now += 1000;
+    h.fireTimer((t) => t.ms === 500);
+    assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"]);
+  });
+
+  it("coming back mid-session arms no dwell", () => {
+    const h = mk();
+    startPetting(h);
+    h.pointerleave();
+    h.pointerenter({ clientX: 120, clientY: 100 });
+    assert.strictEqual(live(h, 1200).length, 0);
+  });
+
+  it("every other end path drops the grace", () => {
+    for (const [name, end] of [
+      ["dnd", (h) => h.apiHandlers.stateSync({ dndEnabled: true })],
+      ["gestures off", (h) => h.apiHandlers.stateSync({ petGesturesEnabled: false })],
+      ["blur", (h) => h.windowEvent("blur")],
+    ]) {
+      const h = mk();
+      startPetting(h);
+      h.pointerleave();
+      end(h);
+      assert.deepStrictEqual(gestures(h), ["pet-start", "pet-end"], name);
+      assert.strictEqual(live(h, GRACE_MS).length, 0, name);
+    }
+  });
+
+  it("the catch miss and the cursor-trust report do not wait for the grace", () => {
+    const h = mk({ sendState: { ...ON, petHoverReports: true } });
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    h.fireTimer((t) => t.ms === 1200);
+    h.pointerleave();
+    assert.deepStrictEqual(gestures(h), ["pointer-enter", "hover-dwell", "hover-move", "pointer-leave"]);
+  });
+
+  it("a leave with gestures blocked arms nothing", () => {
+    const h = mk({ sendState: { ...ON, dndEnabled: true } });
+    h.pointerenter({ clientX: 100, clientY: 100 });
+    h.pointerleave();
+    assert.strictEqual(live(h, GRACE_MS).length, 0);
   });
 });
 

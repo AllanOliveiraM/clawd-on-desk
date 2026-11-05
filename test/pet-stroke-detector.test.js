@@ -115,3 +115,20 @@ test("one-way pass with small backsteps never pets", () => {
   assert.ok(run(d, clock, xs, 40).every((r) => r === null));
   assert.equal(d.isActive(), false);
 });
+
+test("touch buys a fresh end delay only while active", () => {
+  const { d, clock } = make();
+  d.touch(); // idle: nothing to extend, nothing to throw
+  assert.equal(d.isActive(), false);
+  for (const x of [100, 120, 100, 120]) {
+    clock.t += 100;
+    d.feed(x, 0);
+  }
+  assert.equal(d.isActive(), true);
+  clock.t += PET_STROKE.endAfterMs - 1;
+  d.touch();
+  clock.t += PET_STROKE.endAfterMs - 1;
+  assert.equal(d.poll(), null);
+  clock.t += 1;
+  assert.equal(d.poll(), "pet-end");
+});

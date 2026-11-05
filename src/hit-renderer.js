@@ -90,16 +90,20 @@ function clearQueuedDragMove() {
 // "pet-start" / "pet-continue" / "pet-end" / "hover-dwell" to main, which
 // re-validates everything. After a dwell, the first move > 3 px (or the leave)
 // reports one "hover-move" (Clawd Mischief: the catch turns into a miss).
-// Both timers exist only while needed: the 500 ms poll while the detector is
-// active, the 1200 ms dwell inside a fresh entry.
+// The timers exist only while needed: the 500 ms poll while the detector is
+// active, the 1200 ms dwell inside a fresh entry, the 800 ms leave grace after
+// a leave. A stroke often overshoots the pet, so the leave only ends the
+// gesture if the cursor stays out for the whole grace.
 const PET_POLL_MS = 500;
 const HOVER_DWELL_MS = 1200;
+const PET_LEAVE_GRACE_MS = 800;
 const HOVER_DWELL_SLOP_PX = 3;
 const _petStrokeApi = window.ClawdPetStrokeDetector || null;
 const petDetector = _petStrokeApi && typeof _petStrokeApi.createPetStrokeDetector === "function"
   ? _petStrokeApi.createPetStrokeDetector()
   : null;
 let petPollTimer = null;
+let petLeaveTimer = null;
 let hoverDwellTimer = null;
 let hoverEntryX = 0;
 let hoverEntryY = 0;
@@ -126,12 +130,20 @@ function cancelHoverDwell() {
   hoverDwellTimer = null;
 }
 
+function cancelPetLeaveGrace() {
+  if (petLeaveTimer === null) return false;
+  clearTimeout(petLeaveTimer);
+  petLeaveTimer = null;
+  return true;
+}
+
 function schedulePetPoll() {
   if (petPollTimer !== null) return;
   petPollTimer = setTimeout(() => {
     petPollTimer = null;
     if (!petDetector) return;
-    const out = petDetector.poll();
+    // While the cursor is out, the leave grace decides when the gesture ends.
+    const out = petLeaveTimer === null ? petDetector.poll() : null;
     if (out) sendPetGesture(out);
     if (petDetector.isActive()) schedulePetPoll();
   }, PET_POLL_MS);
@@ -141,6 +153,7 @@ function schedulePetPoll() {
 // only when a petting session was actually running.
 function endPetGestures() {
   cancelHoverDwell();
+  cancelPetLeaveGrace();
   if (petPollTimer !== null) {
     clearTimeout(petPollTimer);
     petPollTimer = null;
@@ -199,6 +212,7 @@ area.addEventListener("pointerenter", (e) => {
     petHoverReported = true;
     sendPetGesture("pointer-enter");
   }
+  if (cancelPetLeaveGrace() && petDetector) petDetector.touch();
   cancelHoverDwell();
   hoverMoveArmed = false;
   // A new entry always starts a fresh dwell budget, even when this entry is
@@ -208,12 +222,23 @@ area.addEventListener("pointerenter", (e) => {
   if (!petGesturesAllowed()) return;
   hoverLastX = e.clientX;
   hoverLastY = e.clientY;
+  if (petDetector.isActive()) return;
   armHoverDwell(e.clientX, e.clientY);
 });
 
 area.addEventListener("pointerleave", () => {
   sendHoverMoveOnce();
-  endPetGestures();
+  if (petGesturesAllowed()) {
+    cancelHoverDwell();
+    if (petLeaveTimer === null) {
+      petLeaveTimer = setTimeout(() => {
+        petLeaveTimer = null;
+        endPetGestures();
+      }, PET_LEAVE_GRACE_MS);
+    }
+  } else {
+    endPetGestures();
+  }
   if (petHoverReported) {
     petHoverReported = false;
     sendPetGesture("pointer-leave");

@@ -108,7 +108,13 @@
       return null;
     }
 
-    return { feed, poll, reset, isActive: () => active };
+    // The cursor came back after a brief exit: the session gets a fresh end
+    // delay, since no reversal could be seen while it was out.
+    function touch() {
+      if (active) lastReversalAt = now();
+    }
+
+    return { feed, poll, reset, touch, isActive: () => active };
   }
 
   const api = { createPetStrokeDetector, PET_STROKE };
