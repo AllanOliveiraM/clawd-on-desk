@@ -145,9 +145,9 @@
 52%{transform:translate(1.4px,0.041px) rotate(-10.125deg) scale(1,1)}
 53.5%,87.6%{transform:translate(5.4px,0.5px) rotate(0deg) scale(1,1)}
 55%,57%,84%,86.4%{transform:translate(5.4px,3.5px) rotate(0deg) scale(1,1)}
-60%{transform:translate(3.65px,1.3px) rotate(0deg) scale(1,1)}
-64%,78%{transform:translate(1.9px,-1.1px) rotate(0deg) scale(1,1)}
-81%{transform:translate(3.65px,1.3px) rotate(0deg) scale(1,1)}
+60%{transform:translate(2.4px,1.3px) rotate(0deg) scale(1,1)}
+64%,78%{transform:translate(-0.6px,-0.3px) rotate(0deg) scale(1,1)}
+81%{transform:translate(2.4px,1.3px) rotate(0deg) scale(1,1)}
 89%{transform:translate(1.384px,-0.3px) rotate(-10deg) scale(1,1)}
 93.3%{transform:translate(0px,0px) rotate(35.328deg) scale(1,1)}
 94.6%{transform:translate(0px,0px) rotate(5.597deg) scale(1,1)}
@@ -160,9 +160,9 @@
       @keyframes mug-mv {
 0%,55%,57%,84%,86.8%,100%{transform:translate(0px,0px) rotate(0deg) scale(1,1)}
 56%,85.4%{transform:translate(0px,0.15px) rotate(0deg) scale(1,1)}
-60%{transform:translate(-1.75px,-2.2px) rotate(0deg) scale(1,1)}
-64%,78%{transform:translate(-3.5px,-4.6px) rotate(0deg) scale(1,1)}
-81%{transform:translate(-1.75px,-2.2px) rotate(0deg) scale(1,1)}
+60%{transform:translate(-3px,-2.2px) rotate(0deg) scale(1,1)}
+64%,78%{transform:translate(-6px,-3.8px) rotate(0deg) scale(1,1)}
+81%{transform:translate(-3px,-2.2px) rotate(0deg) scale(1,1)}
 }
       .mug-tilt { transform-origin: 19.4px 13.5px; animation: mug-tilt 5s ease-in-out 0.3s infinite backwards; }
       @keyframes mug-tilt {
