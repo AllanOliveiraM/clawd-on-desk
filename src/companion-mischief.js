@@ -15,11 +15,11 @@ const MISCHIEF_COOLDOWN_MS = {
   catch: 90000,
   pounce: 600000,
   fakeNap: 10800000,
-  poke: 1200000,
+  poke: 600000,
   reachClose: 3600000,
-  wall: 1200000,
-  sitEdge: 1200000,
-  toy: 1200000,
+  wall: 600000,
+  sitEdge: 600000,
+  toy: 600000,
   welcome: 0,
   stretchBack: 0,
   dayRhythm: 0,
@@ -42,8 +42,8 @@ const CURSOR_UNSEEN_MS = 600000;
 // Under XWayland (Ruling N1) he looks after 30 s, before the 60 s doze.
 const XWAYLAND_CURSOR_UNSEEN_MS = 30000;
 
-const GLOBAL_COOLDOWN_CALM_MS = 900000; // activity 0
-const GLOBAL_COOLDOWN_ACTIVE_MS = 480000; // activity 1
+const GLOBAL_COOLDOWN_CALM_MS = 480000; // activity 0
+const GLOBAL_COOLDOWN_ACTIVE_MS = 240000; // activity 1
 
 // Reactive triggers (catch, pounce, boo, welcome, stretchBack) never consume
 // the global cooldown: see GLOBAL_COOLDOWN_IDS.

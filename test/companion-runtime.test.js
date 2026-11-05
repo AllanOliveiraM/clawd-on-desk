@@ -1546,7 +1546,7 @@ test("a pet already at the bottom edge sits in place once and is not re-picked",
   // One return walk back into the band, then nothing more.
   assert.equal(env.runtime.getRoamDelayMs(false, 8000), 4000);
   assert.equal(env.runtime.pickRoamTarget(atBottom), null);
-  for (let i = 0; i < 900; i += 1) {
+  for (let i = 0; i < 500; i += 1) {
     env.clock.advance(1000);
     env.runtime.tick();
     assert.equal(env.runtime.getRoamDelayMs(false, 8000), 15600, "sitEdge is not picked again");

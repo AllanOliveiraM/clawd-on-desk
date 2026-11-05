@@ -36,8 +36,8 @@ function sample(x, y, over) {
 test("exports expected constants and helpers", () => {
   assert.equal(m.MISCHIEF_IDS.length, 13);
   assert.equal(m.MISCHIEF_COOLDOWN_MS.fakeNap, 10800000);
-  assert.equal(m.globalCooldownMs({ activity: 0 }), 900000);
-  assert.equal(m.globalCooldownMs({ activity: 1 }), 480000);
+  assert.equal(m.globalCooldownMs({ activity: 0 }), 480000);
+  assert.equal(m.globalCooldownMs({ activity: 1 }), 240000);
   assert.equal(m.dayWindow(6), "morning");
   assert.equal(m.dayWindow(10), null);
   assert.equal(m.dayWindow(23), "night");
@@ -633,8 +633,8 @@ test("a cooldown set after a clock step back is not shortened by later calls", (
   // Probed in clock order: an earlier probe after a later read is itself a
   // clock step back (R2': what had expired at the last read stays expired).
   assert.equal(brain.isGlobalReady(back + m.globalCooldownMs(TRAITS) - 1), false);
-  assert.equal(brain.canReact("poke", back + 1199999), false);
-  assert.equal(brain.canReact("poke", back + 1200000), true);
+  assert.equal(brain.canReact("poke", back + 599999), false);
+  assert.equal(brain.canReact("poke", back + 600000), true);
 });
 
 test("a forward jump of 8 h releases the global and every own cooldown", () => {
@@ -698,12 +698,12 @@ test("fetch eligibility matrix", () => {
 });
 
 test("globalCooldownMs interpolates with activity and defaults to 0.5", () => {
-  assert.equal(m.globalCooldownMs({ activity: 0 }), 900000);
-  assert.equal(m.globalCooldownMs({ activity: 0.5 }), 690000);
-  assert.equal(m.globalCooldownMs({ activity: 1 }), 480000);
-  for (const bad of [{ activity: NaN }, {}, null, undefined, { activity: "1" }]) assert.equal(m.globalCooldownMs(bad), 690000);
-  assert.equal(m.globalCooldownMs({ activity: 7 }), 480000, "clamped");
-  assert.equal(m.globalCooldownMs({ activity: -3 }), 900000, "clamped");
+  assert.equal(m.globalCooldownMs({ activity: 0 }), 480000);
+  assert.equal(m.globalCooldownMs({ activity: 0.5 }), 360000);
+  assert.equal(m.globalCooldownMs({ activity: 1 }), 240000);
+  for (const bad of [{ activity: NaN }, {}, null, undefined, { activity: "1" }]) assert.equal(m.globalCooldownMs(bad), 360000);
+  assert.equal(m.globalCooldownMs({ activity: 7 }), 240000, "clamped");
+  assert.equal(m.globalCooldownMs({ activity: -3 }), 480000, "clamped");
 });
 
 test("personalities: unknown falls back to balanced, table is complete and finite", () => {
