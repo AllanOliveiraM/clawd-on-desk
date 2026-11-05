@@ -27,8 +27,10 @@ function fake(opts = {}) {
 }
 
 test("parses only well-formed lines", () => {
-  assert.deepEqual(parseLine("12 -34"), { x: 12, y: -34 });
-  for (const bad of ["", "12", "12 34 56", "a b", "1.5 2"]) assert.equal(parseLine(bad), null);
+  assert.deepEqual(parseLine("12 -34"), { x: 12, y: -34, shift: false });
+  assert.deepEqual(parseLine("12 34 1"), { x: 12, y: 34, shift: true });
+  assert.deepEqual(parseLine("12 34 0"), { x: 12, y: 34, shift: false });
+  for (const bad of ["", "12", "12 34 56", "12 34 1 1", "a b", "1.5 2"]) assert.equal(parseLine(bad), null);
 });
 
 test("the socket lives in the runtime directory, or nowhere", () => {
@@ -57,6 +59,25 @@ test("keeps the newest complete position across chunks", () => {
   assert.deepEqual(bridge.getPoint(), { x: 10, y: 20 });
   s.emit("data", Buffer.from("0\nnoise\n"));
   assert.deepEqual(bridge.getPoint(), { x: 30, y: 40 });
+  assert.equal(bridge.isShiftHeld(), false);
+});
+
+test("the shift state follows the stream and dies with the connection", () => {
+  const { bridge, env } = fake();
+  assert.equal(bridge.isShiftHeld(), false);
+  bridge.setActive(true);
+  env.sockets[0].emit("data", "1 2 1\n");
+  assert.equal(bridge.isShiftHeld(), true);
+  env.sockets[0].emit("data", "1 2 0\n");
+  assert.equal(bridge.isShiftHeld(), false);
+  env.sockets[0].emit("data", "1 2 1\n");
+  env.sockets[0].emit("close");
+  assert.equal(bridge.isShiftHeld(), false);
+  bridge.setActive(true);
+  env.timers.shift().fn();
+  env.sockets[1].emit("data", "1 2 1\n");
+  bridge.setActive(false);
+  assert.equal(bridge.isShiftHeld(), false);
 });
 
 test("an endless line without a newline is dropped", () => {

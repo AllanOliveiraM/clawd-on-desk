@@ -81,6 +81,7 @@ function createHarness({ isPackaged = true, companionEnabled = true, gateReason 
     menu,
     plays,
     close: () => closeCallback(),
+    popped: () => closeCallback !== null,
     labels: () => ctx.contextMenu.template.map((item) => item.label || item.type),
     // Whole template minus click handlers: the "identical" checks compare this.
     json: () => JSON.stringify(ctx.contextMenu.template),
@@ -257,3 +258,60 @@ describe("context menu test mode (spec §2)", () => {
     assert.deepStrictEqual(order, ["showInactive", "play"]);
   });
 });
+
+describe("pet menu focus on Linux (XWayland)", { skip: process.platform !== "linux" }, () => {
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  function focusHarness({ focused = false } = {}) {
+    const h = createHarness();
+    const listeners = new Map();
+    const owner = h.ctx.contextMenuOwner;
+    owner.isFocused = () => focused;
+    owner.once = (event, fn) => listeners.set(event, fn);
+    owner.removeListener = (event) => listeners.delete(event);
+    let destroyed = false;
+    owner.isDestroyed = () => destroyed;
+    return {
+      ...h,
+      fireFocus: () => { const fn = listeners.get("focus"); if (fn) fn(); },
+      destroyOwner: () => { destroyed = true; },
+      listeners,
+    };
+  }
+
+  it("a focused owner opens right away", () => {
+    const h = focusHarness({ focused: true });
+    h.menu.showPetContextMenu();
+    assert.ok(h.popped());
+    assert.equal(h.ctx.menuOpen, true);
+  });
+
+  it("an unfocused owner waits for focus, and a second click meanwhile does nothing", () => {
+    const h = focusHarness();
+    h.menu.showPetContextMenu();
+    assert.equal(h.popped(), false, "the menu would close at once without focus");
+    assert.equal(h.ctx.menuOpen, true);
+    h.menu.showPetContextMenu();
+    h.fireFocus();
+    assert.ok(h.popped());
+    assert.equal(h.listeners.size, 0);
+  });
+
+  it("no focus in time still opens the menu", async () => {
+    const h = focusHarness();
+    h.menu.showPetContextMenu();
+    await wait(260);
+    assert.ok(h.popped());
+    assert.equal(h.listeners.size, 0);
+  });
+
+  it("an owner destroyed while waiting opens nothing and frees the menu state", async () => {
+    const h = focusHarness();
+    h.menu.showPetContextMenu();
+    h.destroyOwner();
+    await wait(260);
+    assert.equal(h.popped(), false);
+    assert.equal(h.ctx.menuOpen, false);
+  });
+});
+

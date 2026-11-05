@@ -11,6 +11,7 @@ const platform = process.platform;
 const isMac = platform === "darwin";
 const isWin = platform === "win32";
 const isLinux = platform === "linux";
+const MENU_FOCUS_WAIT_MS = 200;
 
 // Login-item / autostart helpers and the openAtLogin write path live in
 // src/login-item.js + main.js's settings-actions effect. menu.js used to
@@ -424,6 +425,30 @@ module.exports = function initMenu(ctx) {
     fn();
   }
 
+  // A menu opened before the owner window gets focus closes at once under
+  // XWayland (measured: 17 ms), so it waits for the focus the owner just asked
+  // for. The timeout keeps the menu working if focus never arrives.
+  function whenOwnerFocused(owner, open) {
+    if (!isLinux || typeof owner.isFocused !== "function" || owner.isFocused()) {
+      open();
+      return;
+    }
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      owner.removeListener("focus", settle);
+      if (owner.isDestroyed()) {
+        ctx.menuOpen = false;
+        return;
+      }
+      open();
+    };
+    const timer = setTimeout(settle, MENU_FOCUS_WAIT_MS);
+    owner.once("focus", settle);
+  }
+
   function popupMenuAt(menu) {
     if (ctx.menuOpen) return;
     afterMenuClose = null;
@@ -437,7 +462,7 @@ module.exports = function initMenu(ctx) {
     owner.focus();
 
     ctx.menuOpen = true;
-    menu.popup({
+    whenOwnerFocused(owner, () => menu.popup({
       window: owner,
       callback: () => {
         ctx.menuOpen = false;
@@ -475,7 +500,7 @@ module.exports = function initMenu(ctx) {
         afterMenuClose = null;
         if (pending) pending();
       },
-    });
+    }));
   }
 
   function buildDisplaySubmenu(displays = screen.getAllDisplays()) {

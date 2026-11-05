@@ -1,4 +1,4 @@
-// Streams "x y\n" to local clients whenever the pointer moves. Nothing reads
+// Streams "x y shift\n" to local clients whenever one changes. Nothing reads
 // the pointer while no client is connected. The socket lives in the user's
 // private runtime directory and is restricted to the user.
 import Gio from 'gi://Gio';
@@ -126,8 +126,8 @@ export class PointerServer {
     }
 
     _poll() {
-        const [x, y] = this._readPointer();
-        const line = `${Math.round(x)} ${Math.round(y)}\n`;
+        const [x, y, shift] = this._readPointer();
+        const line = `${Math.round(x)} ${Math.round(y)} ${shift ? 1 : 0}\n`;
         if (line === this._last)
             return;
         this._last = line;

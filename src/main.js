@@ -5625,7 +5625,7 @@ function createWindow() {
 
   registerPetInteractionIpc({
     ipcMain,
-    showContextMenu: (_event, options) => showPetContextMenu(options),
+    showContextMenu: (_event, options) => showPetContextMenu({ shiftKey: (options && options.shiftKey === true) || _pointerBridge.isShiftHeld() }),
     moveWindowForDrag: () => moveWindowForDrag(),
     setIdlePaused: (value) => { idlePaused = !!value; },
     setLowPowerIdlePaused,

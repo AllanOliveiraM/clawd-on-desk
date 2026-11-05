@@ -12,7 +12,7 @@ const server = new PointerServer({
     readPointer: () => {
         reads += 1;
         GLib.file_set_contents(reportPath, String(reads));
-        return mode === 'still' ? [7, 9] : [reads, 5];
+        return mode === 'still' ? [7, 9, 1] : [reads, 5, 0];
     },
 });
 server.start();

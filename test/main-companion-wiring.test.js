@@ -497,7 +497,7 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
         return { createCursorTrust: (options) => { trustOptions = options; return { enabled: true, notePointerLeft: () => { left += 1; } }; } };
       }
       if (id === "./linux-ozone") return { isXWaylandSession: () => true };
-      if (id === "./pointer-bridge") return { createPointerBridge: () => ({ getPoint: () => null, setActive() {} }) };
+      if (id === "./pointer-bridge") return { createPointerBridge: () => ({ getPoint: () => null, isShiftHeld: () => false, setActive() {} }) };
       throw new Error(id);
     },
     process: { platform: "linux", env: {} },
@@ -631,3 +631,23 @@ it("the real pointer only runs with Clawd Alive under XWayland, and wins the tru
   h.subscriptions.get("companionEnabled")(true, { companionEnabled: true });
   assert.equal(h.bridgeSyncs.at(-1), true);
 });
+
+it("the pet menu also counts the shift key the extension saw", () => {
+  const line = source.split("\n").find((l) => l.includes("showContextMenu: (_event, options) =>"));
+  assert.ok(line, "show-context-menu wiring not found");
+  const handler = line.trim().replace(/^showContextMenu: /, "").replace(/,$/, "");
+  const run = (held, options) => {
+    let got = null;
+    const fn = vm.runInNewContext(`(${handler})`, {
+      showPetContextMenu: (o) => { got = o; },
+      _pointerBridge: { isShiftHeld: () => held },
+    });
+    fn({}, options);
+    return got;
+  };
+  assert.equal(run(true, { shiftKey: false }).shiftKey, true);
+  assert.equal(run(false, { shiftKey: true }).shiftKey, true);
+  assert.equal(run(false, { shiftKey: false }).shiftKey, false);
+  assert.equal(run(true, undefined).shiftKey, true);
+});
+

@@ -17,8 +17,8 @@ function defaultSocketPath(env = process.env) {
 }
 
 function parseLine(line) {
-  const match = /^(-?\d+) (-?\d+)$/.exec(line);
-  return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
+  const match = /^(-?\d+) (-?\d+)(?: ([01]))?$/.exec(line);
+  return match ? { x: Number(match[1]), y: Number(match[2]), shift: match[3] === "1" } : null;
 }
 
 function createPointerBridge({
@@ -31,7 +31,14 @@ function createPointerBridge({
   let socket = null;
   let retryTimer = null;
   let point = null;
+  let shiftHeld = false;
   let buffer = "";
+
+  function forget() {
+    point = null;
+    shiftHeld = false;
+    buffer = "";
+  }
 
   function clearRetry() {
     if (retryTimer === null) return;
@@ -55,15 +62,17 @@ function createPointerBridge({
     if (buffer.length > MAX_BUFFER_CHARS) buffer = "";
     for (const line of lines) {
       const next = parseLine(line);
-      if (next) point = next;
+      if (next) {
+        point = { x: next.x, y: next.y };
+        shiftHeld = next.shift;
+      }
     }
   }
 
   function onGone(owner) {
     if (socket !== owner) return;
     socket = null;
-    point = null;
-    buffer = "";
+    forget();
     scheduleRetry();
   }
 
@@ -91,14 +100,14 @@ function createPointerBridge({
     clearRetry();
     const current = socket;
     socket = null;
-    point = null;
-    buffer = "";
+    forget();
     if (current) current.destroy();
   }
 
   return {
     setActive,
     getPoint: () => point,
+    isShiftHeld: () => shiftHeld,
     dispose: () => setActive(false),
   };
 }

@@ -66,13 +66,13 @@ test("positions arrive as lines, only when they change", { skip: !hasGjs }, asyn
   a.socket.destroy();
   const lines = a.text.trim().split("\n");
   assert.ok(lines.length > 2);
-  assert.ok(lines.every((l) => /^\d+ 5$/.test(l)));
+  assert.ok(lines.every((l) => /^\d+ 5 0$/.test(l)));
 
   const still = await startServer(t, "still");
   const b = await connect(still.socketPath);
   await wait(150);
   b.socket.destroy();
-  assert.equal(b.text, "7 9\n");
+  assert.equal(b.text, "7 9 1\n");
 });
 
 test("a second client gets the current position right away", { skip: !hasGjs }, async (t) => {
@@ -81,7 +81,7 @@ test("a second client gets the current position right away", { skip: !hasGjs }, 
   await wait(80);
   const b = await connect(still.socketPath);
   await wait(80);
-  assert.equal(b.text, "7 9\n");
+  assert.equal(b.text, "7 9 1\n");
   a.socket.destroy();
   b.socket.destroy();
 });
@@ -97,7 +97,7 @@ test("a stale socket file does not stop it, and stopping removes the socket", { 
   await new Promise((resolve) => child.stdout.once("data", resolve));
   const client = await connect(first.socketPath);
   await wait(60);
-  assert.equal(client.text, "7 9\n");
+  assert.equal(client.text, "7 9 1\n");
   client.socket.destroy();
   child.kill("SIGTERM");
   await new Promise((resolve) => child.once("exit", resolve));
