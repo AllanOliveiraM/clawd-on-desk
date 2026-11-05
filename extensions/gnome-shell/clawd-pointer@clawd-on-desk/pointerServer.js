@@ -1,4 +1,5 @@
-// Streams "x y shift\n" to local clients whenever one changes. Nothing reads
+// Announces "v <version>\n" on connect, then streams "x y shift\n" to local
+// clients whenever one changes. Nothing reads
 // the pointer while no client is connected. The socket lives in the user's
 // private runtime directory and is restricted to the user.
 import Gio from 'gi://Gio';
@@ -9,7 +10,8 @@ const MAX_CLIENTS = 4;
 const encoder = new TextEncoder();
 
 export class PointerServer {
-    constructor({socketPath, readPointer, pollMs = POLL_MS}) {
+    constructor({socketPath, readPointer, pollMs = POLL_MS, version}) {
+        this._version = version;
         this._socketPath = socketPath;
         this._readPointer = readPointer;
         this._pollMs = pollMs;
@@ -71,6 +73,8 @@ export class PointerServer {
         };
         this._clients.add(client);
         this._watchClosed(client);
+        if (this._version !== undefined)
+            this._send(client, `v ${this._version}\n`);
         if (this._last)
             this._send(client, this._last);
         this._startPolling();

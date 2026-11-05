@@ -80,6 +80,17 @@ test("the shift state follows the stream and dies with the connection", () => {
   assert.equal(bridge.isShiftHeld(), false);
 });
 
+test("remembers the version the extension announced, until the connection ends", () => {
+  const { bridge, env } = fake();
+  assert.equal(bridge.getExtensionVersion(), null);
+  bridge.setActive(true);
+  env.sockets[0].emit("data", "v 2\n1 2 0\n");
+  assert.equal(bridge.getExtensionVersion(), 2);
+  assert.deepEqual(bridge.getPoint(), { x: 1, y: 2 });
+  env.sockets[0].emit("close");
+  assert.equal(bridge.getExtensionVersion(), null);
+});
+
 test("an endless line without a newline is dropped", () => {
   const { bridge, env } = fake();
   bridge.setActive(true);

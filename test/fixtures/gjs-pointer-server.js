@@ -9,10 +9,11 @@ let reads = 0;
 const server = new PointerServer({
     socketPath,
     pollMs: 10,
+    version: mode === 'versioned' ? 3 : undefined,
     readPointer: () => {
         reads += 1;
         GLib.file_set_contents(reportPath, String(reads));
-        return mode === 'still' ? [7, 9, 1] : [reads, 5, 0];
+        return mode === 'moving' ? [reads, 5, 0] : [7, 9, 1];
     },
 });
 server.start();

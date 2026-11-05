@@ -2,5 +2,6 @@
   "uuid": "clawd-pointer@clawd-on-desk",
   "name": "Clawd Pointer Bridge",
   "description": "Shares the pointer position with the Clawd on Desk app over a private socket, so Clawd can see the cursor on Wayland. It only reads the pointer while the app is connected.",
+  "clawd-version": 2,
   "shell-version": ["45", "46", "47", "48", "49", "50"]
 }

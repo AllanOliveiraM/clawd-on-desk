@@ -103,3 +103,11 @@ test("a stale socket file does not stop it, and stopping removes the socket", { 
   await new Promise((resolve) => child.once("exit", resolve));
   assert.equal(fs.existsSync(first.socketPath), false);
 });
+
+test("a server with a version announces it before any position", { skip: !hasGjs }, async (t) => {
+  const server = await startServer(t, "versioned");
+  const client = await connect(server.socketPath);
+  await wait(80);
+  client.socket.destroy();
+  assert.equal(client.text, "v 3\n7 9 1\n");
+});

@@ -564,6 +564,72 @@
     return { row, button };
   }
 
+  // GNOME Wayland only: the row stays hidden until main says the extension
+  // applies here, so every other session sees nothing new.
+  function buildCompanionCursorBridgeRow(enabled) {
+    const row = document.createElement("div");
+    row.className = "row companion-cursor-bridge-row";
+    row.style.display = "none";
+    const text = document.createElement("div");
+    text.className = "row-text";
+    const label = document.createElement("span");
+    label.className = "row-label";
+    label.textContent = t("rowCompanionCursorBridge");
+    const description = document.createElement("span");
+    description.className = "row-desc";
+    description.textContent = t("rowCompanionCursorBridgeDesc");
+    const status = document.createElement("span");
+    status.className = "row-desc companion-cursor-bridge-status";
+    text.appendChild(label);
+    text.appendChild(description);
+    text.appendChild(status);
+
+    const controlHost = document.createElement("div");
+    controlHost.className = "row-control";
+    const button = helpers.buildButton({
+      labelKey: "companionCursorBridgeInstall",
+      size: "compact",
+      className: "companion-cursor-bridge-install",
+      disabled: !enabled,
+    });
+    controlHost.appendChild(button);
+    row.appendChild(text);
+    row.appendChild(controlHost);
+
+    function apply(state) {
+      row.style.display = state === "missing" || state === "needs-login" || state === "active" ? "" : "none";
+      button.style.display = state === "missing" ? "" : "none";
+      status.textContent = state === "active"
+        ? t("companionCursorBridgeActive")
+        : state === "needs-login" ? t("companionCursorBridgeNeedsLogin") : "";
+    }
+
+    const api = window.settingsAPI;
+    if (api && typeof api.getPointerExtension === "function") {
+      Promise.resolve(api.getPointerExtension())
+        .then((result) => { if (result && result.status === "ok") apply(result.state); })
+        .catch(() => {});
+    }
+
+    let busy = false;
+    button.addEventListener("click", async () => {
+      if (busy || !readCompanionEnabled() || !api || typeof api.installPointerExtension !== "function") return;
+      busy = true;
+      helpers.setButtonState(button, { pending: true });
+      try {
+        const result = await api.installPointerExtension();
+        if (result && result.status === "ok") apply(result.state);
+        else ops.showToast(t("toastCompanionCursorBridgeFailed"), { error: true });
+      } catch {
+        ops.showToast(t("toastCompanionCursorBridgeFailed"), { error: true });
+      } finally {
+        busy = false;
+        if (document.body.contains(row)) helpers.setButtonState(button, { pending: false });
+      }
+    });
+    return { row, button };
+  }
+
   // Spec 2026-11-04 §3: mood card. Data comes from one pull when the card is
   // (re)mounted or Clawd Alive turns on, then from main's rate-limited push
   // (applyCompanionMood). The renderer never polls; window focus only
@@ -752,6 +818,7 @@
     });
     const reset = buildCompanionResetRow(enabled);
     const moodCard = buildCompanionMoodCard(enabled);
+    const cursorBridge = buildCompanionCursorBridgeRow(enabled);
     const section = helpers.buildSection(t("sectionPetCompanion"), [
       helpers.buildSwitchRow({
         key: "companionEnabled",
@@ -773,6 +840,7 @@
         descKey: "rowCompanionMischiefDesc",
         disabled: !enabled,
       }),
+      cursorBridge.row,
       helpers.buildSwitchRow({
         key: "companionMemory",
         labelKey: "rowCompanionMemory",
@@ -787,6 +855,7 @@
       personalityDescription: personality.optionDescription,
       autonomyDescription: autonomyRow.querySelector(".row-desc"),
       resetButton: reset.button,
+      cursorBridgeButton: cursorBridge.button,
       moodCard,
     };
     return section;

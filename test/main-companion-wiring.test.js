@@ -498,8 +498,11 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
       }
       if (id === "./linux-ozone") return { isXWaylandSession: () => true };
       if (id === "./pointer-bridge") return { createPointerBridge: () => ({ getPoint: () => null, isShiftHeld: () => false, setActive() {} }) };
+      if (id === "./gnome-pointer-extension") return { createGnomePointerExtension: () => ({}) };
       throw new Error(id);
     },
+    path,
+    __dirname: "/app/src",
     process: { platform: "linux", env: {} },
     app: { commandLine: { getSwitchValue: () => "x11" } },
     BrowserWindow: { getAllWindows: () => [render, hit, settings, dashboard, hud, hidden] },

@@ -611,6 +611,25 @@ function registerSettingsIpc(options = {}) {
     const snapshot = readMoodSnapshot(options.companionRuntime);
     return snapshot ? { status: "ok", snapshot } : { status: "error", message: "unavailable" };
   });
+  // Clawd Alive on GNOME Wayland: the optional extension that shows Clawd the
+  // cursor. Installing is a user action; the state only drives the Settings row.
+  handle("settings:get-pointer-extension", (event) => {
+    const rejected = rejectUntrustedSettingsEvent(event);
+    if (rejected) return rejected;
+    const extension = options.pointerExtension;
+    return { status: "ok", state: extension ? extension.getState() : "unsupported" };
+  });
+  handle("settings:install-pointer-extension", async (event) => {
+    const rejected = rejectUntrustedSettingsEvent(event);
+    if (rejected) return rejected;
+    const extension = options.pointerExtension;
+    if (!extension) return { status: "error", message: "unavailable" };
+    try {
+      return { status: "ok", state: await extension.install() };
+    } catch (err) {
+      return { status: "error", message: (err && err.message) || "install failed" };
+    }
+  });
   handle("settings:update", (_event, payload) => {
     if (!payload || typeof payload !== "object") {
       return { status: "error", message: "settings:update payload must be { key, value }" };

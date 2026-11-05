@@ -168,6 +168,8 @@ contextBridge.exposeInMainWorld("settingsAPI", {
   clearRoamFence: () => ipcRenderer.invoke("settings:clear-roam-fence"),
   resetCompanion: () => ipcRenderer.invoke("settings:companion-reset"),
   getCompanionMood: () => ipcRenderer.invoke("settings:get-companion-mood"),
+  getPointerExtension: () => ipcRenderer.invoke("settings:get-pointer-extension"),
+  installPointerExtension: () => ipcRenderer.invoke("settings:install-pointer-extension"),
   onCompanionMoodChanged: (cb) => {
     if (typeof cb !== "function") return () => {};
     companionMoodListeners.add(cb);

@@ -2749,6 +2749,7 @@ function companionPinnedTrustWindows() {
 const _pointerBridge = require("./pointer-bridge").createPointerBridge();
 function syncPointerBridge(enabled = _settingsController.get("companionEnabled") === true) {
   _pointerBridge.setActive(_cursorTrust.enabled && enabled);
+  if (enabled) _pointerExtension.syncInstalled();
 }
 const _cursorTrust = require("./cursor-trust").createCursorTrust({
   enabled: require("./linux-ozone").isXWaylandSession({
@@ -2804,6 +2805,12 @@ function pushCompanionPointerTracking() {
     } catch {}
   }
 }
+const _pointerExtension = require("./gnome-pointer-extension").createGnomePointerExtension({
+  supported: _cursorTrust.enabled && /gnome/i.test(process.env.XDG_CURRENT_DESKTOP || ""),
+  sourceDir: path.join(__dirname, "..", "extensions", "gnome-shell", "clawd-pointer@clawd-on-desk")
+    .replace("app.asar" + path.sep, "app.asar.unpacked" + path.sep),
+  getLoadedVersion: () => _pointerBridge.getExtensionVersion(),
+});
 const _tickCtx = {
   get isCursorTrusted() { return getCompanionCursorTrustCheck(); },
   getRealCursorPoint: () => _pointerBridge.getPoint(),
@@ -5372,6 +5379,7 @@ const settingsIpcRuntime = registerSettingsIpc({
   // Getter: the companion is constructed further down; the reset handler reads
   // this at call time.
   get companionRuntime() { return _companion; },
+  get pointerExtension() { return _pointerExtension; },
   ipcMain,
   app,
   BrowserWindow,

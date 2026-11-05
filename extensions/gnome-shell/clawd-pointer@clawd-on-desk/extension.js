@@ -7,6 +7,7 @@ import {PointerServer} from './pointerServer.js';
 export default class ClawdPointerExtension extends Extension {
     enable() {
         this._server = new PointerServer({
+            version: this.metadata['clawd-version'],
             socketPath: GLib.build_filenamev([GLib.get_user_runtime_dir(), 'clawd-pointer.sock']),
             readPointer: () => {
                 const [x, y, mods] = global.get_pointer();

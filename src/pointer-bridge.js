@@ -32,11 +32,13 @@ function createPointerBridge({
   let retryTimer = null;
   let point = null;
   let shiftHeld = false;
+  let extensionVersion = null;
   let buffer = "";
 
   function forget() {
     point = null;
     shiftHeld = false;
+    extensionVersion = null;
     buffer = "";
   }
 
@@ -61,6 +63,11 @@ function createPointerBridge({
     buffer = lines.pop();
     if (buffer.length > MAX_BUFFER_CHARS) buffer = "";
     for (const line of lines) {
+      const announced = /^v (\d+)$/.exec(line);
+      if (announced) {
+        extensionVersion = Number(announced[1]);
+        continue;
+      }
       const next = parseLine(line);
       if (next) {
         point = { x: next.x, y: next.y };
@@ -108,6 +115,7 @@ function createPointerBridge({
     setActive,
     getPoint: () => point,
     isShiftHeld: () => shiftHeld,
+    getExtensionVersion: () => extensionVersion,
     dispose: () => setActive(false),
   };
 }
