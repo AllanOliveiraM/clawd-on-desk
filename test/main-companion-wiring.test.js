@@ -574,3 +574,26 @@ it("Alive off re-applies only a state that shows a companion file, never under D
   const block = slice('if (key === "companionEnabled" && snapshot && snapshot.companionEnabled !== true) {', "\n      }\n");
   assert.ok(block.includes("dropCompanionVisualsAfterDisable();"));
 });
+
+// Runs the real wrapper from main.js: the arbiter reads visualGeneration from
+// what this returns, and drops the playback when it gets nothing back.
+it("the companion's sendToRenderer hands the visual request back to the arbiter", () => {
+  const options = slice('require("./companion-runtime").createCompanionRuntime({', "getIdleMode:");
+  const start = options.indexOf("sendToRenderer: (...args) =>");
+  assert.ok(start >= 0, "companion sendToRenderer option not found");
+  const wrapperSource = options.slice(start + "sendToRenderer: ".length).trim().replace(/,$/, "");
+  const request = { visualGeneration: 7 };
+  const calls = [];
+  const wrapper = vm.runInNewContext(`(${wrapperSource})`, {
+    sendToRenderer: (...args) => {
+      calls.push(args);
+      return request;
+    },
+    nudgeCompanionMood: (result) => {
+      calls.push("nudge");
+      return result;
+    },
+  });
+  assert.equal(wrapper("state-change", "idle", "x.svg"), request);
+  assert.deepEqual(calls, [["state-change", "idle", "x.svg"], "nudge"]);
+});

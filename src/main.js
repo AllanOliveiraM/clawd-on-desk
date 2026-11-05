@@ -6191,10 +6191,7 @@ const _companion = require("./companion-runtime").createCompanionRuntime({
   canPlay: isPetFreeForIdle,
   restoreIdleVisual: () => _tick.restoreIdleVisual(),
   isVisualGenerationCurrent,
-  sendToRenderer: (...args) => {
-    sendToRenderer(...args);
-    nudgeCompanionMood();
-  },
+  sendToRenderer: (...args) => nudgeCompanionMood(sendToRenderer(...args)),
   getIdleMode: () => (_settingsController.get("freeRoam") === true
     ? "roam"
     : _settingsController.get("idleActivities") === true ? "activities" : "none"),
