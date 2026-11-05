@@ -12,6 +12,7 @@ const isMac = platform === "darwin";
 const isWin = platform === "win32";
 const isLinux = platform === "linux";
 const MENU_FOCUS_WAIT_MS = 200;
+const MENU_OWNER_HIDE_DELAY_MS = 500;
 
 // Login-item / autostart helpers and the openAtLogin write path live in
 // src/login-item.js + main.js's settings-actions effect. menu.js used to
@@ -425,6 +426,8 @@ module.exports = function initMenu(ctx) {
     fn();
   }
 
+  let ownerHideTimer = null;
+
   // A menu opened before the owner window gets focus closes at once under
   // XWayland (measured: 17 ms), so it waits for the focus the owner just asked
   // for. The timeout keeps the menu working if focus never arrives.
@@ -449,8 +452,31 @@ module.exports = function initMenu(ctx) {
     owner.once("focus", settle);
   }
 
+  // Under XWayland, hiding the owner in the same moment the menu closes can
+  // block the main process for 20 s or more, until the GPU process exits.
+  // Measured with real clicks: a few menus froze it at once; 42 with a later
+  // hide did not. Focus still returns to the previous window after the hide.
+  function cancelOwnerHide() {
+    if (ownerHideTimer === null) return;
+    clearTimeout(ownerHideTimer);
+    ownerHideTimer = null;
+  }
+
+  function hideOwnerAfterMenu(owner) {
+    if (!isLinux) {
+      owner.hide();
+      return;
+    }
+    cancelOwnerHide();
+    ownerHideTimer = setTimeout(() => {
+      ownerHideTimer = null;
+      if (!owner.isDestroyed()) owner.hide();
+    }, MENU_OWNER_HIDE_DELAY_MS);
+  }
+
   function popupMenuAt(menu) {
     if (ctx.menuOpen) return;
+    cancelOwnerHide();
     afterMenuClose = null;
     const owner = ensureContextMenuOwner();
     if (!owner) return;
@@ -466,7 +492,7 @@ module.exports = function initMenu(ctx) {
       window: owner,
       callback: () => {
         ctx.menuOpen = false;
-        if (owner && !owner.isDestroyed()) owner.hide();
+        if (owner && !owner.isDestroyed()) hideOwnerAfterMenu(owner);
         // #1260 backstop: the normal renderer path ends any active drag
         // before asking for this menu, so a lock still held at close time
         // was stranded by the menu's modal loop swallowing the closing

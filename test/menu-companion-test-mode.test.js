@@ -315,3 +315,47 @@ describe("pet menu focus on Linux (XWayland)", { skip: process.platform !== "lin
   });
 });
 
+describe("pet menu owner hide on Linux (XWayland)", { skip: process.platform !== "linux" }, () => {
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  function hideHarness() {
+    const h = createHarness();
+    const owner = h.ctx.contextMenuOwner;
+    const state = { hides: 0, destroyed: false };
+    owner.hide = () => { state.hides += 1; };
+    owner.isDestroyed = () => state.destroyed;
+    return { ...h, state };
+  }
+
+  it("hides the owner a moment after the menu closes, never at once", async () => {
+    const h = hideHarness();
+    h.menu.showPetContextMenu();
+    h.close();
+    assert.equal(h.state.hides, 0, "hiding right at close can freeze the app");
+    assert.equal(h.ctx.menuOpen, false);
+    await wait(560);
+    assert.equal(h.state.hides, 1);
+  });
+
+  it("a new menu keeps the owner visible", async () => {
+    const h = hideHarness();
+    h.menu.showPetContextMenu();
+    h.close();
+    h.menu.showPetContextMenu();
+    await wait(560);
+    assert.equal(h.state.hides, 0);
+    h.close();
+    await wait(560);
+    assert.equal(h.state.hides, 1);
+  });
+
+  it("an owner destroyed meanwhile is left alone", async () => {
+    const h = hideHarness();
+    h.menu.showPetContextMenu();
+    h.close();
+    h.state.destroyed = true;
+    await wait(560);
+    assert.equal(h.state.hides, 0);
+  });
+});
+
