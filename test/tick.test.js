@@ -1980,6 +1980,46 @@ describe("tick companion coordination", () => {
     return calls.filter(([channel]) => channel === "state-change").map(([, , svg]) => svg);
   }
 
+  it("the real pointer feeds the companion and the eyes, not the mouse clock", () => {
+    let real = { x: 900, y: 700 };
+    ctx.getRealCursorPoint = () => real;
+    const samples = [];
+    ctx.companion.tick = (sample) => { samples.push(sample); };
+    const trustAsked = [];
+    ctx.isCursorTrusted = (point) => { trustAsked.push(point); return true; };
+    ctx.roam = { enabled: true, cancelRoam() { cancels++; }, tick() {} };
+    let cancels = 0;
+    const eyes = [];
+    const send = ctx.sendToRenderer;
+    ctx.sendToRenderer = (channel, ...rest) => {
+      if (channel === "eye-move") eyes.push(rest);
+      return send(channel, ...rest);
+    };
+    start();
+    advance(600);
+    const stillSince = tickApi._mouseStillSince;
+    const eyesBefore = eyes.length;
+    real = { x: 10, y: 10 };
+    advance(600);
+    assert.equal(samples.at(-1).x, 10);
+    assert.equal(trustAsked.at(-1).x, 10);
+    assert.ok(eyes.length > eyesBefore, "the eyes follow the real pointer");
+    assert.equal(tickApi._mouseStillSince, stillSince, "the idle clock ignores it");
+    assert.equal(cancels, 0, "it never cancels a walk");
+  });
+
+  it("no real pointer leaves Electron's cursor in charge, and a throwing source falls back", () => {
+    const samples = [];
+    ctx.companion.tick = (sample) => { samples.push(sample); };
+    ctx.getRealCursorPoint = () => { throw new Error("boom"); };
+    start();
+    advance(600);
+    assert.equal(samples.at(-1).x, 300);
+    ctx.getRealCursorPoint = () => null;
+    advance(300);
+    assert.equal(samples.at(-1).x, 300);
+  });
+
   it("the companion's sleep clock decides when the yawn starts", () => {
     ctx.theme.timings.mouseSleepTimeout = 1000;
     let clock = 0;

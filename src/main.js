@@ -2745,6 +2745,11 @@ function companionPinnedTrustWindows() {
   } catch {}
   return out;
 }
+// Optional GNOME Shell extension: the real pointer, where XWayland can't see it.
+const _pointerBridge = require("./pointer-bridge").createPointerBridge();
+function syncPointerBridge(enabled = _settingsController.get("companionEnabled") === true) {
+  _pointerBridge.setActive(_cursorTrust.enabled && enabled);
+}
 const _cursorTrust = require("./cursor-trust").createCursorTrust({
   enabled: require("./linux-ozone").isXWaylandSession({
     platform: process.platform,
@@ -2783,7 +2788,7 @@ ipcMain.on("companion:pointer-left", (event) => {
 // Feature off: the tick gets no trust check at all (its trusted path), so it
 // never reads the window list.
 function isCompanionCursorTrusted(point) {
-  return _cursorTrust.isTrusted(point);
+  return _pointerBridge.getPoint() !== null || _cursorTrust.isTrusted(point);
 }
 function getCompanionCursorTrustCheck() {
   return _settingsController.get("companionEnabled") === true ? isCompanionCursorTrusted : undefined;
@@ -2801,6 +2806,7 @@ function pushCompanionPointerTracking() {
 }
 const _tickCtx = {
   get isCursorTrusted() { return getCompanionCursorTrustCheck(); },
+  getRealCursorPoint: () => _pointerBridge.getPoint(),
   get theme() { return getActiveTheme(); },
   get win() { return win; },
   getPetWindowBounds,
@@ -2998,6 +3004,7 @@ sendDashboardI18n = () => {
 // the quit path runs. Kept as its own listener so the quick-host teardown below
 // stays a single, directly testable line.
 app.on("before-quit", () => stopActivePermissionReviews());
+app.on("before-quit", () => _pointerBridge.dispose());
 app.on("before-quit", () => _dashboard.quick.dispose());
 app.on("will-quit", () => _dashboard.quick.dispose());
 
@@ -6240,6 +6247,7 @@ function dropCompanionVisualsAfterDisable() {
   }
 }
 _companion.configure(readCompanionConfig());
+syncPointerBridge();
 try {
   for (const key of COMPANION_PREF_KEYS) {
     _settingsController.subscribeKey(key, (_value, snapshot) => {
@@ -6250,6 +6258,7 @@ try {
       }
       if (key === "companionEnabled") {
         pushCompanionPointerTracking();
+        syncPointerBridge(!!(snapshot && snapshot.companionEnabled === true));
         if (!(snapshot && snapshot.companionEnabled === true)) _cursorTrust.notePetHover(false);
         sendToHitWin("hit-state-sync", {
           petGesturesEnabled: isPetGesturesEnabled(snapshot),

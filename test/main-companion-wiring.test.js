@@ -75,6 +75,7 @@ it("canPlayIdleActivity delegates to isPetFreeForIdle", () => {
 const companionSource = slice("// ── Clawd Alive companion", "// Convenience getters for mini state");
 
 function companionHarness(prefs = {}) {
+  const bridgeSyncs = [];
   const values = {
     freeRoam: false,
     idleActivities: false,
@@ -111,6 +112,7 @@ function companionHarness(prefs = {}) {
       }
       throw new Error(`unexpected require ${id}`);
     },
+    syncPointerBridge: (enabled) => { bridgeSyncs.push(enabled); },
     path,
     app: { getPath: (name) => (name === "userData" ? "/user-data" : null) },
     screen: {
@@ -138,12 +140,12 @@ function companionHarness(prefs = {}) {
     sendToHitWin: (...args) => hitSends.push(JSON.parse(JSON.stringify(args))),
     console: { warn() {} },
     process: { platform: process.platform },
-    _cursorTrust: { enabled: "xwayland-flag" },
+    _cursorTrust: { enabled: "xwayland-flag", notePetHover() {} },
     pushCompanionPointerTracking: () => { trackingPushes.push(1); },
   };
   vm.runInNewContext(`${companionSource}\nthis._companionOut = _companion;\nthis._isPetGesturesEnabled = isPetGesturesEnabled;`, ctx);
   return {
-    ctx, values, subscriptions, configureCalls, hitSends, nudges, runtime, runtimeOptions, storeOptions, trackingPushes,
+    bridgeSyncs, ctx, values, subscriptions, configureCalls, hitSends, nudges, runtime, runtimeOptions, storeOptions, trackingPushes,
     out: ctx._companionOut, isPetGesturesEnabled: ctx._isPetGesturesEnabled,
   };
 }
@@ -495,6 +497,7 @@ it("the tick trusts the cursor only through the XWayland window check", () => {
         return { createCursorTrust: (options) => { trustOptions = options; return { enabled: true, notePointerLeft: () => { left += 1; } }; } };
       }
       if (id === "./linux-ozone") return { isXWaylandSession: () => true };
+      if (id === "./pointer-bridge") return { createPointerBridge: () => ({ getPoint: () => null, setActive() {} }) };
       throw new Error(id);
     },
     process: { platform: "linux", env: {} },
@@ -615,4 +618,16 @@ it("the runtime reads real idle time from the presence service, and only Linux e
   const { runtimeOptions } = companionHarness();
   assert.equal(runtimeOptions.getSystemIdleMs(), 1234);
   assert.ok(companionSource.includes('createUserPresence({ enabled: process.platform === "linux" })'));
+});
+
+it("the real pointer only runs with Clawd Alive under XWayland, and wins the trust check", () => {
+  const bridge = slice("// Optional GNOME Shell extension", "const _cursorTrust = ");
+  assert.ok(bridge.includes("_pointerBridge.setActive(_cursorTrust.enabled && enabled);"));
+  assert.ok(source.includes("_companion.configure(readCompanionConfig());\nsyncPointerBridge();"));
+  assert.ok(source.includes('return _pointerBridge.getPoint() !== null || _cursorTrust.isTrusted(point);'));
+  const h = companionHarness();
+  h.subscriptions.get("companionEnabled")(false, { companionEnabled: false });
+  assert.equal(h.bridgeSyncs.at(-1), false);
+  h.subscriptions.get("companionEnabled")(true, { companionEnabled: true });
+  assert.equal(h.bridgeSyncs.at(-1), true);
 });

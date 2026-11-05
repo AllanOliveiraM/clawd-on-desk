@@ -13,6 +13,9 @@ let lastCursorX = null, lastCursorY = null;
 let mouseStillSince = Date.now();
 let isMouseIdle = false;       // showing idle-look
 let hasTriggeredYawn = false;  // 60s threshold already fired
+let lastSeenX = null;           // last real pointer (Clawd Alive), null without one
+let lastSeenY = null;
+let lastRealMoveAt = 0;
 let idleLookPlayed = false;    // idle-look already played once since last movement
 let idleLookReturnTimer = null;
 let idleLookVisualGeneration = null;
@@ -195,7 +198,8 @@ function getBaseTickDelay(idleNow, miniIdleNow) {
   if (ctx.lowPowerIdlePaused && miniIdleNow) return LOW_POWER_MINI_IDLE_TICK_MS;
   if (ctx.miniMode || miniIdleNow) return FAST_TICK_MS;
   if (idleNow) {
-    if (Date.now() - mouseStillSince <= RECENT_MOUSE_MS) return BOOST_TICK_MS;
+    const now = Date.now();
+    if (now - mouseStillSince <= RECENT_MOUSE_MS || now - lastRealMoveAt <= RECENT_MOUSE_MS) return BOOST_TICK_MS;
     return IDLE_TICK_MS;
   }
   if (ctx.idlePaused) return REACTION_TICK_MS;
@@ -438,6 +442,21 @@ function runMainTickOnce() {
     lastCursorX = cursor.x;
     lastCursorY = cursor.y;
 
+    // Clawd Alive may know the real pointer where Electron's cursor is frozen
+    // (XWayland). What he looks at follows it, but `moved` stays Electron's:
+    // it drives the idle clock and cancels walks, and a pointer visible across
+    // the whole desktop would stop every walk while the user works.
+    const realCursor = typeof ctx.getRealCursorPoint === "function"
+      ? guarded(() => ctx.getRealCursorPoint(), null, "getRealCursorPoint")
+      : null;
+    const seen = realCursor || cursor;
+    const seenMoved = realCursor
+      ? lastSeenX !== null && (realCursor.x !== lastSeenX || realCursor.y !== lastSeenY)
+      : moved;
+    lastSeenX = realCursor ? realCursor.x : null;
+    lastSeenY = realCursor ? realCursor.y : null;
+    if (realCursor && seenMoved) lastRealMoveAt = Date.now();
+
     // ── Cursor-over-pet tracking (for mini peek + eye tracking, NOT for input routing) ──
     const pointerBridgeKey = getPointerBridgeKey();
     const suppressPassiveIpc = shouldSuppressPassiveIpc();
@@ -454,8 +473,8 @@ function runMainTickOnce() {
     }
     if (bounds && !ctx.dragLocked) {
       const hit = ctx.getHitRectScreen(bounds);
-      const over = cursor.x >= hit.left && cursor.x <= hit.right
-                && cursor.y >= hit.top  && cursor.y <= hit.bottom;
+      const over = seen.x >= hit.left && seen.x <= hit.right
+                && seen.y >= hit.top  && seen.y <= hit.bottom;
       ctx.mouseOverPet = over;
       if (idleNow) {
         companionPetRect = { x: hit.left, y: hit.top, width: hit.right - hit.left, height: hit.bottom - hit.top };
@@ -490,7 +509,7 @@ function runMainTickOnce() {
       }
     }
 
-    if (eyeTrackingEnabled) sendPointerBridge(cursor, bounds);
+    if (eyeTrackingEnabled) sendPointerBridge(seen, bounds);
 
     if (!idleNow && !miniIdleNow && !roamNow) return nextDelay();
 
@@ -629,9 +648,9 @@ function runMainTickOnce() {
       // 2026-11-04 §4) reaches it as null, flagged for searchMouse.
       if (ctx.companion && !isMouseIdle) {
         const cursorTrusted = typeof ctx.isCursorTrusted === "function"
-          ? guarded(() => ctx.isCursorTrusted(cursor) !== false, true, "isCursorTrusted")
+          ? guarded(() => ctx.isCursorTrusted(seen) !== false, true, "isCursorTrusted")
           : true;
-        guarded(() => ctx.companion.tick(cursorTrusted ? companionCursorSample(cursor) : null, { cursorTrusted }), undefined, "companion.tick");
+        guarded(() => ctx.companion.tick(cursorTrusted ? companionCursorSample(seen) : null, { cursorTrusted }), undefined, "companion.tick");
       }
 
       if (ctx.roam) guarded(() => ctx.roam.tick(), undefined, "roam.tick");
@@ -649,7 +668,7 @@ function runMainTickOnce() {
       if (idleNow && !isMouseIdle && ctx.forceEyeResend) ctx.forceEyeResend = false;
       return nextDelay();
     }
-    if (shouldSuppressPassiveIpc() && !moved) {
+    if (shouldSuppressPassiveIpc() && !seenMoved) {
       if (ctx.forceEyeResend) ctx.forceEyeResend = false;
       return nextDelay();
     }
@@ -657,10 +676,10 @@ function runMainTickOnce() {
       if (Date.now() < ctx.eyePauseUntil) return nextDelay();
       ctx.eyePauseUntil = null;
     }
-    if (!moved && !ctx.forceEyeResend) return nextDelay();
+    if (!seenMoved && !ctx.forceEyeResend) return nextDelay();
 
     // ── Eye position calculation (shared by idle and mini-idle) ──
-    const skipDedup = ctx.forceEyeResend || (ctx.lowPowerIdlePaused && moved);
+    const skipDedup = ctx.forceEyeResend || (ctx.lowPowerIdlePaused && seenMoved);
     ctx.forceEyeResend = false;
 
     if (!bounds) {
@@ -673,8 +692,8 @@ function runMainTickOnce() {
     const eyeScreenX = obj.x + obj.w * theme.eyeTracking.eyeRatioX;
     const eyeScreenY = obj.y + obj.h * theme.eyeTracking.eyeRatioY;
 
-    const relX = cursor.x - eyeScreenX;
-    const relY = cursor.y - eyeScreenY;
+    const relX = seen.x - eyeScreenX;
+    const relY = seen.y - eyeScreenY;
 
     const MAX_OFFSET = theme.eyeTracking.maxOffset;
     const dist = Math.sqrt(relX * relX + relY * relY);
@@ -711,7 +730,7 @@ function runMainTickOnce() {
     // resets on a pause, or when the cursor is too close to the eye-tracking origin (where
     // the angle is dominated by sub-pixel jitter), instead of decaying every tick — so a
     // genuine two-circle gesture reaches ±SPIN_THRESHOLD precisely.
-    if (idleNow && !miniIdleNow && !isMouseIdle && moved && THEME_SUPPORTS_DIZZY) {
+    if (idleNow && !miniIdleNow && !isMouseIdle && seenMoved && THEME_SUPPORTS_DIZZY) {
       const now = Date.now();
 
       if (dist < SPIN_MIN_RADIUS) {
