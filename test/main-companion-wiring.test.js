@@ -654,3 +654,7 @@ it("the pet menu also counts the shift key the extension saw", () => {
   assert.equal(run(true, undefined).shiftKey, true);
 });
 
+it("the hardware acceleration switch applies on Windows and Linux", () => {
+  assert.ok(source.includes("const _hardwareAccelerationDisabledAtStartup = (isWin || isLinux)\n"));
+});
+

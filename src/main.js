@@ -370,7 +370,7 @@ const _initialPrefsRecovered = _initialPrefsLoad.recovered === true;
 // #1183: must run before app ready, so it reads the startup snapshot directly
 // instead of waiting for the settings controller. Kept as a constant so
 // Settings can tell when the saved switch no longer matches this process.
-const _hardwareAccelerationDisabledAtStartup = isWin
+const _hardwareAccelerationDisabledAtStartup = (isWin || isLinux)
   && !!_initialPrefsLoad.snapshot
   && _initialPrefsLoad.snapshot.disableHardwareAcceleration === true;
 if (_hardwareAccelerationDisabledAtStartup) {

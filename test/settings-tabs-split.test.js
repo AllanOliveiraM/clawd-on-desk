@@ -819,6 +819,19 @@ describe("settings tab split", () => {
     ]);
   });
 
+  it("shows the GPU switch on Windows and Linux, not on macOS", async () => {
+    for (const [platform, shown] of [["Win32", true], ["Linux x86_64", true], ["MacIntel", false]]) {
+      const general = createHarness({
+        tab: "general",
+        platform,
+        snapshot: makeSnapshot({ disableHardwareAcceleration: false }),
+        settingsAPI: { getStartupRenderState: () => Promise.resolve({ hardwareAccelerationDisabled: false }) },
+      });
+      await general.settle();
+      assert.strictEqual(!!general.getSwitch("disableHardwareAcceleration"), shown, platform);
+    }
+  });
+
   it("offers a restart only while the GPU switch differs from launch (#1183)", async () => {
     const general = createHarness({
       tab: "general",

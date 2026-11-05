@@ -518,7 +518,7 @@
       }),
       // #1183: Windows-only, like the switch it backs (main.js reads it at
       // startup only on win32).
-      ...(i18n && i18n.IS_WIN ? [buildHardwareAccelerationRow()] : []),
+      ...(i18n && !i18n.IS_MAC ? [buildHardwareAccelerationRow()] : []),
     ]));
   }
 
