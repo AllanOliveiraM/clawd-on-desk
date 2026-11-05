@@ -222,6 +222,7 @@ function createHarness(overrides = {}) {
     settingsController,
     recapRuntime: overrides.recapRuntime,
     companionRuntime: overrides.companionRuntime,
+    pointerExtension: overrides.pointerExtension,
     themeLoader,
     codexPetMain,
     officialThemeMain: overrides.officialThemeMain,
@@ -2022,3 +2023,26 @@ test("#1275: startup render state reports both pet topmost launch values", async
     h.runtime.dispose();
   }
 });
+
+test("pointer extension: state and install go through the service, failures stay readable", async () => {
+  const calls = [];
+  const harness = createHarness({
+    pointerExtension: {
+      getState: () => "missing",
+      install: async () => { calls.push("install"); return "needs-login"; },
+    },
+  });
+  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:get-pointer-extension"), { status: "ok", state: "missing" });
+  assert.deepStrictEqual(await harness.ipcMain.invoke("settings:install-pointer-extension"), { status: "ok", state: "needs-login" });
+  assert.deepStrictEqual(calls, ["install"]);
+
+  const failing = createHarness({
+    pointerExtension: { getState: () => "missing", install: async () => { throw new Error("no gsettings"); } },
+  });
+  assert.deepStrictEqual(await failing.ipcMain.invoke("settings:install-pointer-extension"), { status: "error", message: "no gsettings" });
+
+  const missing = createHarness();
+  assert.deepStrictEqual(await missing.ipcMain.invoke("settings:get-pointer-extension"), { status: "ok", state: "unsupported" });
+  assert.deepStrictEqual(await missing.ipcMain.invoke("settings:install-pointer-extension"), { status: "error", message: "unavailable" });
+});
+

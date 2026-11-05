@@ -627,7 +627,7 @@
         if (document.body.contains(row)) helpers.setButtonState(button, { pending: false });
       }
     });
-    return { row, button };
+    return { row, button, status };
   }
 
   // Spec 2026-11-04 §3: mood card. Data comes from one pull when the card is
@@ -855,7 +855,7 @@
       personalityDescription: personality.optionDescription,
       autonomyDescription: autonomyRow.querySelector(".row-desc"),
       resetButton: reset.button,
-      cursorBridgeButton: cursorBridge.button,
+      cursorBridge,
       moodCard,
     };
     return section;

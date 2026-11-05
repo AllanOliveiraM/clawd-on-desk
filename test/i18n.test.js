@@ -181,6 +181,8 @@ describe("i18n locales", () => {
       "companionResetConfirmTitle", "companionResetConfirmDetail",
       "companionResetConfirmAction", "companionResetConfirmCancel",
       "toastCompanionResetDone", "toastCompanionResetFailed",
+      "rowCompanionCursorBridge", "rowCompanionCursorBridgeDesc", "companionCursorBridgeInstall",
+      "companionCursorBridgeActive", "companionCursorBridgeNeedsLogin", "toastCompanionCursorBridgeFailed",
     ];
     const { PERSONALITY_IDS } = require("../src/companion-model");
     for (const id of PERSONALITY_IDS) {

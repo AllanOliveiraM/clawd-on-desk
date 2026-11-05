@@ -12998,6 +12998,74 @@ describe("settings renderer browser environment", () => {
       assert.strictEqual(c.optionDesc.textContent, en.companionPersonalityShyDesc);
     });
 
+    describe("GNOME cursor extension row", () => {
+      function bridgeHarness(settingsAPI) {
+        const toasts = [];
+        const harness = loadGeneralTabForTest({
+          tab: "pet",
+          snapshot: companionSnapshot({ companionEnabled: true }),
+          settingsAPI,
+        });
+        harness.core.ops.showToast = (message, options) => toasts.push({ message, options });
+        harness.renderContent();
+        return { harness, toasts, bridge: harness.core.state.mountedControls.companion.cursorBridge };
+      }
+
+      it("stays hidden where it doesn't apply, and without the API", async () => {
+        const unsupported = bridgeHarness({ getPointerExtension: () => ({ status: "ok", state: "unsupported" }) });
+        await flush();
+        assert.strictEqual(unsupported.bridge.row.style.display, "none");
+        const old = bridgeHarness({});
+        await flush();
+        assert.strictEqual(old.bridge.row.style.display, "none");
+        const failing = bridgeHarness({ getPointerExtension: () => Promise.reject(new Error("no")) });
+        await flush();
+        assert.strictEqual(failing.bridge.row.style.display, "none");
+      });
+
+      it("offers the install, then tells the user to log in again", async () => {
+        const installs = [];
+        const { bridge } = bridgeHarness({
+          getPointerExtension: () => ({ status: "ok", state: "missing" }),
+          installPointerExtension: () => { installs.push(1); return { status: "ok", state: "needs-login" }; },
+        });
+        await flush();
+        assert.strictEqual(bridge.row.style.display, "");
+        assert.strictEqual(bridge.button.style.display, "");
+        bridge.button.dispatchEvent({ type: "click", bubbles: false });
+        bridge.button.dispatchEvent({ type: "click", bubbles: false });
+        await flush();
+        assert.strictEqual(installs.length, 1, "one install for a double click");
+        assert.strictEqual(bridge.button.style.display, "none");
+        assert.strictEqual(bridge.status.textContent, en.companionCursorBridgeNeedsLogin);
+      });
+
+      it("shows the active state without a button", async () => {
+        const { bridge } = bridgeHarness({ getPointerExtension: () => ({ status: "ok", state: "active" }) });
+        await flush();
+        assert.strictEqual(bridge.button.style.display, "none");
+        assert.strictEqual(bridge.status.textContent, en.companionCursorBridgeActive);
+      });
+
+      it("a failed install toasts and keeps the button", async () => {
+        for (const installPointerExtension of [
+          () => ({ status: "error", message: "nope" }),
+          () => Promise.reject(new Error("nope")),
+        ]) {
+          const { bridge, toasts } = bridgeHarness({
+            getPointerExtension: () => ({ status: "ok", state: "missing" }),
+            installPointerExtension,
+          });
+          await flush();
+          bridge.button.dispatchEvent({ type: "click", bubbles: false });
+          await flush();
+          assert.strictEqual(toasts.length, 1);
+          assert.strictEqual(toasts[0].message, en.toastCompanionCursorBridgeFailed);
+          assert.strictEqual(bridge.button.style.display, "");
+        }
+      });
+    });
+
     it("reset asks for confirmation and does nothing on cancel", async () => {
       const resets = [];
       const toasts = [];
