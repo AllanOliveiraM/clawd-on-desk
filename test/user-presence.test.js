@@ -2,6 +2,9 @@
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const { createUserPresence, parseIdleTime } = require("../src/user-presence");
 
 function make(opts = {}) {
@@ -92,5 +95,62 @@ test("a good answer clears the failure count, and bad output counts as a failure
 test("a runner that throws counts as a failure and never reaches the caller", () => {
   const { presence } = make({ run: () => { throw new Error("spawn failed"); } });
   assert.doesNotThrow(() => presence.sample());
+  assert.equal(presence.sample(), null);
+});
+
+// The default runner, against a fake gdbus on PATH: the tests above replace it.
+function withPath(t, dir) {
+  const original = process.env.PATH;
+  process.env.PATH = dir;
+  t.after(() => { process.env.PATH = original; });
+}
+
+function tempDir(t) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "clawd-presence-"));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
+
+async function waitFor(check) {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const value = check();
+    if (value !== null) return value;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return null;
+}
+
+test("the default runner asks Mutter's idle monitor through gdbus", { skip: process.platform === "win32" }, async (t) => {
+  const dir = tempDir(t);
+  const argvFile = path.join(dir, "argv");
+  const script = path.join(dir, "gdbus");
+  fs.writeFileSync(script, [
+    "#!/bin/sh",
+    `for arg in "$@"; do printf '%s\\n' "$arg" >> '${argvFile}'; done`,
+    "echo '(uint64 1234,)'",
+    "",
+  ].join("\n"), { mode: 0o755 });
+  // Keeps /bin and /usr/bin for the script's own shell.
+  withPath(t, `${dir}${path.delimiter}${process.env.PATH}`);
+
+  const presence = createUserPresence({ enabled: true });
+  assert.equal(presence.sample(), null, "no answer yet");
+  const idle = await waitFor(() => presence.sample());
+
+  assert.ok(idle >= 1234 && idle < 1234 + 5000, `idle ${idle}`);
+  assert.deepEqual(fs.readFileSync(argvFile, "utf8").trimEnd().split("\n"), [
+    "call", "--session",
+    "--dest", "org.gnome.Mutter.IdleMonitor",
+    "--object-path", "/org/gnome/Mutter/IdleMonitor/Core",
+    "--method", "org.gnome.Mutter.IdleMonitor.GetIdletime",
+  ]);
+});
+
+test("a missing gdbus is no answer and never reaches the caller", async (t) => {
+  withPath(t, tempDir(t));
+  const presence = createUserPresence({ enabled: true });
+  assert.doesNotThrow(() => presence.sample());
+  await new Promise((resolve) => setTimeout(resolve, 200));
   assert.equal(presence.sample(), null);
 });
