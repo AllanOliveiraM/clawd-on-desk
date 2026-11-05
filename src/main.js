@@ -2558,6 +2558,8 @@ const _stateCtx = {
   // Clawd Alive dreamy sleep: may swap the collapse / sleeping visual for one
   // sleep (null = original; state.js guards the call, _companion is created later).
   pickSleepVisual: (state, options) => _companion.pickSleepVisual(state, options),
+  // Clawd Alive: input outside the app's sight wakes him too.
+  isUserBack: () => _companion.isUserBack(),
   // Clawd Alive work escalation: may swap the working / juggling tier visual
   // (null = the theme's tier file; state.js guards the call).
   pickWorkVisual: (state, info) => _companion.pickWorkVisual(state, info),
@@ -5990,9 +5992,9 @@ const _roamCtx = {
   getCurrentState: () => _state.getCurrentState(),
   getUnattendedMs: () => {
     const mouseStillSince = _tick ? _tick._mouseStillSince : Date.now();
-    return Date.now() - mouseStillSince;
+    return _companion.sleepClockMs(Date.now() - mouseStillSince, getActiveTheme().timings.mouseSleepTimeout);
   },
-  getSleepTimeoutMs: () => getActiveTheme().timings.mouseSleepTimeout,
+  getSleepTimeoutMs: () => _companion.sleepTimeoutMs(getActiveTheme().timings.mouseSleepTimeout),
   isSizePreviewActive: () => petWindowRuntime.isSettingsSizePreviewActive(),
   isScreenCaptureOverlayForeground: () => _isForegroundFullscreen.getLastObservation().captureOverlay === true,
   isPetHidden: () => petWindowRuntime.isPetEffectivelyHidden(),
@@ -6089,7 +6091,8 @@ function isPetFreeForIdle() {
   const theme = getActiveTheme();
   const sleepTimeoutMs = theme && theme.timings ? theme.timings.mouseSleepTimeout : null;
   if (Number.isFinite(sleepTimeoutMs) && _tick
-    && Date.now() - _tick._mouseStillSince >= sleepTimeoutMs) return false;
+    && _companion.sleepClockMs(Date.now() - _tick._mouseStillSince, sleepTimeoutMs)
+      >= _companion.sleepTimeoutMs(sleepTimeoutMs)) return false;
   return true;
 }
 
@@ -6185,7 +6188,11 @@ function getCompanionDebugBlockReason() {
   if (petWindowRuntime.isPetEffectivelyHidden() || _state.isSettingsPreviewVisual()) return "agent-busy";
   return null;
 }
+// GNOME reports real idle time for any window; the runtime only asks with
+// Clawd Alive on, near sleep time.
+const _userPresence = require("./user-presence").createUserPresence({ enabled: process.platform === "linux" });
 const _companion = require("./companion-runtime").createCompanionRuntime({
+  getSystemIdleMs: () => _userPresence.sample(),
   getTheme: () => getActiveTheme(),
   getCurrentState: () => _state.getCurrentState(),
   canPlay: isPetFreeForIdle,

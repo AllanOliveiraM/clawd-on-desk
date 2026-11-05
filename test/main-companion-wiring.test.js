@@ -46,6 +46,7 @@ function gateHarness() {
     _state: { isSettingsPreviewVisual: () => false },
     pendingPermissions: [],
     getActiveTheme: () => ({ timings: { mouseSleepTimeout: 60000 } }),
+    _companion: { sleepClockMs: (mouseStillMs) => mouseStillMs, sleepTimeoutMs: (baseMs) => baseMs },
     _tick: { _mouseStillSince: 1000 },
     Date: { now: () => 1000 },
   };
@@ -100,6 +101,9 @@ function companionHarness(prefs = {}) {
     require: (id) => {
       if (id === "./companion-runtime") {
         return { createCompanionRuntime: (options) => { runtimeOptions = options; return runtime; } };
+      }
+      if (id === "./user-presence") {
+        return { createUserPresence: () => ({ sample: () => 1234 }) };
       }
       if (id === "./companion-geometry") return require("../src/companion-geometry");
       if (id === "./companion-store") {
@@ -596,4 +600,19 @@ it("the companion's sendToRenderer hands the visual request back to the arbiter"
   });
   assert.equal(wrapper("state-change", "idle", "x.svg"), request);
   assert.deepEqual(calls, [["state-change", "idle", "x.svg"], "nudge"]);
+});
+
+it("roam and the idle-activity gate read the companion's sleep clock", () => {
+  const roamCtx = slice("getUnattendedMs: () => {", "isSizePreviewActive:");
+  assert.ok(roamCtx.includes("_companion.sleepClockMs("));
+  assert.ok(roamCtx.includes("_companion.sleepTimeoutMs("));
+  const gate = slice("function canPlayIdleActivity() {", '\nconst _idleActivity = require("./idle-activity")');
+  assert.ok(gate.includes("_companion.sleepClockMs("));
+  assert.ok(gate.includes("_companion.sleepTimeoutMs("));
+});
+
+it("the runtime reads real idle time from the presence service, and only Linux enables it", () => {
+  const { runtimeOptions } = companionHarness();
+  assert.equal(runtimeOptions.getSystemIdleMs(), 1234);
+  assert.ok(companionSource.includes('createUserPresence({ enabled: process.platform === "linux" })'));
 });

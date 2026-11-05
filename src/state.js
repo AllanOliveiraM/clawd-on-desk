@@ -1151,13 +1151,23 @@ function scheduleWakePollTick(delay = WAKE_POLL_MS) {
   wakePollTimer = setTimeout(runWakePollTick, delay);
 }
 
+// Clawd Alive: input outside the app's sight also wakes him (false when off).
+function isUserBack() {
+  if (typeof ctx.isUserBack !== "function") return false;
+  try {
+    return ctx.isUserBack() === true;
+  } catch {
+    return false;
+  }
+}
+
 function runWakePollTick() {
   wakePollTimer = null;
   if (!_getCursor || !isWakePollState(currentState) || ctx.doNotDisturb) return;
   const cursor = _getCursor();
   const moved = cursor.x !== lastWakeCursorX || cursor.y !== lastWakeCursorY;
 
-  if (moved) {
+  if (moved || isUserBack()) {
     stopWakePoll();
     wakeFromDoze();
     return;

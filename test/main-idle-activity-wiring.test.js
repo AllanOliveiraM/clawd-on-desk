@@ -86,6 +86,7 @@ function gateHarness() {
     _state: { isSettingsPreviewVisual: () => false },
     pendingPermissions: [],
     getActiveTheme: () => ({ timings: { mouseSleepTimeout: 60000 } }),
+    _companion: { sleepClockMs: (mouseStillMs) => mouseStillMs, sleepTimeoutMs: (baseMs) => baseMs },
     _tick: { _mouseStillSince: 1000 },
     Date: { now: () => 1000 },
   };

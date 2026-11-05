@@ -69,6 +69,14 @@ const GRID_DECAY = 0.9;
 const GESTURES = new Set(["pet-start", "pet-continue", "pet-end", "hover-dwell", "hover-move"]);
 // Mischief tuning.
 const MISCHIEF_LOW_ENERGY = 25; // jumpy/walking reactions stay off below this
+// Sleep (Alive only): by day he waits longer; at night or worn out he keeps
+// the theme's own timeout. The system is only asked this close to sleep time.
+const DAY_SLEEP_DELAY_MS = 5 * 60 * 1000;
+const NIGHT_START_HOUR = 23;
+const NIGHT_END_HOUR = 6;
+const SLEEPY_ENERGY = 25;
+const SLEEP_PROBE_LEAD_MS = 15000;
+const USER_BACK_MS = 5000;
 const WALKING_MISCHIEF = new Set(["poke", "reachClose", "wall", "sitEdge", "fetch"]);
 const EDGE_WALKS = new Set(["reachClose", "wall", "sitEdge", "fetch"]); // skip roam's margin band
 // Sides the scene animates, so roam measures the arrival gap on that side.
@@ -164,6 +172,8 @@ function createCompanionRuntime(options = {}) {
     // Mischief: platform for the "close button" corner, local hour for tests.
     getPlatform = () => process.platform,
     getHour = undefined,
+    // Real time since the user's last input, in ms, or null when unknown.
+    getSystemIdleMs = () => null,
     // Test mode: why the pet cannot play right now ("dnd", "mini", ...) or
     // null; without it a closed canPlay() reads as "agent-busy".
     getDebugBlockReason = null,
@@ -1229,6 +1239,32 @@ function createCompanionRuntime(options = {}) {
     startPetVisual();
   }
 
+  // ---- sleep clock ----
+  // The tick, roam and the idle-activity gate all decide "sleep is due" as
+  // sleepClockMs >= sleepTimeoutMs. Both answer the original values with the
+  // feature off, so the mouse clock and the theme timeout stay untouched.
+  function sleepClockMs(mouseStillMs, baseTimeoutMs) {
+    if (disposed || !config.enabled || mouseStillMs < baseTimeoutMs - SLEEP_PROBE_LEAD_MS) return mouseStillMs;
+    const idleMs = getSystemIdleMs();
+    return Number.isFinite(idleMs) ? Math.min(mouseStillMs, idleMs) : mouseStillMs;
+  }
+
+  function sleepTimeoutMs(baseTimeoutMs) {
+    if (disposed || !config.enabled) return baseTimeoutMs;
+    const hour = getHour ? getHour() : new Date(now()).getHours();
+    const night = hour >= NIGHT_START_HOUR || hour < NIGHT_END_HOUR;
+    if (night || state.mood.energy < SLEEPY_ENERGY) return baseTimeoutMs;
+    return Math.max(baseTimeoutMs, DAY_SLEEP_DELAY_MS);
+  }
+
+  // Wake poll: input anywhere means the user came back, even with the cursor
+  // out of the app's sight.
+  function isUserBack() {
+    if (disposed || !config.enabled) return false;
+    const idleMs = getSystemIdleMs();
+    return Number.isFinite(idleMs) && idleMs < USER_BACK_MS;
+  }
+
   // Roam's isCompanionPlaying gate: true from the send of any companion
   // visual (committed or not), across scene parts and event switches, during
   // a petting session even without a visual, while a welcome / stretch waits
@@ -1543,6 +1579,9 @@ function createCompanionRuntime(options = {}) {
     noteIdleEntered,
     isAnimating: () => !disposed && isAnimating(),
     holdsRoam,
+    sleepClockMs,
+    sleepTimeoutMs,
+    isUserBack,
     cancel,
     reset,
     dispose,

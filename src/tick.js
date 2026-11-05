@@ -272,6 +272,16 @@ function sendPointerBridge(cursor, bounds) {
   ctx.sendToRenderer("cloudling-pointer", payload);
 }
 
+// Clawd Alive may hold sleep back (real activity, daytime); without it this is
+// the plain mouse clock against the theme timeout.
+function isSleepDue(elapsed) {
+  const companion = ctx.companion;
+  if (!companion || typeof companion.sleepClockMs !== "function") return elapsed >= MOUSE_SLEEP_TIMEOUT;
+  const clock = guarded(() => companion.sleepClockMs(elapsed, MOUSE_SLEEP_TIMEOUT), elapsed, "companion.sleepClockMs");
+  const limit = guarded(() => companion.sleepTimeoutMs(MOUSE_SLEEP_TIMEOUT), MOUSE_SLEEP_TIMEOUT, "companion.sleepTimeoutMs");
+  return clock >= limit;
+}
+
 function resetIdlePeriodForMouseMove() {
   mouseStillSince = Date.now();
   hasTriggeredYawn = false;
@@ -508,7 +518,7 @@ function runMainTickOnce() {
       }
 
       // 60s no mouse movement → yawning → dozing
-      if (!hasTriggeredYawn && elapsed >= MOUSE_SLEEP_TIMEOUT) {
+      if (!hasTriggeredYawn && isSleepDue(elapsed)) {
         hasTriggeredYawn = true;
         if (!isMouseIdle && !shouldSuppressPassiveIpc()) ctx.sendToRenderer("eye-move", 0, 0);
         if (SLEEP_MODE === "direct") {

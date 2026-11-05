@@ -1874,6 +1874,33 @@ describe("wake poll behavior", () => {
     assert.strictEqual(api.getCurrentState(), "idle");
   });
 
+  it("input anywhere wakes him with the cursor out of sight", () => {
+    const events = [];
+    let back = false;
+    ctx.sendToRenderer = (ev) => events.push(ev);
+    ctx.isUserBack = () => back;
+    api.applyState("dozing");
+    mock.timers.tick(500);
+    mock.timers.tick(1000);
+    assert.ok(!events.includes("wake-from-doze"), "still asleep with nobody around");
+    back = true;
+    mock.timers.tick(200);
+    assert.ok(events.includes("wake-from-doze"));
+    mock.timers.tick(350);
+    assert.strictEqual(api.getCurrentState(), "idle");
+  });
+
+  it("a throwing presence check never stops the wake poll", () => {
+    const events = [];
+    ctx.sendToRenderer = (ev) => events.push(ev);
+    ctx.isUserBack = () => { throw new Error("boom"); };
+    api.applyState("dozing");
+    mock.timers.tick(700);
+    fakeCursor.x = 200;
+    mock.timers.tick(200);
+    assert.ok(events.includes("wake-from-doze"));
+  });
+
   it("wake-from-doze returns to the user-selected idle visual", () => {
     api.cleanup();
     ctx = makeCtx({

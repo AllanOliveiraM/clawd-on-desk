@@ -1980,6 +1980,37 @@ describe("tick companion coordination", () => {
     return calls.filter(([channel]) => channel === "state-change").map(([, , svg]) => svg);
   }
 
+  it("the companion's sleep clock decides when the yawn starts", () => {
+    ctx.theme.timings.mouseSleepTimeout = 1000;
+    let clock = 0;
+    const asked = [];
+    ctx.companion.sleepClockMs = (elapsed, base) => { asked.push(base); return clock; };
+    ctx.companion.sleepTimeoutMs = () => 5000;
+    const states = [];
+    ctx.setState = function (state) { states.push(state); this.currentState = state; };
+    start();
+    advance(3000);
+    assert.deepEqual(states, [], "the mouse clock passed the theme timeout, the sleep clock did not");
+    assert.ok(asked.length > 0 && asked.every((base) => base === 1000));
+    clock = 4999;
+    advance(1000);
+    assert.deepEqual(states, []);
+    clock = 5000;
+    advance(1500);
+    assert.deepEqual(states, ["yawning"]);
+  });
+
+  it("a throwing sleep clock falls back to the original timeout and keeps the loop alive", () => {
+    ctx.theme.timings.mouseSleepTimeout = 1000;
+    ctx.companion.sleepClockMs = () => { throw new Error("boom"); };
+    ctx.companion.sleepTimeoutMs = () => { throw new Error("boom"); };
+    const states = [];
+    ctx.setState = function (state) { states.push(state); this.currentState = state; };
+    start();
+    advance(2500);
+    assert.deepEqual(states, ["yawning"]);
+  });
+
   it("companion tick runs only in idle branch and not during idle-look", () => {
     ctx.currentState = "working";
     start();
