@@ -350,6 +350,14 @@ const SCHEMA = {
     default: 5000,
     validate: (v) => Number.isInteger(v) && v >= 0 && v <= 60000,
   },
+  // #1326 follow-up: opt-in reminder for a Claude Desktop end-of-turn question
+  // (mcp__ccd_turn__wrap_up) still unanswered after the configured minutes.
+  claudeTurnAskReminder: { type: "boolean", default: false },
+  claudeTurnAskReminderMinutes: {
+    type: "number",
+    default: 5,
+    validate: (v) => Number.isInteger(v) && v >= 1 && v <= 120,
+  },
   // Opt-in decorative feedback for recognized Claude Code Bash test runs.
   // The hook sends only pass/fail, never the command or full test output.
   testReactionsEnabled: { type: "boolean", default: false },
@@ -557,6 +565,8 @@ const SCHEMA = {
       // default MUST exist or startup sync would write the hooks for any user
       // who merely has a ~/.kiro/crew directory.
       "kirocrew": { integrationInstalled: false, enabled: false, permissionsEnabled: false, notificationHookEnabled: false },
+      // permissionsEnabled intentionally defaults on for read-only reminder cards.
+      "kiro-desktop": { integrationInstalled: false, enabled: false, permissionsEnabled: true },
     }),
     normalize: normalizeAgents,
   },

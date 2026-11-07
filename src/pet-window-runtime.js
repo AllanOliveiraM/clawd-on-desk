@@ -2324,6 +2324,17 @@ function createPetWindowRuntime(options = {}) {
     };
   }
 
+  // Pet windows have no recreation path (#1335), so ignore close requests on Windows.
+  // before-quit sets isQuitting before normal shutdown closes the windows.
+  // macOS must allow close because MacUpdater's native quitAndInstall closes
+  // windows before before-quit, while isQuitting is still false.
+  function ignoreWindowsPetWindowClose(win, isQuitting) {
+    if (!isWin) return;
+    win.on("close", (event) => {
+      if (!isQuitting()) event.preventDefault();
+    });
+  }
+
   function createRenderWindow(optionsArg = {}) {
     const BrowserWindow = optionsArg.BrowserWindow;
     if (typeof BrowserWindow !== "function") {
@@ -2360,6 +2371,7 @@ function createPetWindowRuntime(options = {}) {
       },
     });
 
+    ignoreWindowsPetWindowClose(renderWin, isQuitting);
     if (typeof optionsArg.setRenderWindow === "function") {
       optionsArg.setRenderWindow(renderWin);
     }
@@ -2460,6 +2472,7 @@ function createPetWindowRuntime(options = {}) {
     if (typeof BrowserWindow !== "function") {
       throw new Error("createHitWindow requires BrowserWindow");
     }
+    const isQuitting = typeof optionsArg.isQuitting === "function" ? optionsArg.isQuitting : () => false;
     const initialHitWindowBounds = getInitialHitWindowBounds();
     // Same Windows command-line limit as the pet window: keep the hit-renderer
     // theme JSON out of argv and let its preload read the latest value over IPC.
@@ -2495,6 +2508,7 @@ function createPetWindowRuntime(options = {}) {
         ],
       },
     });
+    ignoreWindowsPetWindowClose(hitWin, isQuitting);
     // setShape: native hit region, no per-pixel alpha dependency.
     // hitWin has no visual content, so clipping is irrelevant.
     hitWin.setShape([{ x: 0, y: 0, width: initialHitWindowBounds.width, height: initialHitWindowBounds.height }]);
